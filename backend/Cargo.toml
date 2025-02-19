@@ -7,11 +7,14 @@ edition = "2021"
 actix-cors = "0.7.0"
 actix-session = { version = "0.10.1", features = ["cookie-session"] }
 actix-web = "4.9.0"
-# argon2-kdf = "1.5.4"
 argon2-kdf = { git = "https://github.com/lucascompython/argon2-kdf", branch = "main" }
 env_logger = { version = "0.11.6", optional = true }
 mimalloc = "0.1.43"
 sonic-rs = "0.3.17"
+sqlx = { version = "0.8.3", default-features = false, features = [
+    "runtime-tokio",
+    "mysql",
+] }
 
 [features]
 default = []

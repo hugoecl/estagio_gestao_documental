@@ -2,7 +2,7 @@ use actix_cors::Cors;
 use actix_session::{config::PersistentSession, storage::CookieSessionStore, SessionMiddleware};
 use actix_web::{
     cookie::{time::Duration, Key},
-    App, HttpServer,
+    web, App, HttpServer,
 };
 use mimalloc::MiMalloc;
 
@@ -11,9 +11,12 @@ static GLOBAL: MiMalloc = MiMalloc;
 
 const SECS_IN_WEEK: i64 = 60 * 60 * 24 * 7;
 
+mod db;
 mod handlers;
 mod routes;
 mod utils;
+
+use db::Db;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -29,6 +32,16 @@ async fn main() -> std::io::Result<()> {
         #[cfg(feature = "log")]
         env_logger::init_from_env(env_logger::Env::new().default_filter_or("debug"));
     }
+
+    let db = match Db::new().await {
+        Ok(db) => db,
+        Err(e) => {
+            eprintln!("Failed to connect to the database: {:?}", e);
+            return Ok(());
+        }
+    };
+
+    let state = web::Data::new(db);
 
     HttpServer::new(move || {
         let session_middleware: SessionMiddleware<CookieSessionStore>;
@@ -59,8 +72,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(Cors::permissive()) // TODO: Change this to a more secure configuration
             .wrap(actix_web::middleware::Logger::default())
             .wrap(session_middleware)
-        // .app_data(state.clone())
-        // .app_data(web::PayloadConfig::default().limit(1024 * 1024 * 5)) // 5 MB
+            .app_data(state.clone())
     })
     .bind(("0.0.0.0", 1234))?
     .run()
