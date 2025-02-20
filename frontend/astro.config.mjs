@@ -9,6 +9,9 @@ export default defineConfig({
   vite: {
       plugins: [tailwindcss()]
   },
-
-  integrations: [svelte()]
+  integrations: [svelte()],
+  prefetch: {
+    prefetchAll: true,
+    defaultStrategy: 'viewport'
+  }
 });

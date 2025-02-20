@@ -1,0 +1,33 @@
+---
+import Layout from "@layouts/Layout.astro";
+
+export function getStaticPaths() {
+  const contratos = [
+    "Eletricidade",
+    "Água",
+    "Limpeza",
+    "Impressoras",
+    "Comunicações",
+  ];
+  const cidades = ["Viana do Castelo", "Braga", "Porto", "Vila Real"];
+
+  const paths = contratos.flatMap((contrato) =>
+    cidades.map((cidade) => ({ params: { contrato, clinica: cidade } }))
+  );
+
+  return paths;
+}
+
+const { contrato, clinica } = Astro.params;
+---
+
+<Layout title=`${contrato} - ${clinica}`>
+  <h1>Contratos de Eletricidade</h1>
+  <h1>Contratos de Eletricidade</h1>
+  <h1>Contratos de Eletricidade</h1>
+  <h1>Contratos de Eletricidade</h1>
+  <p>Contratos de eletricidade em vigor</p>
+  <p>Contratos de eletricidade em vigor</p>
+  <p>Contratos de eletricidade em vigor</p>
+  <p>Contratos de eletricidade em vigor</p>
+</Layout>

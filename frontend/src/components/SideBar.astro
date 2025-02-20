@@ -1,14 +1,14 @@
 ---
-
+import jccBigLogo from "@assets/jcc_big.jpg";
 ---
 
-<main>
+<main transition:persist>
   <aside class="sidebar">
-    <div class="sidebar__header">
-      <img src="src/assets/jcc_big.jpg" alt="JCC" />
+    <a href="/" class="sidebar__header">
+      <img src={jccBigLogo.src} alt="JCC" />
       <h1 class="sidebar__title">Gestão Documental</h1>
-    </div>
-    <nav class="sidebar__nav">
+    </a>
+    <nav>
       <ul class="menu bg-base-200 rounded-box w-56">
         <li>
           <details>
@@ -22,10 +22,22 @@
                       <details>
                         <summary>Eletricidade</summary>
                         <ul>
-                          <li><a>Viana do Castelo</a></li>
-                          <li><a>Braga</a></li>
-                          <li><a>Porto</a></li>
-                          <li><a>Vila Real</a></li>
+                          <li>
+                            <a href="/contratos/Eletricidade-Viana do Castelo"
+                              >Viana do Castelo</a
+                            >
+                          </li>
+                          <li>
+                            <a href="/contratos/Eletricidade-Braga">Braga</a>
+                          </li>
+                          <li>
+                            <a href="/contratos/Eletricidade-Porto">Porto</a>
+                          </li>
+                          <li>
+                            <a href="/contratos/Eletricidade-Vila Real"
+                              >Vila Real</a
+                            >
+                          </li>
                         </ul>
                       </details>
                     </li>
@@ -33,10 +45,16 @@
                       <details>
                         <summary>Água</summary>
                         <ul>
-                          <li><a>Viana do Castelo</a></li>
-                          <li><a>Braga</a></li>
-                          <li><a>Porto</a></li>
-                          <li><a>Vila Real</a></li>
+                          <li>
+                            <a href="/contratos/Água-Viana do Castelo"
+                              >Viana do Castelo</a
+                            >
+                          </li>
+                          <li><a href="/contratos/Água-Braga">Braga</a></li>
+                          <li><a href="/contratos/Água-Porto">Porto</a></li>
+                          <li>
+                            <a href="/contratos/Água-Vila Real">Vila Real</a>
+                          </li>
                         </ul>
                       </details>
                     </li>
@@ -44,10 +62,16 @@
                       <details>
                         <summary>Limpeza</summary>
                         <ul>
-                          <li><a>Viana do Castelo</a></li>
-                          <li><a>Braga</a></li>
-                          <li><a>Porto</a></li>
-                          <li><a>Vila Real</a></li>
+                          <li>
+                            <a href="/contratos/Limpeza-Viana do Castelo"
+                              >Viana do Castelo</a
+                            >
+                          </li>
+                          <li><a href="/contratos/Limpeza-Braga">Braga</a></li>
+                          <li><a href="/contratos/Limpeza-Porto">Porto</a></li>
+                          <li>
+                            <a href="/contratos/Limpeza-Vila Real">Vila Real</a>
+                          </li>
                         </ul>
                       </details>
                     </li>
@@ -55,10 +79,22 @@
                       <details>
                         <summary>Impressoras</summary>
                         <ul>
-                          <li><a>Viana do Castelo</a></li>
-                          <li><a>Braga</a></li>
-                          <li><a>Porto</a></li>
-                          <li><a>Vila Real</a></li>
+                          <li>
+                            <a href="/contratos/Impressoras-Viana do Castelo"
+                              >Viana do Castelo</a
+                            >
+                          </li>
+                          <li>
+                            <a href="/contratos/Impressoras-Braga">Braga</a>
+                          </li>
+                          <li>
+                            <a href="/contratos/Impressoras-Porto">Porto</a>
+                          </li>
+                          <li>
+                            <a href="/contratos/Impressoras-Vila Real"
+                              >Vila Real</a
+                            >
+                          </li>
                         </ul>
                       </details>
                     </li>
@@ -66,10 +102,20 @@
                       <details>
                         <summary>Comunicações</summary>
                         <ul>
-                          <li><a>Viana do Castelo</a></li>
-                          <li><a>Braga</a></li>
-                          <li><a>Porto</a></li>
-                          <li><a>Vila Real</a></li>
+                          <li>
+                            <a href="/contratos/Comunicações-Viana do Castelo"
+                              >Viana do Castelo</a>
+                          </li>
+                          <li>
+                            <a href="/contratos/Comunicações-Braga">Braga</a>
+                          </li>
+                          <li>
+                            <a href="/contratos/Comunicações-Porto">Porto</a>
+                          </li>
+                          <li>
+                            <a href="/contratos/Comunicações-Vila Real"
+                              >Vila Real</a>
+                          </li>
                         </ul>
                       </details>
                     </li>
@@ -286,21 +332,6 @@
     font-size: 24px;
     font-weight: 700;
     color: #111827;
-  }
-
-  .sidebar__nav {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .sidebar__list {
-    list-style: none;
-    padding: 0;
-  }
-
-  .sidebar__item {
-    margin: 0;
   }
 
   img {
