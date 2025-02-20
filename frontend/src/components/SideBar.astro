@@ -2,11 +2,11 @@
 import jccBigLogo from "@assets/jcc_big.jpg";
 ---
 
-<main transition:persist>
-  <aside class="sidebar">
+<main class="w-100">
+  <aside class="sidebar bg-base-100">
     <a href="/" class="sidebar__header">
       <img src={jccBigLogo.src} alt="JCC" />
-      <h1 class="sidebar__title">Gestão Documental</h1>
+      <h1 class="sidebar__title font-bold">Gestão Documental</h1>
     </a>
     <nav>
       <ul class="menu bg-base-200 rounded-box w-56">
@@ -104,7 +104,8 @@ import jccBigLogo from "@assets/jcc_big.jpg";
                         <ul>
                           <li>
                             <a href="/contratos/Comunicações-Viana do Castelo"
-                              >Viana do Castelo</a>
+                              >Viana do Castelo</a
+                            >
                           </li>
                           <li>
                             <a href="/contratos/Comunicações-Braga">Braga</a>
@@ -114,7 +115,8 @@ import jccBigLogo from "@assets/jcc_big.jpg";
                           </li>
                           <li>
                             <a href="/contratos/Comunicações-Vila Real"
-                              >Vila Real</a>
+                              >Vila Real</a
+                            >
                           </li>
                         </ul>
                       </details>
@@ -309,13 +311,8 @@ import jccBigLogo from "@assets/jcc_big.jpg";
 
 <style>
   .sidebar {
-    background-color: #f3f4f6;
     height: 100vh;
     position: fixed;
-    top: 0;
-    left: 0;
-    display: flex;
-    flex-direction: column;
     padding: 16px;
     overflow-y: auto;
   }
@@ -330,8 +327,6 @@ import jccBigLogo from "@assets/jcc_big.jpg";
 
   .sidebar__title {
     font-size: 24px;
-    font-weight: 700;
-    color: #111827;
   }
 
   img {
