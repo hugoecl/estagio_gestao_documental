@@ -33,11 +33,6 @@ async fn main() -> std::io::Result<()> {
 
     let key = Key::generate();
 
-    if cfg!(debug_assertions) {
-        #[cfg(feature = "log")]
-        env_logger::init_from_env(env_logger::Env::new().default_filter_or("debug"));
-    }
-
     let (db, cache) = match Db::new().await {
         Ok((db, cache)) => (db, cache),
         Err(e) => {
@@ -47,6 +42,11 @@ async fn main() -> std::io::Result<()> {
     };
 
     let state = web::Data::new(State { db, cache });
+
+    if cfg!(debug_assertions) {
+        #[cfg(feature = "log")]
+        env_logger::init_from_env(env_logger::Env::new().default_filter_or("debug"));
+    }
 
     HttpServer::new(move || {
         let session_middleware: SessionMiddleware<CookieSessionStore>;

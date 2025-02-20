@@ -1,11 +1,16 @@
 use std::sync::atomic;
 
+use actix_session::Session;
 use actix_web::{web, HttpResponse, Responder};
 use serde::Deserialize;
 
 use crate::{
     db::UserCache,
-    utils::{hashing_utils::hash, json_utils::Json},
+    utils::{
+        hashing_utils::{hash, verify},
+        json_utils::Json,
+        session_utils::admin_only,
+    },
     State,
 };
 
@@ -58,4 +63,38 @@ pub async fn register(state: web::Data<State>, request_data: web::Bytes) -> impl
     });
 
     HttpResponse::Ok().body("Registering user")
+}
+
+#[derive(Deserialize)]
+struct LoginRequest {
+    email: String,
+    password: String,
+}
+
+pub async fn login(
+    state: web::Data<State>,
+    request_date: web::Bytes,
+    session: Session,
+) -> impl Responder {
+    let Json(req): Json<LoginRequest> = Json::from_bytes(request_date).unwrap();
+
+    for (i, u) in state.cache.users.pin().iter() {
+        if u.email == req.email {
+            if verify(&req.password, &u.password) {
+                session.insert("user_id", i).unwrap();
+                session.insert("is_admin", u.is_admin).unwrap();
+                return HttpResponse::Ok().finish();
+            }
+        }
+    }
+
+    HttpResponse::Unauthorized().finish()
+}
+
+pub async fn protected(session: Session) -> impl Responder {
+    if let Err(response) = admin_only(&session) {
+        return response;
+    }
+
+    HttpResponse::Ok().body("Protected Route")
 }
