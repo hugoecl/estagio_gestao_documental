@@ -12,6 +12,7 @@ argon2-kdf = { git = "https://github.com/lucascompython/argon2-kdf", branch = "m
 env_logger = { version = "0.11.6", optional = true }
 mimalloc = "0.1.43"
 papaya = "0.2.0"
+serde = { version = "1.0.218", features = ["derive"] }
 sonic-rs = "0.3.17"
 sqlx = { version = "0.8.3", default-features = false, features = [
     "runtime-tokio",

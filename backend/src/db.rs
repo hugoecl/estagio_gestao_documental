@@ -1,3 +1,5 @@
+use std::sync::atomic::AtomicI32;
+
 use ahash::RandomState;
 use papaya::HashMap;
 use sqlx::mysql::MySqlPool;
@@ -19,9 +21,10 @@ pub struct Db {
 
 pub struct Cache {
     pub users: HashMap<i32, UserCache, RandomState>,
+    pub last_user_id: AtomicI32,
 }
 
-pub fn i8_to_bool(i: i8) -> bool {
+fn i8_to_bool(i: i8) -> bool {
     i != 0
 }
 
@@ -44,13 +47,16 @@ impl Db {
         .await?;
 
         let users = sqlx::query!("SELECT * FROM users").fetch_all(&pool).await?;
+        let users_length = users.len();
 
         let users_cache = HashMap::builder()
             .hasher(RandomState::new())
-            .capacity(users.len())
+            .capacity(users_length)
             .build();
 
-        for user in users {
+        let mut last_user_id = -1;
+
+        for (i, user) in users.into_iter().enumerate() {
             users_cache.pin().insert(
                 user.id,
                 UserCache {
@@ -64,10 +70,19 @@ impl Db {
                     is_admin: i8_to_bool(user.is_admin),
                 },
             );
+            if i == users_length - 1 {
+                last_user_id = user.id;
+            }
         }
 
         println!("Connected to Database");
 
-        Ok((Db { pool }, Cache { users: users_cache }))
+        Ok((
+            Db { pool },
+            Cache {
+                users: users_cache,
+                last_user_id: AtomicI32::new(last_user_id),
+            },
+        ))
     }
 }
