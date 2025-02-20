@@ -16,7 +16,12 @@ mod handlers;
 mod routes;
 mod utils;
 
-use db::Db;
+use db::{Cache, Db};
+
+struct State {
+    db: Db,
+    cache: Cache,
+}
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -33,15 +38,15 @@ async fn main() -> std::io::Result<()> {
         env_logger::init_from_env(env_logger::Env::new().default_filter_or("debug"));
     }
 
-    let db = match Db::new().await {
-        Ok(db) => db,
+    let (db, cache) = match Db::new().await {
+        Ok((db, cache)) => (db, cache),
         Err(e) => {
             eprintln!("Failed to connect to the database: {:?}", e);
             return Ok(());
         }
     };
 
-    let state = web::Data::new(db);
+    let state = web::Data::new(State { db, cache });
 
     HttpServer::new(move || {
         let session_middleware: SessionMiddleware<CookieSessionStore>;

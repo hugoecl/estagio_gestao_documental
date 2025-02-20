@@ -3,6 +3,6 @@ CREATE TABLE IF NOT EXISTS users (
     username VARCHAR(255) UNIQUE NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     password BINARY(48) NOT NULL,
-    is_admin BOOLEAN NOT NULL DEFAULT 0,
+    is_admin BOOLEAN NOT NULL DEFAULT false,
     PRIMARY KEY (id)
 );
