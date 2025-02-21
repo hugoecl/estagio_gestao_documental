@@ -4,7 +4,7 @@ import jccBigLogo from "@assets/jcc_big.jpg";
 ---
 
 <main class="w-100">
-  <aside class="sidebar bg-base-100">
+  <aside class="sidebar bg-base-100" transition:persist="true">
     <a href="/" class="sidebar__header">
       <Image height="100" src={jccBigLogo} alt="JCC" />
       <h1 class="sidebar__title font-bold">Gestão Documental</h1>
@@ -24,9 +24,12 @@ import jccBigLogo from "@assets/jcc_big.jpg";
                         <summary>Eletricidade</summary>
                         <ul>
                           <li>
-                            <a href="/contratos/Eletricidade-Viana do Castelo"
-                              >Viana do Castelo</a
+                            <a
+                              id="viana"
+                              href="/contratos/Eletricidade-Viana do Castelo"
                             >
+                              Viana do Castelo
+                            </a>
                           </li>
                           <li>
                             <a href="/contratos/Eletricidade-Braga">Braga</a>
