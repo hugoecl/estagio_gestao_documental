@@ -1,6 +1,7 @@
 ---
 export const prerender = true;
 import Layout from "@layouts/Layout.astro";
+import Collapse from "@components/Collapse.svelte";
 
 export function getStaticPaths() {
   const contratos = [
@@ -51,6 +52,8 @@ const { contrato, clinica } = Astro.params;
       <kbd class="kbd kbd-sm">L</kbd>
     </label>
   </div>
+
+  <Collapse client:load title="Formulário"> teste de collapse </Collapse>
 </Layout>
 
 <script>
