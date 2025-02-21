@@ -1,8 +1,15 @@
 ---
-import Layout from "@layouts/Layout.astro";
+import LoginRegisterLayout from "@layouts/LoginRegisterLayout.astro";
 import RegisterFieldset from "@components/RegisterFieldset.astro";
 ---
 
-<Layout title="Registo" notRenderNav={true}>
+<LoginRegisterLayout title="Registo">
   <RegisterFieldset />
-</Layout>
+  <div class="mt-4 text-center">
+    <p>
+      Já tem uma conta? <a href="/login" class="link link-primary"
+        >Inicie sessão aqui</a
+      >
+    </p>
+  </div>
+</LoginRegisterLayout>

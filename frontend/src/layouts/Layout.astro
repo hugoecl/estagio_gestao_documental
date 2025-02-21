@@ -1,4 +1,5 @@
 ---
+import CommonHead from "@components/CommonHead.astro";
 import NavBar from "@components/NavBar.astro";
 import "../assets/app.css";
 
@@ -11,13 +12,8 @@ const { title, notRenderNav } = Astro.props;
 
 <!doctype html>
 <html lang="pt" data-theme="corporate">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="generator" content={Astro.generator} />
-    <title>{title}</title>
-  </head>
+  <CommonHead title={title} />
+
   <body class="bg-base-300">
     <div id="toast-top" class="toast toast-top toast-center"></div>
     <div id="toast-bottom-right" class="toast toast-end"></div>
