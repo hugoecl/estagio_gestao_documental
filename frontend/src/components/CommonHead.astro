@@ -1,5 +1,6 @@
 ---
 import { ClientRouter } from "astro:transitions";
+import jccLogoSmall from "@assets/jcc_small.png";
 
 interface Props {
   title: string;
@@ -11,7 +12,7 @@ const { title, serverRouter } = Astro.props;
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width" />
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="icon" type="image/png" href={jccLogoSmall.src} />
   <meta name="generator" content={Astro.generator} />
   <title>{title}</title>
   {!serverRouter && <ClientRouter />}
