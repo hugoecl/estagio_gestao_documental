@@ -24,6 +24,7 @@ pub struct Cache {
     pub last_user_id: AtomicI32,
 }
 
+#[inline(always)]
 fn i8_to_bool(i: i8) -> bool {
     i != 0
 }
