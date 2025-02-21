@@ -1,17 +1,17 @@
 use std::sync::atomic;
 
 use actix_session::Session;
-use actix_web::{web, HttpResponse, Responder};
+use actix_web::{HttpResponse, Responder, web};
 use serde::Deserialize;
 
 use crate::{
+    State,
     db::UserCache,
     utils::{
         hashing_utils::{hash, verify},
         json_utils::Json,
-        session_utils::admin_only,
+        session_utils::{admin_only, validate_session},
     },
-    State,
 };
 
 #[derive(Deserialize)]
@@ -89,6 +89,19 @@ pub async fn login(
     }
 
     HttpResponse::Unauthorized().finish()
+}
+
+pub async fn check(session: Session) -> impl Responder {
+    if let Err(response) = validate_session(&session) {
+        return response;
+    }
+
+    HttpResponse::Ok().finish()
+}
+
+pub async fn logout(session: Session) -> impl Responder {
+    session.clear();
+    HttpResponse::Ok().finish()
 }
 
 pub async fn protected(session: Session) -> impl Responder {

@@ -14,6 +14,14 @@ pub fn init(cfg: &mut web::ServiceConfig) {
             .route(
                 "/protected",
                 web::get().to(crate::handlers::user_handlers::protected),
+            )
+            .route(
+                "/check",
+                web::get().to(crate::handlers::user_handlers::check),
+            )
+            .route(
+                "/logout",
+                web::post().to(crate::handlers::user_handlers::logout),
             ),
     );
 }
