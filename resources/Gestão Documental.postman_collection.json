@@ -11,6 +11,15 @@
 			"request": {
 				"method": "POST",
 				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"username\": \"lucas\",\r\n    \"email\": \"lucas@gmail.com\",\r\n    \"password\": \"1234\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
 				"url": {
 					"raw": "{{host}}/users/register",
 					"host": [
@@ -52,6 +61,24 @@
 			"response": []
 		},
 		{
+			"name": "logout",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "{{host}}/users/logout",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"users",
+						"logout"
+					]
+				}
+			},
+			"response": []
+		},
+		{
 			"name": "protected",
 			"request": {
 				"method": "GET",
@@ -64,6 +91,24 @@
 					"path": [
 						"users",
 						"protected"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "check",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{host}}/users/check",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"users",
+						"check"
 					]
 				}
 			},
