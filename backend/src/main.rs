@@ -28,7 +28,7 @@ struct State {
 async fn main() -> std::io::Result<()> {
     let addrs: &str;
     if cfg!(debug_assertions) {
-        addrs = "127.0.0.1";
+        addrs = "localhost";
         println!("Development Server running at http://{}:1234", addrs);
     } else {
         addrs = "0.0.0.0";
@@ -66,7 +66,7 @@ async fn main() -> std::io::Result<()> {
             SessionMiddleware::builder(CookieSessionStore::default(), key.clone())
                 .cookie_secure(true)
                 .cookie_http_only(true)
-                .cookie_same_site(actix_web::cookie::SameSite::Strict)
+                .cookie_same_site(actix_web::cookie::SameSite::None)
                 .session_lifecycle(
                     PersistentSession::default().session_ttl(Duration::seconds(SECS_IN_WEEK)),
                 )

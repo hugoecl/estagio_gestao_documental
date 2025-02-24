@@ -16,4 +16,26 @@ const { title, serverRouter } = Astro.props;
   <meta name="generator" content={Astro.generator} />
   <title>{title}</title>
   {!serverRouter && <ClientRouter />}
+
+  <script>
+    import { checkUser } from "src/api/utils";
+
+    const ok = await checkUser();
+
+    if (ok) {
+      if (
+        window.location.pathname === "/login" ||
+        window.location.pathname === "/register"
+      ) {
+        window.location.pathname = "/";
+      }
+    } else {
+      if (
+        window.location.pathname !== "/login" &&
+        window.location.pathname !== "/register"
+      ) {
+        window.location.pathname = "/login";
+      }
+    }
+  </script>
 </head>

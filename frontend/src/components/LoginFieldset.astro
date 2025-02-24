@@ -89,7 +89,7 @@
     const ok = await loginUser(emailInput.value, passwordInput.value);
 
     if (ok) {
-      window.location.href = "/";
+      window.location.pathname = "/";
     } else {
       showAlert("Credenciais inválidas", AlertType.ERROR, AlertPosition.TOP);
     }

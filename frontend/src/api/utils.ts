@@ -21,11 +21,13 @@ export async function loginUser(
 ): Promise<boolean> {
   const response = await fetch(`${API_BASE_URL}/users/login`, {
     method: "POST",
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ email, password }),
   });
+
   return response.ok;
 }
 
