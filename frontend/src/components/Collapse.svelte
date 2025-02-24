@@ -6,7 +6,14 @@
   let isOpen = $state(false);
 </script>
 
-<div class="collapse collapse-arrow bg-base-100 border border-base-300">
+<div
+  class="collapse collapse-arrow bg-base-100 border border-base-300 collapse-open"
+  onclick={(e) => {
+    e.preventDefault();
+    e.currentTarget.classList.toggle("collapse-open");
+    e.currentTarget.classList.toggle("collapse-close");
+  }}
+>
   <input
     type="radio"
     name={title}
