@@ -12,15 +12,7 @@
     e.currentTarget.classList.toggle("collapse-close");
   }}
 >
-  <input
-    type="radio"
-    name={title}
-    checked={true}
-    onmousedown={(e) => {
-      e.preventDefault();
-      e.currentTarget.checked = !e.currentTarget.checked;
-    }}
-  />
+  <input type="radio" name={title} checked={true} />
   <div class="collapse-title font-semibold">{title}</div>
 
   <div class="collapse-content text-sm">
@@ -31,6 +23,7 @@
 <style>
   .collapse {
     border-radius: 0.3rem;
+    z-index: 0;
   }
   input {
     cursor: pointer;
