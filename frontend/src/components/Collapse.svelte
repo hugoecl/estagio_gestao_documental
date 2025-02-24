@@ -2,8 +2,6 @@
   import type { Snippet } from "svelte";
 
   const { title, children }: { title: string; children: Snippet } = $props();
-
-  let isOpen = $state(false);
 </script>
 
 <div
