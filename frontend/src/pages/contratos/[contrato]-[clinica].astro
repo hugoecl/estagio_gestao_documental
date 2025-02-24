@@ -57,15 +57,16 @@ const { contrato, clinica } = Astro.params;
 </Layout>
 
 <script>
-  const searchInput = document.getElementById("search-input")!;
-
-  window.addEventListener("keydown", (event) => {
-    if (event.ctrlKey && event.key === "l") {
-      event.preventDefault();
-      searchInput.focus();
-    } else if (event.key === "Escape") {
-      event.preventDefault();
-      searchInput.blur();
-    }
+  document.addEventListener("astro:page-load", () => {
+    const searchInput = document.getElementById("search-input")!;
+    window.addEventListener("keydown", (event) => {
+      if (event.ctrlKey && event.key === "l") {
+        event.preventDefault();
+        searchInput.focus();
+      } else if (event.key === "Escape") {
+        event.preventDefault();
+        searchInput.blur();
+      }
+    });
   });
 </script>
