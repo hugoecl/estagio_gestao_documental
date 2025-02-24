@@ -1,8 +1,8 @@
 ---
-export const prerender = true;
 import Layout from "@layouts/Layout.astro";
 import Collapse from "@components/Collapse.svelte";
 import SearchBar from "@components/SearchBar.astro";
+import DatePicker from "@components/DatePicker.svelte";
 
 export function getStaticPaths() {
   const contratos = [
@@ -25,10 +25,13 @@ const { contrato, clinica } = Astro.params;
 ---
 
 <Layout title=`${contrato} - ${clinica}`>
-  <div class="flex items-center justify-between">
+  <div class="flex items-center justify-between mb-7">
     <h1 class="text-xl font-medium">{contrato} - {clinica}</h1>
     <SearchBar />
   </div>
 
-  <Collapse client:load title="Formulário"> teste de collapse </Collapse>
+  <Collapse client:load title="Formulário">
+    <DatePicker client:only />
+    ola
+  </Collapse>
 </Layout>

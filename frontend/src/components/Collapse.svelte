@@ -6,13 +6,18 @@
 
 <div
   class="collapse collapse-arrow bg-base-100 border border-base-300 collapse-open"
-  onclick={(e) => {
-    e.preventDefault();
-    e.currentTarget.classList.toggle("collapse-open");
-    e.currentTarget.classList.toggle("collapse-close");
-  }}
 >
-  <input type="radio" name={title} checked={true} />
+  <input
+    type="radio"
+    name={title}
+    checked={true}
+    onclick={(e) => {
+      e.preventDefault();
+      const parent = e.currentTarget.parentElement!;
+      parent.classList.toggle("collapse-open");
+      parent.classList.toggle("collapse-close");
+    }}
+  />
   <div class="collapse-title font-semibold">{title}</div>
 
   <div class="collapse-content text-sm">
