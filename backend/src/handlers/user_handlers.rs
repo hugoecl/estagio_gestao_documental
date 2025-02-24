@@ -79,12 +79,10 @@ pub async fn login(
     let Json(req): Json<LoginRequest> = Json::from_bytes(request_date).unwrap();
 
     for (i, u) in state.cache.users.pin().iter() {
-        if u.email == req.email {
-            if verify(&req.password, &u.password) {
-                session.insert("user_id", i).unwrap();
-                session.insert("is_admin", u.is_admin).unwrap();
-                return HttpResponse::Ok().finish();
-            }
+        if u.email == req.email && verify(&req.password, &u.password) {
+            session.insert("user_id", i).unwrap();
+            session.insert("is_admin", u.is_admin).unwrap();
+            return HttpResponse::Ok().finish();
         }
     }
 

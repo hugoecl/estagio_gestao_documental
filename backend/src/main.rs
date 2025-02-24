@@ -1,8 +1,9 @@
 use actix_cors::Cors;
-use actix_session::{config::PersistentSession, storage::CookieSessionStore, SessionMiddleware};
+use actix_session::{SessionMiddleware, config::PersistentSession, storage::CookieSessionStore};
 use actix_web::{
-    cookie::{time::Duration, Key},
-    web, App, HttpServer,
+    App, HttpServer,
+    cookie::{Key, time::Duration},
+    web,
 };
 use mimalloc::MiMalloc;
 
@@ -25,10 +26,13 @@ struct State {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    let addrs: &str;
     if cfg!(debug_assertions) {
-        println!("Development Server running at http://127.0.0.1:1234");
+        addrs = "127.0.0.1";
+        println!("Development Server running at http://{}:1234", addrs);
     } else {
-        println!("Production Server running at https://0.0.0.0:1234");
+        addrs = "0.0.0.0";
+        println!("Production Server running at https://{}:1234", addrs);
     }
 
     let key = Key::generate();
@@ -49,29 +53,25 @@ async fn main() -> std::io::Result<()> {
     }
 
     HttpServer::new(move || {
-        let session_middleware: SessionMiddleware<CookieSessionStore>;
-
-        if cfg!(debug_assertions) {
-            session_middleware =
-                SessionMiddleware::builder(CookieSessionStore::default(), key.clone())
-                    .cookie_secure(false)
-                    .cookie_http_only(false)
-                    .cookie_same_site(actix_web::cookie::SameSite::Strict)
-                    .session_lifecycle(
-                        PersistentSession::default().session_ttl(Duration::seconds(SECS_IN_WEEK)),
-                    )
-                    .build();
+        let session_middleware = if cfg!(debug_assertions) {
+            SessionMiddleware::builder(CookieSessionStore::default(), key.clone())
+                .cookie_secure(false)
+                .cookie_http_only(false)
+                .cookie_same_site(actix_web::cookie::SameSite::Strict)
+                .session_lifecycle(
+                    PersistentSession::default().session_ttl(Duration::seconds(SECS_IN_WEEK)),
+                )
+                .build()
         } else {
-            session_middleware =
-                SessionMiddleware::builder(CookieSessionStore::default(), key.clone())
-                    .cookie_secure(true)
-                    .cookie_http_only(true)
-                    .cookie_same_site(actix_web::cookie::SameSite::Strict)
-                    .session_lifecycle(
-                        PersistentSession::default().session_ttl(Duration::seconds(SECS_IN_WEEK)),
-                    )
-                    .build();
-        }
+            SessionMiddleware::builder(CookieSessionStore::default(), key.clone())
+                .cookie_secure(true)
+                .cookie_http_only(true)
+                .cookie_same_site(actix_web::cookie::SameSite::Strict)
+                .session_lifecycle(
+                    PersistentSession::default().session_ttl(Duration::seconds(SECS_IN_WEEK)),
+                )
+                .build()
+        };
         App::new()
             .configure(routes::init)
             .wrap(Cors::permissive()) // TODO: Change this to a more secure configuration
@@ -79,7 +79,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(session_middleware)
             .app_data(state.clone())
     })
-    .bind(("0.0.0.0", 1234))?
+    .bind((addrs, 1234))?
     .run()
     .await
 }
