@@ -15,6 +15,7 @@
   <input
     type="radio"
     name={title}
+    checked={true}
     onmousedown={(e) => {
       e.preventDefault();
       e.currentTarget.checked = !e.currentTarget.checked;
