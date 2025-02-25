@@ -23,3 +23,28 @@
     ></path>
   </svg>
 </label>
+
+<script is:inline>
+  function setTheme(document) {
+    const themeController = document.querySelector(".theme-controller");
+    const savedTheme = localStorage.getItem("theme");
+    if (savedTheme) {
+      themeController.checked = savedTheme === "business";
+    }
+
+    themeController.addEventListener("change", () => {
+      if (themeController.checked) {
+        document.documentElement.setAttribute("data-theme", "business");
+        localStorage.setItem("theme", "business");
+      } else {
+        document.documentElement.setAttribute("data-theme", "corporate");
+        localStorage.setItem("theme", "corporate");
+      }
+    });
+  }
+
+  setTheme(document);
+  document.addEventListener("astro:before-swap", (e) => {
+    setTheme(e.newDocument);
+  });
+</script>
