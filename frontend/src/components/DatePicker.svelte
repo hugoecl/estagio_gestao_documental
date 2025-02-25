@@ -1,33 +1,43 @@
 <script lang="ts">
+  import calendarIcon from "@assets/calendar_icon.svg?raw";
   import "cally";
+  import { onMount } from "svelte";
 
-  let date = $state("dd/mm/aaaa");
+  let cally: HTMLButtonElement;
+  let dateSpan: HTMLSpanElement;
+
+  onMount(() => {
+    cally = document.getElementById("cally") as HTMLButtonElement;
+    dateSpan = cally.querySelector("span")!;
+  });
 </script>
 
 <button
-  popovertarget="cally-popover1"
+  popovertarget="cally-popover"
   class="input input-border"
-  id="cally1"
-  style="anchor-name:--cally1"
+  id="cally"
+  style="anchor-name:--cally"
 >
-  {date}
+  {@html calendarIcon}
+
+  <span>dd/mm/aaaa</span>
 </button>
 
 <div
-  popover
-  id="cally-popover1"
+  popover="auto"
+  id="cally-popover"
   class="dropdown bg-base-100 rounded-box shadow-lg"
-  style="position-anchor:--cally1"
+  style="position-anchor:--cally"
 >
   <calendar-date
     class="cally"
     onclick={(e) => {
-      date = e.currentTarget.value;
-      const popover = document.getElementById("cally1");
-      popover.active = false;
-      document.body.focus();
-
-      // popover?.classList.add("hidden");
+      if (e.currentTarget.value.length !== 0) {
+        dateSpan.innerHTML = new Date(e.currentTarget.value).toLocaleDateString(
+          "pt-PT"
+        );
+        cally.click();
+      }
     }}
   >
     <svg
@@ -54,6 +64,12 @@
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 24 24"><path d="m8.25 4.5 7.5 7.5-7.5 7.5"></path></svg
     >
-    <calendar-month onblur={(e) => console.log("toma")}></calendar-month>
+    <calendar-month></calendar-month>
   </calendar-date>
 </div>
+
+<style>
+  calendar-month::part(heading) {
+    text-transform: capitalize;
+  }
+</style>
