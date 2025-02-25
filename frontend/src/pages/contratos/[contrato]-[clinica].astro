@@ -30,7 +30,88 @@ const { contrato, clinica } = Astro.params;
     <SearchBar />
   </div>
 
-  <Collapse client:load title="Formulário">
-    <DatePicker client:only range={true} />
+  <Collapse client:load title="Upload">
+    <form
+      class="grid grid-cols-1 sm:grid-cols-2 gap-4 p-2 rounded-sm shadow-sm"
+    >
+      <fieldset class="fieldset">
+        <legend class="fieldset-legend">Data:</legend>
+        <DatePicker client:load range={false} />
+      </fieldset>
+      <fieldset class="fieldset">
+        <legend class="fieldset-legend">Fornecedor:</legend>
+        <input required type="text" class="input" placeholder="Fornecedor" />
+      </fieldset>
+      <fieldset class="fieldset">
+        <legend class="fieldset-legend">Data Início - Fim:</legend>
+        <DatePicker client:load range={true} />
+      </fieldset>
+      <fieldset class="fieldset">
+        <legend class="fieldset-legend">Tipo:</legend>
+        <select class="select">
+          <option disabled selected>Selecione um Tipo</option>
+          <option>Adenda</option>
+          <option>Novo</option>
+          <option>Renovação</option>
+        </select>
+      </fieldset>
+      <fieldset class="fieldset">
+        <legend class="fieldset-legend">Número de Contrato:</legend>
+        <input
+          required
+          type="text"
+          class="input"
+          placeholder="Número de Contrato"
+        />
+      </fieldset>
+      <fieldset class="fieldset">
+        <legend class="fieldset-legend">Descrição:</legend>
+        <input required type="text" class="input" placeholder="Descrição" />
+      </fieldset>
+      <fieldset class="fieldset">
+        <legend class="fieldset-legend">Status:</legend>
+        <select class="select">
+          <option disabled selected>Selecione o Estado</option>
+          <option>Ativo</option>
+          <option>Não Ativo</option>
+        </select>
+      </fieldset>
+      <fieldset class="fieldset">
+        <legend class="fieldset-legend">Ficheiro</legend>
+        <DatePicker client:load range={false} />
+      </fieldset>
+
+      <div class="flex justify-between sm:col-span-2">
+        <button class="btn btn-secondary">Limpar</button>
+        <button type="submit" class="btn btn-primary">Enviar</button>
+      </div>
+    </form>
   </Collapse>
 </Layout>
+
+<style>
+  .input:hover::placeholder {
+    color: var(--color-base);
+  }
+
+  .select {
+    opacity: 0.7;
+  }
+
+  .select:hover,
+  .input:hover {
+    border-color: var(--color-secondary);
+    box-shadow:
+      0 4px 6px -1px rgb(0 0 0 / 0.1),
+      0 2px 4px -2px rgb(0 0 0 / 0.1);
+    opacity: 1;
+  }
+
+  .select:focus,
+  .input:focus {
+    border-color: var(--color-primary);
+    box-shadow:
+      0 4px 6px -1px rgb(0 0 0 / 0.1),
+      0 2px 4px -2px rgb(0 0 0 / 0.1);
+  }
+</style>

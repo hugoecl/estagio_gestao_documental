@@ -59,7 +59,7 @@
 
 <button
   popovertarget="cally-popover"
-  class="input input-border"
+  class="input input-border opacity-70 hover:opacity-100 hover:shadow-md hover:border-secondary"
   id="cally"
   style="anchor-name:--cally"
 >
@@ -131,5 +131,10 @@
   calendar-month::part(range-start),
   calendar-month::part(range-end) {
     background-color: var(--color-secondary);
+  }
+
+  /* set the button text to be the same color as the placeholder for inputs in daisyui */
+  button {
+    color: var(--color-placeholder-primary);
   }
 </style>
