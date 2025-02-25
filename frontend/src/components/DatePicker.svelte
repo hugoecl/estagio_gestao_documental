@@ -1,7 +1,11 @@
 <script lang="ts">
   import calendarIcon from "@assets/calendar_icon.svg?raw";
+  import previousIcon from "@assets/next_icon.svg?raw";
+  import nextIcon from "@assets/previous_icon.svg?raw";
   import "cally";
   import { onMount } from "svelte";
+
+  const { range }: { range: boolean } = $props();
 
   let cally: HTMLButtonElement;
   let dateSpan: HTMLSpanElement;
@@ -9,6 +13,28 @@
   onMount(() => {
     cally = document.getElementById("cally") as HTMLButtonElement;
     dateSpan = cally.querySelector("span")!;
+
+    const calendar = range
+      ? document.querySelector("calendar-range")
+      : document.querySelector("calendar-date");
+
+    // on svelte 7.0.4 and cally 0.8.0 we have to add the event listener like this
+    // for some reason the onchange svelte event is not working
+    calendar?.addEventListener("change", (e: any) => {
+      if (e.currentTarget.value.length !== 0) {
+        if (range) {
+          const [start, end] = e.currentTarget.value.split("/");
+          dateSpan.innerHTML = `${new Date(start).toLocaleDateString(
+            "pt-PT"
+          )} - ${new Date(end).toLocaleDateString("pt-PT")}`;
+        } else {
+          dateSpan.innerHTML = new Date(
+            e.currentTarget.value
+          ).toLocaleDateString("pt-PT");
+        }
+        cally.click();
+      }
+    });
   });
 </script>
 
@@ -20,7 +46,13 @@
 >
   {@html calendarIcon}
 
-  <span>dd/mm/aaaa</span>
+  <span>
+    {#if range}
+      dd/mm/aaaa - dd/mm/aaaa
+    {:else}
+      dd/mm/aaaa
+    {/if}
+  </span>
 </button>
 
 <div
@@ -29,43 +61,22 @@
   class="dropdown bg-base-100 rounded-box shadow-lg"
   style="position-anchor:--cally"
 >
-  <calendar-date
-    class="cally"
-    onclick={(e) => {
-      if (e.currentTarget.value.length !== 0) {
-        dateSpan.innerHTML = new Date(e.currentTarget.value).toLocaleDateString(
-          "pt-PT"
-        );
-        cally.click();
-      }
-    }}
-  >
-    <svg
-      aria-label="Previous"
-      fill="none"
-      class="size-4"
-      slot="previous"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      stroke-width="2"
-      xmlns="http://www.w3.org/2000/svg"
-      stroke="currentColor"
-      viewBox="0 0 24 24"><path d="M15.75 19.5 8.25 12l7.5-7.5"></path></svg
-    >
-    <svg
-      aria-label="Next"
-      class="size-4"
-      fill="none"
-      stroke="currentColor"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      stroke-width="2"
-      slot="next"
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"><path d="m8.25 4.5 7.5 7.5-7.5 7.5"></path></svg
-    >
-    <calendar-month></calendar-month>
-  </calendar-date>
+  {#if range}
+    <calendar-range class="cally" months={2}>
+      {@html previousIcon}
+      {@html nextIcon}
+      <div class="grid grid-cols-2 gap-4">
+        <calendar-month></calendar-month>
+        <calendar-month offset={1}></calendar-month>
+      </div>
+    </calendar-range>
+  {:else}
+    <calendar-date class="cally">
+      {@html previousIcon}
+      {@html nextIcon}
+      <calendar-month></calendar-month>
+    </calendar-date>
+  {/if}
 </div>
 
 <style>
