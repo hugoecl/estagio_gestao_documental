@@ -10,8 +10,8 @@ type MapEvents<T> = {
 
 declare module "svelte/elements" {
   interface SvelteHTMLElements {
-    "calendar-range": MapEvents<CalendarRangeProps>;
+    "calendar-range": MapEvents<CalendarRangeProps & { class?: string }>;
     "calendar-month": MapEvents<CalendarMonthProps>;
-    "calendar-date": MapEvents<CalendarDateProps>;
+    "calendar-date": MapEvents<CalendarDateProps & { class?: string }>;
   }
 }

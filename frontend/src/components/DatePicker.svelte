@@ -3,7 +3,6 @@
   import previousIcon from "@assets/next_icon.svg?raw";
   import nextIcon from "@assets/previous_icon.svg?raw";
   import "cally";
-  import type { CalendarDate, CalendarRange } from "cally";
   import { onMount } from "svelte";
 
   const { range }: { range: boolean } = $props();
@@ -128,7 +127,6 @@
   calendar-month::part(heading) {
     text-transform: capitalize;
   }
-
   calendar-month::part(range-start),
   calendar-month::part(range-end) {
     background-color: var(--color-secondary);
