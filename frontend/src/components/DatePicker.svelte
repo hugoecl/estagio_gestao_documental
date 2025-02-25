@@ -105,7 +105,7 @@
   style="position-anchor:--cally"
 >
   {#if range}
-    <calendar-range class="cally" months={2}>
+    <calendar-range class="cally border border-zinc-200" months={2}>
       {@render yearSelect()}
       {@html previousIcon}
       {@html nextIcon}
