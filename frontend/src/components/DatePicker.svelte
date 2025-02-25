@@ -2,7 +2,6 @@
   import calendarIcon from "@assets/calendar_icon.svg?raw";
   import previousIcon from "@assets/next_icon.svg?raw";
   import nextIcon from "@assets/previous_icon.svg?raw";
-  import "cally";
   import { onMount } from "svelte";
 
   const { range }: { range: boolean } = $props();
@@ -19,6 +18,8 @@
   }
 
   onMount(() => {
+    import("cally");
+
     cally = document.getElementById("cally") as HTMLButtonElement;
     dateSpan = cally.querySelector("span")!;
 
