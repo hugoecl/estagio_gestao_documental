@@ -5,7 +5,7 @@
 </script>
 
 <div
-  class="collapse collapse-arrow bg-base-100 border border-base-300 collapse-open"
+  class="collapse collapse-arrow bg-base-100 border border-zinc-300 collapse-open"
 >
   <input
     type="radio"
