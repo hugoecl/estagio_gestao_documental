@@ -78,7 +78,7 @@
 
 <button
   popovertarget={uniqueId}
-  class="input input-border opacity-70 hover:opacity-100 hover:shadow-md hover:border-secondary"
+  class="input input-border opacity-50 hover:opacity-100 hover:shadow-md hover:border-secondary"
   bind:this={cally}
   type="button"
 >

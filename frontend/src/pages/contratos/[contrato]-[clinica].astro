@@ -66,7 +66,7 @@ const { contrato, clinica } = Astro.params;
       </fieldset>
       <fieldset class="fieldset">
         <legend class="fieldset-legend">Descrição:</legend>
-        <input required type="text" class="input" placeholder="Descrição" />
+        <textarea required class="textarea" placeholder="Descrição"></textarea>
       </fieldset>
       <fieldset class="fieldset">
         <legend class="fieldset-legend">Status:</legend>
@@ -102,20 +102,23 @@ const { contrato, clinica } = Astro.params;
 </script>
 
 <style>
-  .input:hover::placeholder {
+  .input:hover::placeholder,
+  .textarea:hover::placeholder {
     color: var(--color-base);
   }
 
   .select {
-    opacity: 0.7;
+    opacity: 0.5;
   }
 
   .input,
+  .textarea,
   .select {
     width: 100%;
   }
 
   .select:hover,
+  .textarea:hover,
   .input:hover {
     border-color: var(--color-secondary);
     box-shadow:
