@@ -8,9 +8,14 @@
 
   let cally: HTMLButtonElement;
   let dateSpan: HTMLSpanElement;
+  let yearSelectElement: HTMLSelectElement;
+  // unique id for the popover
+  const uniqueId = Math.random().toString(36).substring(7);
+
+  // svelte throws this warning because we are binding an element that is inside a if statement but in this case since the if statement is controlled by a prop it is safe to ignore this warning
+  // svelte-ignore non_reactive_update
   let calendar: any;
 
-  // create a const named dates that is an array with all the dates from the past 10 years to the next 10 years
   const dates: number[] = [];
   const currentYear = new Date().getFullYear();
   for (let i = -10; i <= 10; i++) {
@@ -20,23 +25,13 @@
   onMount(() => {
     import("cally");
 
-    cally = document.getElementById("cally") as HTMLButtonElement;
-    dateSpan = cally.querySelector("span")!;
-
-    calendar = range
-      ? document.querySelector("calendar-range")
-      : document.querySelector("calendar-date");
-
-    const yearSelect = document.getElementById(
-      "yearSelect"
-    ) as HTMLSelectElement;
     // for checking if the value has really changed or if the user just chenged week/month/date on the calendar
     let oldValue: string;
 
     // on svelte 7.0.4 and cally 0.8.0 we have to add the event listener like this
     // for some reason the onchange svelte event is not working
     calendar?.addEventListener("focusday", (e: any) => {
-      yearSelect.value = e.detail.getUTCFullYear();
+      yearSelectElement.value = e.detail.getUTCFullYear();
 
       if (
         e.currentTarget.value.length !== 0 &&
@@ -52,39 +47,21 @@
           dateSpan.innerHTML = e.detail.toLocaleDateString("pt-PT");
         }
         cally.click();
+        cally.style.opacity = "1";
       }
     });
   });
 </script>
 
-<button
-  popovertarget="cally-popover"
-  class="input input-border opacity-70 hover:opacity-100 hover:shadow-md hover:border-secondary"
-  id="cally"
-  style="anchor-name:--cally"
-  type="button"
->
-  {@html calendarIcon}
-
-  <span>
-    {#if range}
-      dd/mm/aaaa - dd/mm/aaaa
-    {:else}
-      dd/mm/aaaa
-    {/if}
-  </span>
-</button>
-
 {#snippet yearSelect()}
   <div slot="heading">
     <select
-      id="yearSelect"
+      bind:this={yearSelectElement}
       class="select select-secondary"
       onchange={(e) => {
         const date = new Date(calendar.value);
         // @ts-ignore
         date.setUTCFullYear(e.currentTarget.value);
-
         calendar.focusedDate = date.toISOString().slice(0, 10);
       }}
     >
@@ -99,14 +76,34 @@
   </div>
 {/snippet}
 
+<button
+  popovertarget={uniqueId}
+  class="input input-border opacity-70 hover:opacity-100 hover:shadow-md hover:border-secondary"
+  bind:this={cally}
+  type="button"
+>
+  {@html calendarIcon}
+
+  <span bind:this={dateSpan}>
+    {#if range}
+      dd/mm/aaaa - dd/mm/aaaa
+    {:else}
+      dd/mm/aaaa
+    {/if}
+  </span>
+</button>
+
 <div
   popover="auto"
-  id="cally-popover"
-  class="dropdown bg-base-100 rounded-box shadow-lg"
-  style="position-anchor:--cally"
+  id={uniqueId}
+  class="dropdown bg-base-100 rounded-box shadow-lg mt-2"
 >
   {#if range}
-    <calendar-range class="cally border border-zinc-200" months={2}>
+    <calendar-range
+      class="cally border border-zinc-200"
+      months={2}
+      bind:this={calendar}
+    >
       {@render yearSelect()}
       {@html previousIcon}
       {@html nextIcon}
@@ -116,7 +113,7 @@
       </div>
     </calendar-range>
   {:else}
-    <calendar-date class="cally">
+    <calendar-date class="cally border border-zinc-200" bind:this={calendar}>
       {@render yearSelect()}
       {@html previousIcon}
       {@html nextIcon}
@@ -134,8 +131,11 @@
     background-color: var(--color-secondary);
   }
 
-  /* set the button text to be the same color as the placeholder for inputs in daisyui */
   button {
     color: var(--color-placeholder-primary);
+  }
+
+  div[popover] {
+    transition: all 0.3s ease;
   }
 </style>
