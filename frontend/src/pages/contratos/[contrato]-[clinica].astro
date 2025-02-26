@@ -77,8 +77,8 @@ const { contrato, clinica } = Astro.params;
         </select>
       </fieldset>
       <fieldset class="fieldset">
-        <legend class="fieldset-legend">Ficheiro</legend>
-        <DatePicker client:load range={false} />
+        <legend class="fieldset-legend">Ficheiros</legend>
+        <input type="file" class="file-input" multiple />
       </fieldset>
 
       <div class="flex justify-between sm:col-span-2">
@@ -111,7 +111,7 @@ const { contrato, clinica } = Astro.params;
     opacity: 0.5;
   }
 
-  .input,
+  input,
   .textarea,
   .select {
     width: 100%;
@@ -119,7 +119,7 @@ const { contrato, clinica } = Astro.params;
 
   .select:hover,
   .textarea:hover,
-  .input:hover {
+  input:hover {
     border-color: var(--color-secondary);
     box-shadow:
       0 4px 6px -1px rgb(0 0 0 / 0.1),
@@ -128,7 +128,7 @@ const { contrato, clinica } = Astro.params;
   }
 
   .select:focus,
-  .input:focus {
+  input:focus {
     border-color: var(--color-primary);
     box-shadow:
       0 4px 6px -1px rgb(0 0 0 / 0.1),
@@ -147,7 +147,8 @@ const { contrato, clinica } = Astro.params;
       width: auto;
     }
 
-    .input,
+    input,
+    .textarea,
     .select {
       width: 90%;
     }
