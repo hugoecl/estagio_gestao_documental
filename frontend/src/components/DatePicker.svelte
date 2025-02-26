@@ -6,8 +6,7 @@
 
   const { range }: { range: boolean } = $props();
 
-  let cally: HTMLButtonElement;
-  let dateSpan: HTMLSpanElement;
+  let cally: HTMLInputElement;
   let yearSelectElement: HTMLSelectElement;
   // unique id for the popover
   const uniqueId = Math.random().toString(36).substring(7);
@@ -40,11 +39,11 @@
         oldValue = e.currentTarget.value;
         if (range) {
           const [start, _] = e.currentTarget.value.split("/");
-          dateSpan.innerHTML = `${new Date(start).toLocaleDateString(
+          cally.value = `${new Date(start).toLocaleDateString(
             "pt-PT"
           )} - ${e.detail.toLocaleDateString("pt-PT")}`;
         } else {
-          dateSpan.innerHTML = e.detail.toLocaleDateString("pt-PT");
+          cally.value = e.detail.toLocaleDateString("pt-PT");
         }
         cally.click();
         cally.style.opacity = "1";
@@ -76,22 +75,18 @@
   </div>
 {/snippet}
 
-<button
-  popovertarget={uniqueId}
-  class="input input-border opacity-50 hover:opacity-100 hover:shadow-md hover:border-secondary"
-  bind:this={cally}
-  type="button"
->
+<label class="input hover:shadow-md hover:border-secondary">
   {@html calendarIcon}
-
-  <span bind:this={dateSpan}>
-    {#if range}
-      dd/mm/aaaa - dd/mm/aaaa
-    {:else}
-      dd/mm/aaaa
-    {/if}
-  </span>
-</button>
+  <input
+    popovertarget={uniqueId}
+    class="grow"
+    bind:this={cally}
+    type="button"
+    required
+    value={range ? "dd/mm/aaaa - dd/mm/aaaa" : "dd/mm/aaaa"}
+    readonly
+  />
+</label>
 
 <div
   popover="auto"
@@ -131,9 +126,17 @@
     background-color: var(--color-secondary);
   }
 
-  button {
-    color: var(--color-placeholder-primary);
+  .input {
     width: 100%;
+  }
+
+  input {
+    text-align: left;
+    opacity: 0.5;
+  }
+
+  input:hover {
+    opacity: 1;
   }
 
   div[popover] {
@@ -141,7 +144,7 @@
   }
 
   @media (max-width: 640px) {
-    button {
+    .input {
       width: 90%;
     }
   }
