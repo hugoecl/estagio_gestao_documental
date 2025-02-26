@@ -1,0 +1,35 @@
+---
+export interface MenuItem {
+  title: string;
+  href?: string;
+  children?: MenuItem[];
+}
+
+interface Props {
+  items: MenuItem[];
+  isRoot?: boolean;
+}
+
+const { items, isRoot = false } = Astro.props;
+---
+
+<ul
+  class:list={{
+    "menu bg-base-100 border border-zinc-200 rounded-box w-56": isRoot,
+  }}
+>
+  {
+    items.map((item) => (
+      <li>
+        {item.children ? (
+          <details>
+            <summary>{item.title}</summary>
+            <Astro.self items={item.children} />
+          </details>
+        ) : (
+          <a href={item.href || "#"}>{item.title}</a>
+        )}
+      </li>
+    ))
+  }
+</ul>

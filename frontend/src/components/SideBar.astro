@@ -1,6 +1,122 @@
 ---
 import { Image } from "astro:assets";
 import jccBigLogo from "@assets/jcc_big.jpg";
+import RecursiveMenu from "./RecursiveMenu.astro";
+
+// Define the menu structure
+const menuItems = [
+  {
+    title: "Contratos",
+    href: "/contratos",
+  },
+  {
+    title: "Qualidade (SGQ)",
+    children: [
+      { title: "Certificado" },
+      { title: "Manual" },
+      {
+        title: "PO",
+        children: [{ title: "P1" }, { title: "P2" }],
+      },
+      { title: "Módulos" },
+      { title: "Não Conformidade" },
+      {
+        title: "Fornecedores",
+        children: [
+          { title: "Lista de Fornecedores Qualificados" },
+          { title: "Desempenho do Fornecedor" },
+        ],
+      },
+      { title: "Objetivos de Qualidade" },
+      {
+        title: "Inquérito de Satisfação",
+        children: [{ title: "Clientes Particulares" }, { title: "Outros" }],
+      },
+      {
+        title: "Revisão pela Gestão",
+        children: [
+          { title: "Relatórios" },
+          { title: "Atas" },
+          { title: "Análise SWOT" },
+          {
+            title:
+              "Necessidades e Expectativas das Partes Interessadas - Avaliação",
+          },
+          {
+            title:
+              "Necessidades e Expectativas das Partes Interessadas - Plano",
+          },
+        ],
+      },
+      {
+        title: "Auditorias",
+        children: [
+          { title: "Internas" },
+          { title: "Externas" },
+          {
+            title: "Entidade Certificadora",
+            children: [{ title: "Resposta Anterior" }],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    title: "Recursos Humanos",
+    children: [{ title: "Contratos de Funcionários" }],
+  },
+  {
+    title: "ERS",
+    children: [
+      { title: "Geral" },
+      {
+        title: "Proteção Radiológica",
+        children: [
+          {
+            title: "Viana do Castelo",
+            children: [{ title: "Licenças" }],
+          },
+          {
+            title: "Braga",
+            children: [{ title: "Licenças" }],
+          },
+          {
+            title: "Porto",
+            children: [{ title: "Licenças" }],
+          },
+          {
+            title: "Vila Real",
+            children: [{ title: "Licenças" }],
+          },
+        ],
+      },
+      {
+        title: "Inspeção",
+        children: [
+          {
+            title: "Viana do Castelo",
+            children: [{ title: "Geral" }, { title: "Proteção Radiológica" }],
+          },
+          {
+            title: "Braga",
+            children: [{ title: "Geral" }, { title: "Proteção Radiológica" }],
+          },
+          {
+            title: "Porto",
+            children: [{ title: "Geral" }, { title: "Proteção Radiológica" }],
+          },
+          {
+            title: "Vila Real",
+            children: [{ title: "Geral" }, { title: "Proteção Radiológica" }],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    title: "APA",
+  },
+];
 ---
 
 <main class="w-100">
@@ -10,186 +126,7 @@ import jccBigLogo from "@assets/jcc_big.jpg";
       <h1 class="sidebar__title font-bold">Gestão Documental</h1>
     </a>
     <nav>
-      <ul class="menu bg-base-100 border border-zinc-200 rounded-box w-56">
-        <li><a href="/contratos">Contratos</a></li>
-        <li>
-          <details>
-            <summary>Qualidade (SGQ)</summary>
-            <ul>
-              <li><a>Certificado</a></li>
-              <li><a>Manual</a></li>
-              <li>
-                <details>
-                  <summary>PO</summary>
-                  <ul>
-                    <li><a>P1</a></li>
-                    <li><a>P2</a></li>
-                  </ul>
-                </details>
-              </li>
-              <li><a>Módulos</a></li>
-              <li><a>Não Conformidade</a></li>
-              <li>
-                <details>
-                  <summary>Fornecedores </summary>
-                  <ul>
-                    <li><a>Lista de Fornecedores Qualificados</a></li>
-                    <li><a>Desempenho do Fornecedor</a></li>
-                  </ul>
-                </details>
-              </li>
-              <li><a>Objetivos de Qualidade</a></li>
-              <li>
-                <details>
-                  <summary>Inquérito de Satisfação</summary>
-                  <ul>
-                    <li><a>Clientes Particulares</a></li>
-                    <li><a>Outros</a></li>
-                  </ul>
-                </details>
-              </li>
-              <li>
-                <details>
-                  <summary>Revisão pela Gestão</summary>
-                  <ul>
-                    <li><a>Relatórios</a></li>
-                    <li><a>Atas</a></li>
-                    <li><a>Análise SWOT</a></li>
-                    <li>
-                      <a
-                        >Necessidades e Expectativas das Partes Interessadas -
-                        Avaliação</a
-                      >
-                    </li>
-                    <li>
-                      <a
-                        >Necessidades e Expectativas das Partes Interessadas -
-                        Plano</a
-                      >
-                    </li>
-                  </ul>
-                </details>
-              </li>
-              <li>
-                <details>
-                  <summary>Auditorias</summary>
-                  <ul>
-                    <li><a>Internas</a></li>
-                    <li><a>Externas</a></li>
-                    <li>
-                      <details>
-                        <summary>Entidade Certificadora</summary>
-                        <ul>
-                          <li><a>Resposta Anterior</a></li>
-                        </ul>
-                      </details>
-                    </li>
-                  </ul>
-                </details>
-              </li>
-            </ul>
-          </details>
-        </li>
-        <li>
-          <details>
-            <summary>Recursos Humanos</summary>
-            <ul>
-              <li><a>Contratos de Funcionários</a></li>
-            </ul>
-          </details>
-        </li>
-        <li>
-          <details>
-            <summary>ERS</summary>
-            <ul>
-              <li><a>Geral</a></li>
-              <li>
-                <details>
-                  <summary>Proteção Radiológica</summary>
-                  <ul>
-                    <li>
-                      <details>
-                        <summary>Viana do Castelo</summary>
-                        <ul>
-                          <li><a>Licenças</a></li>
-                        </ul>
-                      </details>
-                    </li>
-                    <li>
-                      <details>
-                        <summary>Braga</summary>
-                        <ul>
-                          <li><a>Licenças</a></li>
-                        </ul>
-                      </details>
-                    </li>
-                    <li>
-                      <details>
-                        <summary>Porto</summary>
-                        <ul>
-                          <li><a>Licenças</a></li>
-                        </ul>
-                      </details>
-                    </li>
-                    <li>
-                      <details>
-                        <summary>Vila Real</summary>
-                        <ul>
-                          <li><a>Licenças</a></li>
-                        </ul>
-                      </details>
-                    </li>
-                  </ul>
-                </details>
-              </li>
-              <li>
-                <details>
-                  <summary>Inspeção</summary>
-                  <ul>
-                    <li>
-                      <details>
-                        <summary>Viana do Castelo</summary><ul>
-                          <li><a>Geral</a></li><li>
-                            <a>Proteção Radiológica</a>
-                          </li>
-                        </ul>
-                      </details>
-                    </li>
-                    <li>
-                      <details>
-                        <summary>Braga</summary><ul>
-                          <li><a>Geral</a></li><li>
-                            <a>Proteção Radiológica</a>
-                          </li>
-                        </ul>
-                      </details>
-                    </li>
-                    <li>
-                      <details>
-                        <summary>Porto</summary><ul>
-                          <li><a>Geral</a></li><li>
-                            <a>Proteção Radiológica</a>
-                          </li>
-                        </ul>
-                      </details>
-                    </li>
-                    <li>
-                      <details>
-                        <summary>Vila Real</summary><ul>
-                          <li><a>Geral</a></li><li>
-                            <a>Proteção Radiológica</a>
-                          </li>
-                        </ul>
-                      </details>
-                    </li>
-                  </ul>
-                </details>
-              </li>
-            </ul>
-          </details>
-          <li><a>APA</a></li>
-        </li>
-      </ul>
+      <RecursiveMenu items={menuItems} isRoot={true} />
     </nav>
   </aside>
 </main>
