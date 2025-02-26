@@ -1,61 +1,81 @@
 ---
 import { Image } from "astro:assets";
 import jccBigLogo from "@assets/jcc_big.jpg";
-import RecursiveMenu from "./RecursiveMenu.astro";
+import RecursiveMenu from "@components/RecursiveMenu.astro";
+import type { MenuItem } from "@lib/types/menu";
 
-// Define the menu structure
-const menuItems = [
+const menuItems: MenuItem[] = [
   {
     title: "Contratos",
-    href: "/contratos",
+    path: "/contratos",
   },
   {
     title: "Qualidade (SGQ)",
+    parentPath: "/qualidade-sgq",
     children: [
-      { title: "Certificado" },
-      { title: "Manual" },
+      { title: "Certificado", path: "certificado" },
+      { title: "Manual", path: "manual" },
       {
         title: "PO",
-        children: [{ title: "P1" }, { title: "P2" }],
-      },
-      { title: "Módulos" },
-      { title: "Não Conformidade" },
-      {
-        title: "Fornecedores",
+        parentPath: "po",
         children: [
-          { title: "Lista de Fornecedores Qualificados" },
-          { title: "Desempenho do Fornecedor" },
+          { title: "P1", path: "p1" },
+          { title: "P2", path: "p2" },
         ],
       },
-      { title: "Objetivos de Qualidade" },
+      { title: "Módulos", path: "modulos" },
+      { title: "Não Conformidade", path: "nao-conformidade" },
+      {
+        title: "Fornecedores",
+        parentPath: "fornecedores",
+        children: [
+          {
+            title: "Fornecedores Qualificados",
+            path: "fornecedores-qualificados",
+          },
+          {
+            title: "Desempenho do Fornecedor",
+            path: "desempenho-do-fornecedor",
+          },
+        ],
+      },
+      { title: "Objetivos de Qualidade", path: "objetivos-qualidade" },
       {
         title: "Inquérito de Satisfação",
-        children: [{ title: "Clientes Particulares" }, { title: "Outros" }],
+        parentPath: "inquerito-satisfacao",
+        children: [
+          { title: "Clientes Particulares", path: "clientes-particulares" },
+          { title: "Outros", path: "outros" },
+        ],
       },
       {
         title: "Revisão pela Gestão",
+        parentPath: "revisao-gestao",
         children: [
-          { title: "Relatórios" },
-          { title: "Atas" },
-          { title: "Análise SWOT" },
+          { title: "Relatórios", path: "relatorios" },
+          { title: "Atas", path: "atas" },
+          { title: "Análise SWOT", path: "analise swot" },
           {
-            title:
-              "Necessidades e Expectativas das Partes Interessadas - Avaliação",
-          },
-          {
-            title:
-              "Necessidades e Expectativas das Partes Interessadas - Plano",
+            title: "Necessidades e Expectativas das Partes Interessadas",
+            parentPath: "necessidades-expectativas-partes-interessadas",
+            children: [
+              { title: "Avaliação", path: "avaliação" },
+              { title: "Plano", path: "plano" },
+            ],
           },
         ],
       },
       {
         title: "Auditorias",
+        parentPath: "auditorias",
         children: [
-          { title: "Internas" },
-          { title: "Externas" },
+          { title: "Internas", path: "internas" },
+          { title: "Externas", path: "externas" },
           {
             title: "Entidade Certificadora",
-            children: [{ title: "Resposta Anterior" }],
+            children: [
+              { title: "Resposta Anterior", path: "resposta-anterior" },
+            ],
           },
         ],
       },
@@ -63,58 +83,29 @@ const menuItems = [
   },
   {
     title: "Recursos Humanos",
-    children: [{ title: "Contratos de Funcionários" }],
+    parentPath: "/recursos-humanos",
+    children: [
+      { title: "Contratos de Funcionários", path: "contratos-funcionarios" },
+    ],
   },
   {
     title: "ERS",
+    parentPath: "/ers",
     children: [
-      { title: "Geral" },
+      { title: "Geral", path: "geral" },
       {
         title: "Proteção Radiológica",
-        children: [
-          {
-            title: "Viana do Castelo",
-            children: [{ title: "Licenças" }],
-          },
-          {
-            title: "Braga",
-            children: [{ title: "Licenças" }],
-          },
-          {
-            title: "Porto",
-            children: [{ title: "Licenças" }],
-          },
-          {
-            title: "Vila Real",
-            children: [{ title: "Licenças" }],
-          },
-        ],
+        path: "protecao-radiologica",
       },
       {
         title: "Inspeção",
-        children: [
-          {
-            title: "Viana do Castelo",
-            children: [{ title: "Geral" }, { title: "Proteção Radiológica" }],
-          },
-          {
-            title: "Braga",
-            children: [{ title: "Geral" }, { title: "Proteção Radiológica" }],
-          },
-          {
-            title: "Porto",
-            children: [{ title: "Geral" }, { title: "Proteção Radiológica" }],
-          },
-          {
-            title: "Vila Real",
-            children: [{ title: "Geral" }, { title: "Proteção Radiológica" }],
-          },
-        ],
+        path: "inspecao",
       },
     ],
   },
   {
     title: "APA",
+    path: "/apa",
   },
 ];
 ---
