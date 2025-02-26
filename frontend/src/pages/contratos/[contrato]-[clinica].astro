@@ -49,7 +49,7 @@ const { contrato, clinica } = Astro.params;
       <fieldset class="fieldset">
         <legend class="fieldset-legend">Tipo:</legend>
         <select class="select">
-          <option disabled selected>Selecione um Tipo</option>
+          <option disabled selected hidden>Selecione um Tipo</option>
           <option>Adenda</option>
           <option>Novo</option>
           <option>Renovação</option>
@@ -71,7 +71,7 @@ const { contrato, clinica } = Astro.params;
       <fieldset class="fieldset">
         <legend class="fieldset-legend">Status:</legend>
         <select class="select">
-          <option disabled selected>Selecione o Estado</option>
+          <option disabled selected hidden>Selecione o Estado</option>
           <option>Ativo</option>
           <option>Não Ativo</option>
         </select>
@@ -88,6 +88,18 @@ const { contrato, clinica } = Astro.params;
     </form>
   </Collapse>
 </Layout>
+
+<script>
+  document.addEventListener("astro:page-load", () => {
+    const selects = document.querySelectorAll(".select");
+    selects.forEach((select) => {
+      select.addEventListener("change", (event) => {
+        // @ts-ignore
+        event.currentTarget.style.opacity = 1;
+      });
+    });
+  });
+</script>
 
 <style>
   .input:hover::placeholder {
