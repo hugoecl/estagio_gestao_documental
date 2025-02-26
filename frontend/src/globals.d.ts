@@ -14,4 +14,11 @@ declare module "svelte/elements" {
     "calendar-month": MapEvents<CalendarMonthProps>;
     "calendar-date": MapEvents<CalendarDateProps & { class?: string }>;
   }
+  interface HTMLInputAttributes {
+    popovertarget?: string;
+  }
+}
+
+interface HTMLInputElement {
+  popovertarget?: string;
 }
