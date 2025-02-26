@@ -88,7 +88,7 @@
       }}
     >
       {#each dates as year}
-        {#if year === new Date().getFullYear()}
+        {#if year === currentYear}
           <option value={year} selected>{year}</option>
         {:else}
           <option value={year}>{year}</option>
