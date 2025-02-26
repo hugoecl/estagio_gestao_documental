@@ -11,7 +11,6 @@ const { items, isRoot = false, parentPath = "" } = Astro.props;
 
 function buildPath(item: MenuItem, parentPath: string): string {
   if ("path" in item && item.path) {
-    console.log(item.path);
     // If path starts with "/", it's absolute
     return item.path.startsWith("/") ? item.path : `${parentPath}/${item.path}`;
   }
