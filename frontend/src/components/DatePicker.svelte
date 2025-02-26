@@ -62,6 +62,7 @@
   class="input input-border opacity-70 hover:opacity-100 hover:shadow-md hover:border-secondary"
   id="cally"
   style="anchor-name:--cally"
+  type="button"
 >
   {@html calendarIcon}
 
