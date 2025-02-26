@@ -78,11 +78,11 @@ const { contrato, clinica } = Astro.params;
       </fieldset>
       <fieldset class="fieldset">
         <legend class="fieldset-legend">Ficheiros</legend>
-        <input type="file" class="file-input" multiple />
+        <input type="file" class="file-input" required multiple />
       </fieldset>
 
       <div class="flex justify-between sm:col-span-2">
-        <button type="reset" class="btn btn-secondary">Limpar</button>
+        <button type="reset" class="btn btn-error">Limpar</button>
         <button type="submit" class="btn btn-primary">Enviar</button>
       </div>
     </form>
