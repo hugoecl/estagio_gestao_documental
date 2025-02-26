@@ -82,7 +82,7 @@ const { contrato, clinica } = Astro.params;
       </fieldset>
 
       <div class="flex justify-between sm:col-span-2">
-        <button class="btn btn-secondary">Limpar</button>
+        <button type="reset" class="btn btn-secondary">Limpar</button>
         <button type="submit" class="btn btn-primary">Enviar</button>
       </div>
     </form>
@@ -95,7 +95,7 @@ const { contrato, clinica } = Astro.params;
     selects.forEach((select) => {
       select.addEventListener("change", (event) => {
         // @ts-ignore
-        event.currentTarget.style.opacity = 1;
+        event.currentTarget.style.opacity = "1";
       });
     });
   });
@@ -108,6 +108,11 @@ const { contrato, clinica } = Astro.params;
 
   .select {
     opacity: 0.7;
+  }
+
+  .input,
+  .select {
+    width: 100%;
   }
 
   .select:hover,
@@ -125,5 +130,23 @@ const { contrato, clinica } = Astro.params;
     box-shadow:
       0 4px 6px -1px rgb(0 0 0 / 0.1),
       0 2px 4px -2px rgb(0 0 0 / 0.1);
+  }
+  @media (max-width: 640px) {
+    .fieldset {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .fieldset-legend {
+      align-self: flex-start;
+      margin-left: 5%;
+      width: auto;
+    }
+
+    .input,
+    .select {
+      width: 90%;
+    }
   }
 </style>

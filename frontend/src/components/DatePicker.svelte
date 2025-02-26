@@ -133,9 +133,16 @@
 
   button {
     color: var(--color-placeholder-primary);
+    width: 100%;
   }
 
   div[popover] {
     transition: all 0.3s ease;
+  }
+
+  @media (max-width: 640px) {
+    button {
+      width: 90%;
+    }
   }
 </style>
