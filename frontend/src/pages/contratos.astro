@@ -4,29 +4,36 @@ import Collapse from "@components/Collapse.svelte";
 import SearchBar from "@components/SearchBar.astro";
 import DatePicker from "@components/DatePicker.svelte";
 
-export function getStaticPaths() {
-  const contratos = [
-    "Eletricidade",
-    "Água",
-    "Limpeza",
-    "Impressoras",
-    "Comunicações",
-  ];
-  const cidades = ["Viana do Castelo", "Braga", "Porto", "Vila Real"];
-
-  const paths = contratos.flatMap((contrato) =>
-    cidades.map((cidade) => ({ params: { contrato, clinica: cidade } }))
-  );
-
-  return paths;
-}
-
-const { contrato, clinica } = Astro.params;
+const contratos = [
+  "Eletricidade",
+  "Água",
+  "Limpeza",
+  "Impressoras",
+  "Comunicações",
+];
+const locais = ["Viana do Castelo", "Braga", "Porto", "Vila Real"];
 ---
 
-<Layout title=`${contrato} - ${clinica}`>
-  <div class="flex items-center justify-between mb-7">
-    <h1 class="text-xl font-medium">{contrato} - {clinica}</h1>
+<Layout title=`${contratos[0]} - ${locais[0]}`>
+  <div class="flex items-center justify-between mb-7 gap-4">
+    <div
+      class="flex max-md:flex-col bg-base-100 gap-4 p-2 rounded-md shadow-sm border border-zinc-300"
+    >
+      <label class="select min-w-[230px]">
+        <span class="label">Contrato</span>
+        <select>
+          <option disabled selected hidden>Contrato</option>
+          {contratos.map((c) => <option value={c}>{c}</option>)}
+        </select>
+      </label>
+      <label class="select">
+        <span class="label">Local</span>
+        <select>
+          <option disabled selected hidden>Local</option>
+          {locais.map((l) => <option value={l}>{l}</option>)}
+        </select>
+      </label>
+    </div>
     <SearchBar />
   </div>
 
