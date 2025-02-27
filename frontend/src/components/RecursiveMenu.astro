@@ -1,0 +1,49 @@
+---
+import type { MenuItem } from "@lib/types/menu";
+
+interface Props {
+  items: MenuItem[];
+  isRoot?: boolean;
+  parentPath?: string;
+}
+
+const { items, isRoot = false, parentPath = "" } = Astro.props;
+
+function buildPath(item: MenuItem, parentPath: string): string {
+  if ("path" in item && item.path) {
+    // If path starts with "/", it's absolute
+    return item.path.startsWith("/") ? item.path : `${parentPath}/${item.path}`;
+  }
+  return "#";
+}
+---
+
+<ul
+  class:list={{
+    "menu bg-base-100 border border-zinc-200 rounded-box w-56": isRoot,
+  }}
+>
+  {
+    items.map((item) => {
+      const currentPath =
+        "parentPath" in item && item.parentPath
+          ? parentPath
+            ? `${parentPath}/${item.parentPath}`
+            : item.parentPath
+          : parentPath;
+
+      return (
+        <li>
+          {item.children ? (
+            <details>
+              <summary>{item.title}</summary>
+              <Astro.self items={item.children} parentPath={currentPath} />
+            </details>
+          ) : (
+            <a href={buildPath(item, currentPath)}>{item.title}</a>
+          )}
+        </li>
+      );
+    })
+  }
+</ul>
