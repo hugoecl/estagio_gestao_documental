@@ -57,7 +57,10 @@
     />
   </label>
 
-  <button class="btn btn-neutral mt-4" type="submit">Login</button>
+  <button class="btn btn-neutral mt-4" type="submit">
+    <span class="loading hidden loading-bars loading-md"></span>
+    <span id="login-text">Iniciar Sessão</span>
+  </button>
 </fieldset>
 
 <script>
@@ -74,6 +77,9 @@
   const loginForm = document.getElementById("login-form")!;
   const loginButton = loginForm.querySelector("button")!;
 
+  const loadingSpinner = loginButton.querySelector(".loading")!;
+  const loginText = loginButton.querySelector("#login-text")!;
+
   loginButton.addEventListener("click", async (e) => {
     e.preventDefault();
 
@@ -86,12 +92,17 @@
       return;
     }
 
+    loadingSpinner.classList.toggle("hidden");
+    loginText.classList.toggle("hidden");
+
     let ok;
 
     try {
       ok = await loginUser(emailInput.value, passwordInput.value);
     } catch {
       showAlert("Erro ao autenticar", AlertType.ERROR, AlertPosition.TOP);
+      loadingSpinner.classList.toggle("hidden");
+      loginText.classList.toggle("hidden");
       return;
     }
 
@@ -99,6 +110,8 @@
       window.location.pathname = "/";
     } else {
       showAlert("Credenciais inválidas", AlertType.ERROR, AlertPosition.TOP);
+      loadingSpinner.classList.toggle("hidden");
+      loginText.classList.toggle("hidden");
     }
   });
 

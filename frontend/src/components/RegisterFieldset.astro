@@ -83,7 +83,10 @@
     />
   </label>
 
-  <button class="btn btn-neutral mt-4" type="submit">Registar</button>
+  <button class="btn btn-neutral mt-4" type="submit">
+    <span class="loading hidden loading-bars loading-md"></span>
+    <span id="register-text">Registar</span>
+  </button>
 </fieldset>
 
 <script>
@@ -101,6 +104,9 @@
   const registerForm = document.getElementById("register-form")!;
   const registerButton = registerForm.querySelector("button")!;
 
+  const loadingSpinner = registerForm.querySelector(".loading")!;
+  const registerText = registerForm.querySelector("#register-text")!;
+
   registerButton.addEventListener("click", async (e) => {
     e.preventDefault();
 
@@ -113,16 +119,30 @@
       return;
     }
 
-    const ok = await registerUser(
-      nameInput.value,
-      emailInput.value,
-      passwordInput.value
-    );
+    registerText.classList.toggle("hidden");
+    loadingSpinner.classList.toggle("hidden");
+
+    let ok;
+
+    try {
+      ok = await registerUser(
+        nameInput.value,
+        emailInput.value,
+        passwordInput.value
+      );
+    } catch {
+      showAlert("Erro ao registar", AlertType.ERROR, AlertPosition.TOP);
+      registerText.classList.toggle("hidden");
+      loadingSpinner.classList.toggle("hidden");
+      return;
+    }
 
     if (ok) {
       window.location.href = "/";
     } else {
       showAlert("Utilizador já existe", AlertType.ERROR, AlertPosition.TOP);
+      registerText.classList.toggle("hidden");
+      loadingSpinner.classList.toggle("hidden");
     }
   });
 

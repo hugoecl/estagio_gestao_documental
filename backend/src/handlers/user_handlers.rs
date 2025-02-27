@@ -29,7 +29,7 @@ pub async fn register(state: web::Data<State>, request_data: web::Bytes) -> impl
         .users
         .pin()
         .values()
-        .any(|u| u.username == user.username)
+        .any(|u| u.username == user.username || u.email == user.email)
     {
         return HttpResponse::Conflict().finish();
     }
