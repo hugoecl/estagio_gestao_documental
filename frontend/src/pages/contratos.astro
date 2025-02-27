@@ -42,17 +42,30 @@ const locais = ["Viana do Castelo", "Braga", "Porto", "Vila Real"];
       class="grid grid-cols-1 sm:grid-cols-2 gap-4 p-2 rounded-sm shadow-sm"
     >
       <fieldset class="fieldset">
-        <legend class="fieldset-legend">Data:</legend>
-        <DatePicker client:load range={false} />
-      </fieldset>
-      <fieldset class="fieldset">
         <legend class="fieldset-legend">Fornecedor:</legend>
         <input required type="text" class="input" placeholder="Fornecedor" />
       </fieldset>
+
+      <fieldset class="fieldset">
+        <legend class="fieldset-legend">Número de Contrato:</legend>
+        <input
+          required
+          type="text"
+          class="input"
+          placeholder="Número de Contrato"
+        />
+      </fieldset>
+
+      <fieldset class="fieldset">
+        <legend class="fieldset-legend">Data:</legend>
+        <DatePicker client:load range={false} />
+      </fieldset>
+
       <fieldset class="fieldset">
         <legend class="fieldset-legend">Data Início - Fim:</legend>
         <DatePicker client:load range={true} />
       </fieldset>
+
       <fieldset class="fieldset">
         <legend class="fieldset-legend">Tipo:</legend>
         <select class="select">
@@ -63,25 +76,16 @@ const locais = ["Viana do Castelo", "Braga", "Porto", "Vila Real"];
         </select>
       </fieldset>
       <fieldset class="fieldset">
-        <legend class="fieldset-legend">Número de Contrato:</legend>
-        <input
-          required
-          type="text"
-          class="input"
-          placeholder="Número de Contrato"
-        />
-      </fieldset>
-      <fieldset class="fieldset">
-        <legend class="fieldset-legend">Descrição:</legend>
-        <textarea required class="textarea" placeholder="Descrição"></textarea>
-      </fieldset>
-      <fieldset class="fieldset">
         <legend class="fieldset-legend">Status:</legend>
         <select class="select">
           <option disabled selected hidden>Selecione o Estado</option>
           <option>Ativo</option>
           <option>Não Ativo</option>
         </select>
+      </fieldset>
+      <fieldset class="fieldset">
+        <legend class="fieldset-legend">Descrição:</legend>
+        <textarea required class="textarea" placeholder="Descrição"></textarea>
       </fieldset>
       <fieldset class="fieldset">
         <legend class="fieldset-legend">Ficheiros</legend>
