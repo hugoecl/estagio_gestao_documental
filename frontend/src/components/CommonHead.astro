@@ -1,6 +1,7 @@
 ---
 import { ClientRouter } from "astro:transitions";
 import jccLogoSmall from "@assets/jcc_small.png";
+import { API_BASE_URL } from "src/api/utils";
 
 interface Props {
   title: string;
@@ -15,32 +16,36 @@ const { title, serverRouter } = Astro.props;
   <link rel="icon" type="image/png" href={jccLogoSmall.src} />
   <meta name="generator" content={Astro.generator} />
   <title>{title}</title>
-  {!serverRouter && <ClientRouter />}
 
-  <script>
-    import { checkUser } from "src/api/utils";
-    let ok;
-
-    try {
-      ok = await checkUser();
-    } catch {
-      ok = false;
-    }
-
-    if (ok) {
-      if (
-        window.location.pathname === "/login" ||
-        window.location.pathname === "/register"
-      ) {
-        window.location.pathname = "/";
+  <script is:inline data-astro-rerun define:vars={{ API_BASE_URL }}>
+    (async function () {
+      let ok;
+      try {
+        const resp = await fetch(`${API_BASE_URL}/users/check`, {
+          credentials: "include",
+        });
+        ok = resp.ok;
+      } catch {
+        ok = false;
       }
-    } else {
-      if (
-        window.location.pathname !== "/login" &&
-        window.location.pathname !== "/register"
-      ) {
-        window.location.pathname = "/login";
+
+      if (ok) {
+        if (
+          window.location.pathname === "/login" ||
+          window.location.pathname === "/register"
+        ) {
+          window.location.pathname = "/";
+        }
+      } else {
+        if (
+          window.location.pathname !== "/login" &&
+          window.location.pathname !== "/register"
+        ) {
+          window.location.pathname = "/login";
+        }
       }
-    }
+    })();
   </script>
+
+  {!serverRouter && <ClientRouter />}
 </head>

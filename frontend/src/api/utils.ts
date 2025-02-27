@@ -1,4 +1,4 @@
-const API_BASE_URL = "http://localhost:1234";
+export const API_BASE_URL = "http://localhost:1234";
 
 export async function registerUser(
   username: string,
@@ -34,14 +34,6 @@ export async function loginUser(
 export async function logoutUser(): Promise<boolean> {
   const response = await fetch(`${API_BASE_URL}/users/logout`, {
     method: "POST",
-    credentials: "include",
-  });
-  return response.ok;
-}
-
-export async function checkUser(): Promise<boolean> {
-  const response = await fetch(`${API_BASE_URL}/users/check`, {
-    method: "GET",
     credentials: "include",
   });
   return response.ok;
