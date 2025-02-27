@@ -34,7 +34,6 @@
       let windowSize = window.innerWidth / rem;
 
       function setDropdownPosition() {
-        console.log("resize:", uniqueId);
         windowSize = window.innerWidth / rem;
 
         if (windowSize < 40) {
