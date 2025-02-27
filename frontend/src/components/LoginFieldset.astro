@@ -86,7 +86,14 @@
       return;
     }
 
-    const ok = await loginUser(emailInput.value, passwordInput.value);
+    let ok;
+
+    try {
+      ok = await loginUser(emailInput.value, passwordInput.value);
+    } catch {
+      showAlert("Erro ao autenticar", AlertType.ERROR, AlertPosition.TOP);
+      return;
+    }
 
     if (ok) {
       window.location.pathname = "/";
