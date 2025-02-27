@@ -28,7 +28,7 @@
 </div>
 
 <script>
-  import { logoutUser } from "src/api/utils";
+  import { logoutUser } from "@api/utils";
 
   document.addEventListener("astro:page-load", () => {
     const settings = document.getElementById("settings")!;
@@ -45,7 +45,7 @@
     });
     document.getElementById("logout-btn")!.addEventListener("click", () => {
       logoutUser().then(() => {
-        window.location.href = "/login";
+        window.location.href = "/iniciar-sessao";
       });
     });
   });

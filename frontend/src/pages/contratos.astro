@@ -97,7 +97,10 @@ const locais = ["Viana do Castelo", "Braga", "Porto", "Vila Real"];
 
       <div class="flex justify-between sm:col-span-2">
         <button type="reset" class="btn btn-error">Limpar</button>
-        <button type="submit" class="btn btn-primary">Enviar</button>
+        <button type="submit" class="btn btn-primary">
+          <span class="loading loading-bars loading-md"></span>
+          <span id="submit-text">Enviar</span>
+        </button>
       </div>
     </form>
   </Collapse>
@@ -106,20 +109,26 @@ const locais = ["Viana do Castelo", "Braga", "Porto", "Vila Real"];
 <script>
   document.addEventListener("astro:page-load", () => {
     const selects = document.querySelectorAll(".select");
-    selects.forEach((select) => {
-      select.addEventListener("change", (event) => {
+    for (let i = 0, len = selects.length; i < len; i++) {
+      selects[i].addEventListener("change", (event) => {
         // @ts-ignore
         event.currentTarget.style.opacity = "1";
       });
-    });
+    }
 
-    const form = document.querySelector(".grid")! as HTMLFormElement;
-    form.addEventListener("submit", (event) => {
-      event.preventDefault();
-      const formData = new FormData(form);
-      const data = Object.fromEntries(formData.entries());
-      console.log(data);
-    });
+    const submitButton = document.querySelector(
+      ".btn-primary"
+    )! as HTMLButtonElement;
+    const loadingBars = submitButton.querySelector(".loading")!;
+    const submitText = submitButton.querySelector("#submit-text")!;
+
+    (document.querySelector(".grid")! as HTMLFormElement).addEventListener(
+      "submit",
+      async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.currentTarget as HTMLFormElement);
+      }
+    );
   });
 </script>
 

@@ -64,7 +64,7 @@
 </fieldset>
 
 <script>
-  import { loginUser } from "src/api/utils";
+  import { loginUser } from "@api/utils";
   import { AlertPosition, AlertType, showAlert } from "./Alert/Alert";
 
   const emailInput = document.getElementById(
@@ -95,16 +95,7 @@
     loadingSpinner.classList.toggle("hidden");
     loginText.classList.toggle("hidden");
 
-    let ok;
-
-    try {
-      ok = await loginUser(emailInput.value, passwordInput.value);
-    } catch {
-      showAlert("Erro ao autenticar", AlertType.ERROR, AlertPosition.TOP);
-      loadingSpinner.classList.toggle("hidden");
-      loginText.classList.toggle("hidden");
-      return;
-    }
+    const ok = await loginUser(emailInput.value, passwordInput.value);
 
     if (ok) {
       window.location.pathname = "/";

@@ -90,7 +90,7 @@
 </fieldset>
 
 <script>
-  import { registerUser } from "src/api/utils";
+  import { registerUser } from "@api/utils";
   import { AlertPosition, AlertType, showAlert } from "./Alert/Alert";
 
   const nameInput = document.getElementById("name-input")! as HTMLInputElement;
@@ -122,20 +122,11 @@
     registerText.classList.toggle("hidden");
     loadingSpinner.classList.toggle("hidden");
 
-    let ok;
-
-    try {
-      ok = await registerUser(
-        nameInput.value,
-        emailInput.value,
-        passwordInput.value
-      );
-    } catch {
-      showAlert("Erro ao registar", AlertType.ERROR, AlertPosition.TOP);
-      registerText.classList.toggle("hidden");
-      loadingSpinner.classList.toggle("hidden");
-      return;
-    }
+    const ok = await registerUser(
+      nameInput.value,
+      emailInput.value,
+      passwordInput.value
+    );
 
     if (ok) {
       window.location.href = "/";

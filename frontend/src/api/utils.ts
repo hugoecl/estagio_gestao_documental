@@ -1,11 +1,30 @@
-export const API_BASE_URL = "http://localhost:1234";
+import API_BASE_URL from "@api/base-url";
+
+import { showAlert, AlertPosition, AlertType } from "@components/Alert/Alert";
+
+async function handleFetch(
+  url: string | URL,
+  options: RequestInit
+): Promise<Response> {
+  try {
+    const response = await fetch(url, options);
+    return response;
+  } catch (error) {
+    showAlert(
+      "Erro ao comunicar com o servidor",
+      AlertType.ERROR,
+      AlertPosition.TOP
+    );
+    throw error;
+  }
+}
 
 export async function registerUser(
   username: string,
   email: string,
   password: string
 ): Promise<boolean> {
-  const response = await fetch(`${API_BASE_URL}/users/register`, {
+  const response = await handleFetch(`${API_BASE_URL}/users/register`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -19,7 +38,7 @@ export async function loginUser(
   email: string,
   password: string
 ): Promise<boolean> {
-  const response = await fetch(`${API_BASE_URL}/users/login`, {
+  const response = await handleFetch(`${API_BASE_URL}/users/login`, {
     method: "POST",
     credentials: "include",
     headers: {
@@ -32,7 +51,7 @@ export async function loginUser(
 }
 
 export async function logoutUser(): Promise<boolean> {
-  const response = await fetch(`${API_BASE_URL}/users/logout`, {
+  const response = await handleFetch(`${API_BASE_URL}/users/logout`, {
     method: "POST",
     credentials: "include",
   });

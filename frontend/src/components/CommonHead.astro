@@ -1,7 +1,7 @@
 ---
 import { ClientRouter } from "astro:transitions";
 import jccLogoSmall from "@assets/jcc_small.png";
-import { API_BASE_URL } from "src/api/utils";
+import API_BASE_URL from "@api/base-url";
 
 interface Props {
   title: string;
@@ -31,17 +31,17 @@ const { title, serverRouter } = Astro.props;
 
       if (ok) {
         if (
-          window.location.pathname === "/login" ||
-          window.location.pathname === "/register"
+          window.location.pathname === "/iniciar-sesao" ||
+          window.location.pathname === "/registo"
         ) {
           window.location.pathname = "/";
         }
       } else {
         if (
-          window.location.pathname !== "/login" &&
-          window.location.pathname !== "/register"
+          window.location.pathname !== "/iniciar-sessao" &&
+          window.location.pathname !== "/registo"
         ) {
-          window.location.pathname = "/login";
+          window.location.pathname = "/iniciar-sessao";
         }
       }
     })();
