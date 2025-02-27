@@ -19,14 +19,14 @@ const locais = ["Viana do Castelo", "Braga", "Porto", "Vila Real"];
     <div
       class="flex max-md:flex-col bg-base-100 gap-4 p-2 rounded-md shadow-sm border border-zinc-300"
     >
-      <label class="select min-w-[230px]">
+      <label class="select min-w-[230px] max-sm:min-w-auto">
         <span class="label">Contrato</span>
         <select>
           <option disabled selected hidden>Contrato</option>
           {contratos.map((c) => <option value={c}>{c}</option>)}
         </select>
       </label>
-      <label class="select">
+      <label class="select min-w-[230px] max-sm:min-w-auto">
         <span class="label">Local</span>
         <select>
           <option disabled selected hidden>Local</option>
@@ -75,6 +75,7 @@ const locais = ["Viana do Castelo", "Braga", "Porto", "Vila Real"];
           <option>Renovação</option>
         </select>
       </fieldset>
+
       <fieldset class="fieldset">
         <legend class="fieldset-legend">Status:</legend>
         <select class="select">
@@ -83,10 +84,12 @@ const locais = ["Viana do Castelo", "Braga", "Porto", "Vila Real"];
           <option>Não Ativo</option>
         </select>
       </fieldset>
+
       <fieldset class="fieldset">
         <legend class="fieldset-legend">Descrição:</legend>
         <textarea required class="textarea" placeholder="Descrição"></textarea>
       </fieldset>
+
       <fieldset class="fieldset">
         <legend class="fieldset-legend">Ficheiros</legend>
         <input type="file" class="file-input" required multiple />
@@ -109,6 +112,14 @@ const locais = ["Viana do Castelo", "Braga", "Porto", "Vila Real"];
         event.currentTarget.style.opacity = "1";
       });
     });
+
+    const form = document.querySelector(".grid")! as HTMLFormElement;
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const formData = new FormData(form);
+      const data = Object.fromEntries(formData.entries());
+      console.log(data);
+    });
   });
 </script>
 
@@ -126,6 +137,8 @@ const locais = ["Viana do Castelo", "Braga", "Porto", "Vila Real"];
 
   .select:hover,
   .textarea:hover,
+  .select:focus,
+  input:focus,
   input:hover {
     border-color: var(--color-secondary);
     box-shadow:
@@ -134,14 +147,11 @@ const locais = ["Viana do Castelo", "Braga", "Porto", "Vila Real"];
     opacity: 1;
   }
 
-  .select:focus,
-  input:focus {
-    border-color: var(--color-primary);
-    box-shadow:
-      0 4px 6px -1px rgb(0 0 0 / 0.1),
-      0 2px 4px -2px rgb(0 0 0 / 0.1);
-  }
-  @media (max-width: 640px) {
+  @media (max-width: 40rem) {
+    .label {
+      display: none;
+    }
+
     .fieldset {
       display: flex;
       flex-direction: column;
