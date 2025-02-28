@@ -33,7 +33,7 @@ impl Db {
     pub async fn new() -> Result<(Db, Cache), sqlx::Error> {
         let pool = MySqlPool::connect("mysql://root:root@localhost:3306/gestao_documental").await?;
 
-        sqlx::query(SCHEMA).execute(&pool).await?;
+        sqlx::raw_sql(SCHEMA).execute(&pool).await?;
 
         let admin_password = hash("admin");
 

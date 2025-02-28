@@ -15,7 +15,7 @@ pub async fn get_contracts() -> impl Responder {
 #[derive(MultipartForm)]
 pub struct ContractFormRequest {
     #[multipart(rename = "contract-number")]
-    contract_number: Text<String>,
+    contract_number: Text<i32>,
     date: Text<String>,
     #[multipart(rename = "date-range")]
     date_range: Text<String>,
