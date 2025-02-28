@@ -4,13 +4,13 @@
   import nextIcon from "@assets/previous_icon.svg?raw";
   import { onMount } from "svelte";
 
-  const { range }: { range: boolean } = $props();
+  const { range, formName }: { range: boolean; formName: string } = $props();
 
   let dropdownPosition = $state("dropdown-center");
 
   let cally: HTMLDivElement;
   let yearSelectElement: HTMLSelectElement;
-  let dateValueSpan: HTMLSpanElement;
+  let dateValue: HTMLInputElement;
   // unique id for the popover
   const uniqueId = Math.random().toString(36).substring(7);
 
@@ -66,11 +66,11 @@
         oldValue = e.currentTarget.value;
         if (range) {
           const [start, _] = e.currentTarget.value.split("/");
-          dateValueSpan.innerHTML = `${new Date(start).toLocaleDateString(
+          dateValue.value = `${new Date(start).toLocaleDateString(
             "pt-PT"
           )} - ${e.detail.toLocaleDateString("pt-PT")}`;
         } else {
-          dateValueSpan.innerHTML = e.detail.toLocaleDateString("pt-PT");
+          dateValue.value = e.detail.toLocaleDateString("pt-PT");
         }
 
         // @ts-ignore
@@ -123,13 +123,13 @@
     bind:this={cally}
   >
     {@html calendarIcon}
-    <span bind:this={dateValueSpan}>
-      {#if range}
-        dd/mm/aaaa - dd/mm/aaaa
-      {:else}
-        dd/mm/aaaa
-      {/if}
-    </span>
+    <input
+      bind:this={dateValue}
+      placeholder={range ? "dd/mm/aaaa" : "dd/mm/aaaa - dd/mm/aaaa"}
+      name={formName}
+      required
+      readonly
+    />
   </div>
   <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
   <div
@@ -168,9 +168,12 @@
   }
 
   .input {
-    text-align: left;
     opacity: 0.7;
     width: 100%;
+  }
+
+  input:hover::placeholder {
+    color: var(--color-base);
   }
 
   .input:hover,

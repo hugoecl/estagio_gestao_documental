@@ -43,7 +43,13 @@ const locais = ["Viana do Castelo", "Braga", "Porto", "Vila Real"];
     >
       <fieldset class="fieldset">
         <legend class="fieldset-legend">Fornecedor:</legend>
-        <input required type="text" class="input" placeholder="Fornecedor" />
+        <input
+          required
+          type="text"
+          class="input"
+          placeholder="Fornecedor"
+          name="fornecedor"
+        />
       </fieldset>
 
       <fieldset class="fieldset">
@@ -53,22 +59,23 @@ const locais = ["Viana do Castelo", "Braga", "Porto", "Vila Real"];
           type="text"
           class="input"
           placeholder="Número de Contrato"
+          name="numero-contrato"
         />
       </fieldset>
 
       <fieldset class="fieldset">
         <legend class="fieldset-legend">Data:</legend>
-        <DatePicker client:load range={false} />
+        <DatePicker client:load range={false} formName="data" />
       </fieldset>
 
       <fieldset class="fieldset">
         <legend class="fieldset-legend">Data Início - Fim:</legend>
-        <DatePicker client:load range={true} />
+        <DatePicker client:load range={true} formName="data-range" />
       </fieldset>
 
       <fieldset class="fieldset">
         <legend class="fieldset-legend">Tipo:</legend>
-        <select class="select">
+        <select class="select" name="tipo">
           <option disabled selected hidden>Selecione um Tipo</option>
           <option>Adenda</option>
           <option>Novo</option>
@@ -78,7 +85,7 @@ const locais = ["Viana do Castelo", "Braga", "Porto", "Vila Real"];
 
       <fieldset class="fieldset">
         <legend class="fieldset-legend">Status:</legend>
-        <select class="select">
+        <select class="select" name="status">
           <option disabled selected hidden>Selecione o Estado</option>
           <option>Ativo</option>
           <option>Não Ativo</option>
@@ -87,18 +94,28 @@ const locais = ["Viana do Castelo", "Braga", "Porto", "Vila Real"];
 
       <fieldset class="fieldset">
         <legend class="fieldset-legend">Descrição:</legend>
-        <textarea required class="textarea" placeholder="Descrição"></textarea>
+        <textarea
+          required
+          class="textarea"
+          placeholder="Descrição"
+          name="descricao"></textarea>
       </fieldset>
 
       <fieldset class="fieldset">
         <legend class="fieldset-legend">Ficheiros</legend>
-        <input type="file" class="file-input" required multiple />
+        <input
+          type="file"
+          class="file-input"
+          name="ficheiros"
+          required
+          multiple
+        />
       </fieldset>
 
       <div class="flex justify-between sm:col-span-2">
         <button type="reset" class="btn btn-error">Limpar</button>
         <button type="submit" class="btn btn-primary">
-          <span class="loading loading-bars loading-md"></span>
+          <span class="hidden loading loading-bars loading-md"></span>
           <span id="submit-text">Enviar</span>
         </button>
       </div>
@@ -127,6 +144,7 @@ const locais = ["Viana do Castelo", "Braga", "Porto", "Vila Real"];
       async (e) => {
         e.preventDefault();
         const formData = new FormData(e.currentTarget as HTMLFormElement);
+        console.log(Object.fromEntries(formData.entries()));
       }
     );
   });
