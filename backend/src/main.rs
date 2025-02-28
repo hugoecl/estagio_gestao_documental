@@ -14,6 +14,7 @@ const SECS_IN_WEEK: i64 = 60 * 60 * 24 * 7;
 
 mod db;
 mod handlers;
+mod models;
 mod routes;
 mod utils;
 

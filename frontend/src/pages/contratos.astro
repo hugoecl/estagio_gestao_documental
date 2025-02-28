@@ -3,34 +3,31 @@ import Layout from "@layouts/Layout.astro";
 import Collapse from "@components/Collapse.svelte";
 import SearchBar from "@components/SearchBar.astro";
 import DatePicker from "@components/DatePicker.svelte";
-
-const contratos = [
-  "Eletricidade",
-  "Água",
-  "Limpeza",
-  "Impressoras",
-  "Comunicações",
-];
-const locais = ["Viana do Castelo", "Braga", "Porto", "Vila Real"];
+import {
+  ContractServices,
+  ContractLocations,
+  ContractStatus,
+  ContractTypes,
+} from "@lib/types/contracts";
 ---
 
-<Layout title=`${contratos[0]} - ${locais[0]}`>
+<Layout title="Contratos">
   <div class="flex items-center justify-between mb-7 gap-4">
     <div
       class="flex max-md:flex-col bg-base-100 gap-4 p-2 rounded-md shadow-sm border border-zinc-300"
     >
       <label class="select min-w-[230px] max-sm:min-w-auto">
         <span class="label">Contrato</span>
-        <select>
-          <option disabled selected hidden>Contrato</option>
-          {contratos.map((c) => <option value={c}>{c}</option>)}
+        <select required form="contract-form" name="service">
+          <option disabled selected hidden value="">Contrato</option>
+          {ContractServices.map((c, i) => <option value={i}>{c}</option>)}
         </select>
       </label>
       <label class="select min-w-[230px] max-sm:min-w-auto">
         <span class="label">Local</span>
-        <select>
-          <option disabled selected hidden>Local</option>
-          {locais.map((l) => <option value={l}>{l}</option>)}
+        <select required form="contract-form" name="location">
+          <option disabled selected hidden value="">Local</option>
+          {ContractLocations.map((l, i) => <option value={i}>{l}</option>)}
         </select>
       </label>
     </div>
@@ -39,6 +36,7 @@ const locais = ["Viana do Castelo", "Braga", "Porto", "Vila Real"];
 
   <Collapse client:load title="Upload">
     <form
+      id="contract-form"
       class="grid grid-cols-1 sm:grid-cols-2 gap-4 p-2 rounded-sm shadow-sm"
     >
       <fieldset class="fieldset">
@@ -75,20 +73,17 @@ const locais = ["Viana do Castelo", "Braga", "Porto", "Vila Real"];
 
       <fieldset class="fieldset">
         <legend class="fieldset-legend">Tipo:</legend>
-        <select class="select" name="type">
-          <option disabled selected hidden>Selecione um Tipo</option>
-          <option>Adenda</option>
-          <option>Novo</option>
-          <option>Renovação</option>
+        <select class="select" name="type" required>
+          <option disabled selected hidden value="">Selecione um Tipo</option>
+          {ContractTypes.map((t, i) => <option value={i}>{t}</option>)}
         </select>
       </fieldset>
 
       <fieldset class="fieldset">
         <legend class="fieldset-legend">Status:</legend>
-        <select class="select" name="status">
-          <option disabled selected hidden>Selecione o Estado</option>
-          <option>Ativo</option>
-          <option>Não Ativo</option>
+        <select class="select" name="status" required>
+          <option disabled selected hidden value="">Selecione o Estado</option>
+          {ContractStatus.map((s, i) => <option value={i}>{s}</option>)}
         </select>
       </fieldset>
 
@@ -118,6 +113,10 @@ const locais = ["Viana do Castelo", "Braga", "Porto", "Vila Real"];
 </Layout>
 
 <script>
+  import { uploadContract } from "@api/utils";
+  import { showAlert, AlertPosition, AlertType } from "@components/Alert/Alert";
+  import { elementsToToggle } from "@stores";
+
   document.addEventListener("astro:page-load", () => {
     const selects = document.querySelectorAll(".select");
     for (let i = 0, len = selects.length; i < len; i++) {
@@ -133,14 +132,40 @@ const locais = ["Viana do Castelo", "Braga", "Porto", "Vila Real"];
     const loadingBars = submitButton.querySelector(".loading")!;
     const submitText = submitButton.querySelector("#submit-text")!;
 
-    (document.querySelector(".grid")! as HTMLFormElement).addEventListener(
-      "submit",
-      async (e) => {
-        e.preventDefault();
-        const formData = new FormData(e.currentTarget as HTMLFormElement);
-        console.log(Object.fromEntries(formData.entries()));
+    elementsToToggle.set([loadingBars, submitText]);
+
+    (
+      document.getElementById("contract-form")! as HTMLFormElement
+    ).addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const form = e.currentTarget as HTMLFormElement;
+
+      loadingBars.classList.toggle("hidden");
+      submitText.classList.toggle("hidden");
+
+      const formData = new FormData(form);
+      const ok = await uploadContract(formData);
+
+      if (ok) {
+        loadingBars.classList.toggle("hidden");
+        submitText.classList.toggle("hidden");
+        showAlert(
+          "Contrato enviado com sucesso!",
+          AlertType.SUCCESS,
+          AlertPosition.TOP
+        );
+        form.reset();
+      } else {
+        loadingBars.classList.toggle("hidden");
+        submitText.classList.toggle("hidden");
+        showAlert(
+          "Erro ao enviar o contrato. Por favor, tente novamente.",
+          AlertType.ERROR,
+          AlertPosition.TOP
+        );
       }
-    );
+    });
   });
 </script>
 

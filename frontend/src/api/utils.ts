@@ -60,3 +60,12 @@ export async function logoutUser(): Promise<boolean> {
   });
   return response.ok;
 }
+
+export async function uploadContract(formData: FormData): Promise<boolean> {
+  const response = await handleFetch(`${API_BASE_URL}/contracts/upload`, {
+    method: "POST",
+    credentials: "include",
+    body: formData,
+  });
+  return response.ok;
+}
