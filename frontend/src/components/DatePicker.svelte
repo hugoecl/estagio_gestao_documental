@@ -120,16 +120,18 @@
   <div
     tabindex="0"
     role="button"
-    class="input cursor-pointer"
+    class="input cursor-pointer caret-transparent"
     bind:this={cally}
   >
     {@html calendarIcon}
     <input
+      class="cursor-pointer"
       bind:this={dateValue}
       placeholder={range ? "dd/mm/aaaa" : "dd/mm/aaaa - dd/mm/aaaa"}
       name={formName}
+      onkeydown={(e) => e.preventDefault()}
+      oninput={(e) => e.preventDefault()}
       required
-      readonly
     />
   </div>
   <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
