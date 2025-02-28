@@ -47,39 +47,80 @@ async fn main() -> std::io::Result<()> {
 
     let state = web::Data::new(State { db, cache });
 
-    if cfg!(debug_assertions) {
-        #[cfg(feature = "log")]
-        env_logger::init_from_env(env_logger::Env::new().default_filter_or("debug"));
-    }
+    #[cfg(feature = "log")]
+    const LOG_LEVEL: &str = if cfg!(debug_assertions) {
+        "debug"
+    } else {
+        "info"
+    };
 
-    HttpServer::new(move || {
-        let session_middleware = if cfg!(debug_assertions) {
-            SessionMiddleware::builder(CookieSessionStore::default(), key.clone())
-                .cookie_secure(false)
-                .cookie_http_only(false)
-                .cookie_same_site(actix_web::cookie::SameSite::Strict)
-                .session_lifecycle(
-                    PersistentSession::default().session_ttl(Duration::seconds(SECS_IN_WEEK)),
-                )
-                .build()
-        } else {
-            SessionMiddleware::builder(CookieSessionStore::default(), key.clone())
-                .cookie_secure(true)
-                .cookie_http_only(true)
-                .cookie_same_site(actix_web::cookie::SameSite::None)
-                .session_lifecycle(
-                    PersistentSession::default().session_ttl(Duration::seconds(SECS_IN_WEEK)),
-                )
-                .build()
-        };
-        App::new()
-            .configure(routes::init)
-            .wrap(Cors::permissive()) // TODO: Change this to a more secure configuration
-            .wrap(actix_web::middleware::Logger::default())
-            .wrap(session_middleware)
-            .app_data(state.clone())
-    })
-    .bind((addrs, 1234))?
-    .run()
-    .await
+    #[cfg(feature = "log")]
+    env_logger::init_from_env(env_logger::Env::new().default_filter_or(LOG_LEVEL));
+
+    if cfg!(feature = "log") {
+        HttpServer::new(move || {
+            let session_middleware = if cfg!(debug_assertions) {
+                SessionMiddleware::builder(CookieSessionStore::default(), key.clone())
+                    .cookie_secure(false)
+                    .cookie_http_only(false)
+                    .cookie_same_site(actix_web::cookie::SameSite::Strict)
+                    .session_lifecycle(
+                        PersistentSession::default().session_ttl(Duration::seconds(SECS_IN_WEEK)),
+                    )
+                    .build()
+            } else {
+                SessionMiddleware::builder(CookieSessionStore::default(), key.clone())
+                    .cookie_secure(true)
+                    .cookie_http_only(true)
+                    .cookie_same_site(actix_web::cookie::SameSite::None)
+                    .session_lifecycle(
+                        PersistentSession::default().session_ttl(Duration::seconds(SECS_IN_WEEK)),
+                    )
+                    .build()
+            };
+
+            App::new()
+                .configure(routes::init)
+                .wrap(Cors::permissive())
+                .wrap(session_middleware)
+                .wrap(actix_web::middleware::Compress::default())
+                .wrap(actix_web::middleware::Logger::default())
+                .app_data(state.clone())
+        })
+        .bind((addrs, 1234))?
+        .run()
+        .await
+    } else {
+        HttpServer::new(move || {
+            let session_middleware = if cfg!(debug_assertions) {
+                SessionMiddleware::builder(CookieSessionStore::default(), key.clone())
+                    .cookie_secure(false)
+                    .cookie_http_only(false)
+                    .cookie_same_site(actix_web::cookie::SameSite::Strict)
+                    .session_lifecycle(
+                        PersistentSession::default().session_ttl(Duration::seconds(SECS_IN_WEEK)),
+                    )
+                    .build()
+            } else {
+                SessionMiddleware::builder(CookieSessionStore::default(), key.clone())
+                    .cookie_secure(true)
+                    .cookie_http_only(true)
+                    .cookie_same_site(actix_web::cookie::SameSite::None)
+                    .session_lifecycle(
+                        PersistentSession::default().session_ttl(Duration::seconds(SECS_IN_WEEK)),
+                    )
+                    .build()
+            };
+
+            App::new()
+                .configure(routes::init)
+                .wrap(Cors::permissive())
+                .wrap(session_middleware)
+                .wrap(actix_web::middleware::Compress::default())
+                .app_data(state.clone())
+        })
+        .bind((addrs, 1234))?
+        .run()
+        .await
+    }
 }
