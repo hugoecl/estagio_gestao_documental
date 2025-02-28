@@ -48,7 +48,7 @@ const locais = ["Viana do Castelo", "Braga", "Porto", "Vila Real"];
           type="text"
           class="input"
           placeholder="Fornecedor"
-          name="fornecedor"
+          name="supplier"
         />
       </fieldset>
 
@@ -59,23 +59,23 @@ const locais = ["Viana do Castelo", "Braga", "Porto", "Vila Real"];
           type="text"
           class="input"
           placeholder="Número de Contrato"
-          name="numero-contrato"
+          name="contract-number"
         />
       </fieldset>
 
       <fieldset class="fieldset">
         <legend class="fieldset-legend">Data:</legend>
-        <DatePicker client:load range={false} formName="data" />
+        <DatePicker client:load range={false} formName="date" />
       </fieldset>
 
       <fieldset class="fieldset">
         <legend class="fieldset-legend">Data Início - Fim:</legend>
-        <DatePicker client:load range={true} formName="data-range" />
+        <DatePicker client:load range={true} formName="date-range" />
       </fieldset>
 
       <fieldset class="fieldset">
         <legend class="fieldset-legend">Tipo:</legend>
-        <select class="select" name="tipo">
+        <select class="select" name="type">
           <option disabled selected hidden>Selecione um Tipo</option>
           <option>Adenda</option>
           <option>Novo</option>
@@ -98,18 +98,12 @@ const locais = ["Viana do Castelo", "Braga", "Porto", "Vila Real"];
           required
           class="textarea"
           placeholder="Descrição"
-          name="descricao"></textarea>
+          name="description"></textarea>
       </fieldset>
 
       <fieldset class="fieldset">
         <legend class="fieldset-legend">Ficheiros</legend>
-        <input
-          type="file"
-          class="file-input"
-          name="ficheiros"
-          required
-          multiple
-        />
+        <input type="file" class="file-input" name="files" required multiple />
       </fieldset>
 
       <div class="flex justify-between sm:col-span-2">
