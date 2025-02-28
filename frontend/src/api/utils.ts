@@ -1,6 +1,7 @@
 import API_BASE_URL from "@api/base-url";
 
 import { showAlert, AlertPosition, AlertType } from "@components/Alert/Alert";
+import { toggleElements } from "@stores";
 
 async function handleFetch(
   url: string | URL,
@@ -10,6 +11,8 @@ async function handleFetch(
     const response = await fetch(url, options);
     return response;
   } catch (error) {
+    toggleElements();
+
     showAlert(
       "Erro ao comunicar com o servidor",
       AlertType.ERROR,

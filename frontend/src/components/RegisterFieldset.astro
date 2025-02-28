@@ -91,7 +91,8 @@
 
 <script>
   import { registerUser } from "@api/utils";
-  import { AlertPosition, AlertType, showAlert } from "./Alert/Alert";
+  import { AlertPosition, AlertType, showAlert } from "@components/Alert/Alert";
+  import { elementsToToggle } from "@stores";
 
   const nameInput = document.getElementById("name-input")! as HTMLInputElement;
   const emailInput = document.getElementById(
@@ -106,6 +107,8 @@
 
   const loadingSpinner = registerForm.querySelector(".loading")!;
   const registerText = registerForm.querySelector("#register-text")!;
+
+  elementsToToggle.set([loadingSpinner, registerText]);
 
   registerButton.addEventListener("click", async (e) => {
     e.preventDefault();

@@ -65,7 +65,8 @@
 
 <script>
   import { loginUser } from "@api/utils";
-  import { AlertPosition, AlertType, showAlert } from "./Alert/Alert";
+  import { AlertPosition, AlertType, showAlert } from "@components/Alert/Alert";
+  import { elementsToToggle } from "@stores";
 
   const emailInput = document.getElementById(
     "email-input"
@@ -79,6 +80,8 @@
 
   const loadingSpinner = loginButton.querySelector(".loading")!;
   const loginText = loginButton.querySelector("#login-text")!;
+
+  elementsToToggle.set([loadingSpinner, loginText]);
 
   loginButton.addEventListener("click", async (e) => {
     e.preventDefault();
