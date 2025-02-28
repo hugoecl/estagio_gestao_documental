@@ -11,8 +11,6 @@
   let cally: HTMLDivElement;
   let yearSelectElement: HTMLSelectElement;
   let dateValue: HTMLInputElement;
-  // unique id for the popover
-  const uniqueId = Math.random().toString(36).substring(7);
 
   // svelte throws this warning because we are binding an element that is inside a if statement but in this case since the if statement is controlled by a prop it is safe to ignore this warning
   // svelte-ignore non_reactive_update
@@ -137,7 +135,6 @@
   <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
   <div
     tabindex="0"
-    id={uniqueId}
     class="dropdown-content rounded-box border border-zinc-200 bg-base-100 card-sm shadow-lg mt-1 w-max"
   >
     {#if range}

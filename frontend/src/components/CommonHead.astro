@@ -18,33 +18,33 @@ const { title, serverRouter } = Astro.props;
   <title>{title}</title>
 
   <script is:inline data-astro-rerun define:vars={{ API_BASE_URL }}>
-    (async function () {
-      let ok;
-      try {
-        const resp = await fetch(`${API_BASE_URL}/users/check`, {
-          credentials: "include",
-        });
-        ok = resp.ok;
-      } catch {
-        ok = false;
-      }
+    // (async function () {
+    //   let ok;
+    //   try {
+    //     const resp = await fetch(`${API_BASE_URL}/users/check`, {
+    //       credentials: "include",
+    //     });
+    //     ok = resp.ok;
+    //   } catch {
+    //     ok = false;
+    //   }
 
-      if (ok) {
-        if (
-          window.location.pathname === "/iniciar-sesao" ||
-          window.location.pathname === "/registo"
-        ) {
-          window.location.pathname = "/";
-        }
-      } else {
-        if (
-          window.location.pathname !== "/iniciar-sessao" &&
-          window.location.pathname !== "/registo"
-        ) {
-          window.location.pathname = "/iniciar-sessao";
-        }
-      }
-    })();
+    //   if (ok) {
+    //     if (
+    //       window.location.pathname === "/iniciar-sesao" ||
+    //       window.location.pathname === "/registo"
+    //     ) {
+    //       window.location.pathname = "/";
+    //     }
+    //   } else {
+    //     if (
+    //       window.location.pathname !== "/iniciar-sessao" &&
+    //       window.location.pathname !== "/registo"
+    //     ) {
+    //       window.location.pathname = "/iniciar-sessao";
+    //     }
+    //   }
+    // })();
   </script>
 
   {!serverRouter && <ClientRouter />}
