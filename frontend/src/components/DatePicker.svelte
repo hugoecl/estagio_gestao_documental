@@ -11,6 +11,8 @@
   let cally: HTMLDivElement;
   let yearSelectElement: HTMLSelectElement;
   let dateValue: HTMLInputElement;
+  let detailsDropdown: HTMLDetailsElement;
+  let dropdownContent: HTMLDivElement;
 
   // svelte throws this warning because we are binding an element that is inside a if statement but in this case since the if statement is controlled by a prop it is safe to ignore this warning
   // svelte-ignore non_reactive_update
@@ -24,6 +26,18 @@
 
   onMount(() => {
     import("cally");
+
+    function handleToggle(e: MouseEvent) {
+      if (
+        detailsDropdown.open &&
+        !detailsDropdown.contains(e.target as Node) &&
+        !cally.contains(e.target as Node)
+      ) {
+        detailsDropdown.open = false;
+      }
+    }
+
+    document.addEventListener("mousedown", handleToggle);
 
     if (range) {
       const rem = parseFloat(
@@ -71,18 +85,18 @@
           dateValue.value = e.detail.toLocaleDateString("pt-PT");
         }
 
-        // TODO: On Firefox this blur does nothing
         // @ts-ignore
-        document.activeElement.blur();
+        detailsDropdown.open = false;
         cally.style.opacity = "1";
       }
     });
-    if (range) {
-      return () => {
+    return () => {
+      document.removeEventListener("mousedown", handleToggle);
+      if (range && window.location.pathname === "/contratos") {
         // @ts-ignore typescript thinks the setDropdownPosition function is not defined but int his condition it is
         window.removeEventListener("resize", setDropdownPosition);
-      };
-    }
+      }
+    };
   });
 </script>
 
@@ -109,33 +123,43 @@
   </div>
 {/snippet}
 
-<div
+<details
   class={[
     "dropdown select-none max-sm:w-[90%]",
     range ? dropdownPosition : "dropdown-center",
   ]}
+  bind:this={detailsDropdown}
 >
-  <div
-    tabindex="0"
-    role="button"
-    class="input cursor-pointer caret-transparent"
-    bind:this={cally}
+  <summary
+    class="list-none"
+    onclick={() => {
+      detailsDropdown.open = !detailsDropdown.open;
+      dropdownContent.style.opacity = detailsDropdown.open ? "1" : "0";
+    }}
   >
-    {@html calendarIcon}
-    <input
-      class="cursor-pointer"
-      bind:this={dateValue}
-      placeholder={range ? "dd/mm/aaaa" : "dd/mm/aaaa - dd/mm/aaaa"}
-      name={formName}
-      onkeydown={(e) => e.preventDefault()}
-      oninput={(e) => e.preventDefault()}
-      required
-    />
-  </div>
+    <div
+      tabindex="0"
+      role="button"
+      class="input cursor-pointer caret-transparent"
+      bind:this={cally}
+    >
+      {@html calendarIcon}
+      <input
+        class="cursor-pointer"
+        bind:this={dateValue}
+        placeholder={range ? "dd/mm/aaaa" : "dd/mm/aaaa - dd/mm/aaaa"}
+        name={formName}
+        onkeydown={(e) => e.preventDefault()}
+        oninput={(e) => e.preventDefault()}
+        required
+      />
+    </div>
+  </summary>
   <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
   <div
     tabindex="0"
     class="dropdown-content rounded-box border border-zinc-200 bg-base-100 card-sm shadow-lg mt-1 w-max"
+    bind:this={dropdownContent}
   >
     {#if range}
       <calendar-range class="cally" months={2} bind:this={calendar}>
@@ -156,7 +180,7 @@
       </calendar-date>
     {/if}
   </div>
-</div>
+</details>
 
 <style>
   calendar-month::part(heading) {

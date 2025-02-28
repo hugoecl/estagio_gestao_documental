@@ -119,6 +119,7 @@ import {
   import { elementsToToggle } from "@stores";
 
   document.addEventListener("astro:page-load", () => {
+    if (window.location.pathname !== "/contratos") return;
     const selects = document.querySelectorAll(".select");
     for (let i = 0, len = selects.length; i < len; i++) {
       selects[i].addEventListener("change", (event) => {
