@@ -31,6 +31,9 @@
     const savedTheme = localStorage.getItem("theme");
     if (savedTheme) {
       themeController.checked = savedTheme === "business";
+    } else {
+      const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      themeController.checked = isDark;
     }
 
     themeController.addEventListener("change", () => {
