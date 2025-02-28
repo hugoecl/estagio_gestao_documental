@@ -73,6 +73,7 @@
           dateValue.value = e.detail.toLocaleDateString("pt-PT");
         }
 
+        // TODO: On Firefox this blur does nothing
         // @ts-ignore
         document.activeElement.blur();
         cally.style.opacity = "1";
