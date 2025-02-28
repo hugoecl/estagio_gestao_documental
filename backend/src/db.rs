@@ -1,4 +1,4 @@
-use std::sync::atomic::AtomicI32;
+use std::sync::atomic::AtomicU32;
 
 use ahash::RandomState;
 use papaya::HashMap;
@@ -20,8 +20,8 @@ pub struct Db {
 }
 
 pub struct Cache {
-    pub users: HashMap<i32, UserCache, RandomState>,
-    pub last_user_id: AtomicI32,
+    pub users: HashMap<u32, UserCache, RandomState>,
+    pub last_user_id: AtomicU32,
 }
 
 #[inline(always)]
@@ -55,7 +55,7 @@ impl Db {
             .capacity(users_length)
             .build();
 
-        let mut last_user_id = -1;
+        let mut last_user_id = 0;
 
         for (i, user) in users.into_iter().enumerate() {
             users_cache.pin().insert(
@@ -82,7 +82,7 @@ impl Db {
             Db { pool },
             Cache {
                 users: users_cache,
-                last_user_id: AtomicI32::new(last_user_id),
+                last_user_id: AtomicU32::new(last_user_id),
             },
         ))
     }

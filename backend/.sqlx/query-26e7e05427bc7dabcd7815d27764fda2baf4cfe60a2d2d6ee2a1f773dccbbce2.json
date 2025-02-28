@@ -1,6 +1,6 @@
 {
   "db_name": "MySQL",
-  "query": "SELECT id, username, email, password, is_admin FROM users",
+  "query": "SELECT * FROM users",
   "describe": {
     "columns": [
       {
@@ -8,8 +8,8 @@
         "name": "id",
         "type_info": {
           "type": "Long",
-          "flags": "NOT_NULL | PRIMARY_KEY | UNIQUE_KEY | AUTO_INCREMENT",
-          "max_size": 11
+          "flags": "NOT_NULL | PRIMARY_KEY | UNIQUE_KEY | UNSIGNED | AUTO_INCREMENT",
+          "max_size": 10
         }
       },
       {
@@ -17,7 +17,7 @@
         "name": "username",
         "type_info": {
           "type": "VarString",
-          "flags": "NOT_NULL | UNIQUE_KEY | NO_DEFAULT_VALUE",
+          "flags": "NOT_NULL | NO_DEFAULT_VALUE",
           "max_size": 1020
         }
       },
@@ -60,5 +60,5 @@
       false
     ]
   },
-  "hash": "a1270eee1a0223a17f0d8d88d42739749b8e1e9668d1a72fb8e652095f29fc5e"
+  "hash": "26e7e05427bc7dabcd7815d27764fda2baf4cfe60a2d2d6ee2a1f773dccbbce2"
 }
