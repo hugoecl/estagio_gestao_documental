@@ -44,14 +44,15 @@ pub async fn register(state: web::Data<State>, request_data: web::Bytes) -> impl
     let new_user_id = state
         .cache
         .last_user_id
-        .fetch_add(1, atomic::Ordering::SeqCst);
+        .fetch_add(1, atomic::Ordering::SeqCst)
+        + 1;
 
     pinned_users_cache.insert(new_user_id, user_cache);
 
     drop(pinned_users_cache);
 
     actix_web::rt::spawn(async move {
-        let _ = sqlx::query!(
+        sqlx::query!(
             "INSERT INTO users (username, email, password, is_admin) VALUES (?, ?, ?, ?)",
             user.username,
             user.email,
@@ -59,7 +60,8 @@ pub async fn register(state: web::Data<State>, request_data: web::Bytes) -> impl
             false
         )
         .execute(&state.db.pool)
-        .await;
+        .await
+        .unwrap();
     });
 
     HttpResponse::Ok().body("Registering user")
