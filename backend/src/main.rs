@@ -1,3 +1,5 @@
+#![feature(macro_metavar_expr)]
+
 use actix_cors::Cors;
 use actix_session::{SessionMiddleware, config::PersistentSession, storage::CookieSessionStore};
 use actix_web::{
@@ -14,6 +16,7 @@ const SECS_IN_WEEK: i64 = 60 * 60 * 24 * 7;
 
 mod db;
 mod handlers;
+mod macros;
 mod models;
 mod routes;
 mod utils;

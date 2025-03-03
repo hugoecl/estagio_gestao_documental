@@ -23,11 +23,9 @@ struct RegisterRequest {
 
 pub async fn register(state: web::Data<State>, request_data: web::Bytes) -> impl Responder {
     let Json(user): Json<RegisterRequest> = Json::from_bytes(request_data).unwrap();
+    let pinned_users_cache = state.cache.users.pin();
 
-    if state
-        .cache
-        .users
-        .pin()
+    if pinned_users_cache
         .values()
         .any(|u| u.username == user.username || u.email == user.email)
     {
@@ -48,7 +46,9 @@ pub async fn register(state: web::Data<State>, request_data: web::Bytes) -> impl
         .last_user_id
         .fetch_add(1, atomic::Ordering::SeqCst);
 
-    state.cache.users.pin().insert(new_user_id, user_cache);
+    pinned_users_cache.insert(new_user_id, user_cache);
+
+    drop(pinned_users_cache);
 
     actix_web::rt::spawn(async move {
         let _ = sqlx::query!(

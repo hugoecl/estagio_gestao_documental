@@ -1,41 +1,17 @@
-use std::str::FromStr;
+use crate::impl_enum_conversions;
 
 pub enum Status {
     Active,
     Inactive,
 }
 
-impl FromStr for Status {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, ()> {
-        match s {
-            "0" => Ok(Status::Active),
-            "1" => Ok(Status::Inactive),
-            _ => Err(()),
-        }
-    }
-}
-
-pub enum Types {
+pub enum Type {
     Addendum,
     New,
     Renew,
 }
 
-impl FromStr for Types {
-    type Err = ();
-    fn from_str(s: &str) -> Result<Self, ()> {
-        match s {
-            "0" => Ok(Types::Addendum),
-            "1" => Ok(Types::New),
-            "2" => Ok(Types::Renew),
-            _ => Err(()),
-        }
-    }
-}
-
-pub enum Services {
+pub enum Service {
     Electricity,
     Water,
     Cleaning,
@@ -43,36 +19,14 @@ pub enum Services {
     Comunications,
 }
 
-impl FromStr for Services {
-    type Err = ();
-    fn from_str(s: &str) -> Result<Self, ()> {
-        match s {
-            "0" => Ok(Services::Electricity),
-            "1" => Ok(Services::Water),
-            "2" => Ok(Services::Cleaning),
-            "3" => Ok(Services::Printers),
-            "4" => Ok(Services::Comunications),
-            _ => Err(()),
-        }
-    }
-}
-
-pub enum Locations {
+pub enum Location {
     VianaDoCastelo,
     Braga,
     Porto,
     VilaReal,
 }
 
-impl FromStr for Locations {
-    type Err = ();
-    fn from_str(s: &str) -> Result<Self, ()> {
-        match s {
-            "0" => Ok(Locations::VianaDoCastelo),
-            "1" => Ok(Locations::Braga),
-            "2" => Ok(Locations::Porto),
-            "3" => Ok(Locations::VilaReal),
-            _ => Err(()),
-        }
-    }
-}
+impl_enum_conversions!(Status, Active => 0, Inactive => 1);
+impl_enum_conversions!(Type, Addendum => 0, New => 1, Renew => 2);
+impl_enum_conversions!(Service, Electricity => 0, Water => 1, Cleaning => 2, Printers => 3, Comunications => 4);
+impl_enum_conversions!(Location, VianaDoCastelo => 0, Braga => 1, Porto => 2, VilaReal => 3);
