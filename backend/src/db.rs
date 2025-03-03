@@ -1,5 +1,6 @@
 use std::sync::atomic::AtomicU32;
 
+use actix_web::http::header::LAST_MODIFIED;
 use ahash::RandomState;
 use papaya::HashMap;
 use sqlx::mysql::MySqlPool;
@@ -66,9 +67,13 @@ async fn get_users_cache(
         .build();
 
     let pinned_users_cache = users_cache.pin();
-    let mut last_user_id = 0;
+    let last_user_id = if let Some(user) = users.last() {
+        user.id
+    } else {
+        0
+    };
 
-    for (i, user) in users.into_iter().enumerate() {
+    for user in users.into_iter() {
         pinned_users_cache.insert(
             user.id,
             UserCache {
@@ -82,9 +87,6 @@ async fn get_users_cache(
                 is_admin: i8_to_bool(user.is_admin),
             },
         );
-        if i == users_length - 1 {
-            last_user_id = user.id;
-        }
     }
     drop(pinned_users_cache);
     Ok((users_cache, last_user_id))
@@ -105,10 +107,15 @@ async fn get_contracts_cache(
         .build();
     let pinned_contracts_cache = contracts_cache.pin();
 
-    let mut last_contract_id = 0;
+    let last_contract_id = if let Some(contract) = contracts.last() {
+        contract.id
+    } else {
+        0
+    };
+
     let mut last_contract_file_id = 0;
 
-    for (i, contract) in contracts.into_iter().enumerate() {
+    for contract in contracts.into_iter() {
         let files = sqlx::query!(
             "SELECT * FROM contract_files WHERE contract_id = ?",
             contract.id
@@ -123,7 +130,7 @@ async fn get_contracts_cache(
             .build();
         let pinned_file_cache = file_cache.pin();
 
-        for (k, file) in files.into_iter().enumerate() {
+        for file in files.into_iter() {
             pinned_file_cache.insert(
                 file.id,
                 ContractFilesCache {
@@ -131,9 +138,7 @@ async fn get_contracts_cache(
                     uploaded_at: file.uploaded_at.unwrap(),
                 },
             );
-            if k == files_length - 1 && i == contracts_length - 1 {
-                last_contract_file_id = file.id;
-            }
+            last_contract_file_id = last_contract_file_id.max(file.id);
         }
         drop(pinned_file_cache);
 
@@ -155,9 +160,6 @@ async fn get_contracts_cache(
                 files: file_cache,
             },
         );
-        if i == contracts_length - 1 {
-            last_contract_id = contract.id;
-        }
     }
 
     drop(pinned_contracts_cache);
