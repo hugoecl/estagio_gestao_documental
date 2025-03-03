@@ -152,12 +152,12 @@ import {
       if (ok) {
         loadingBars.classList.toggle("hidden");
         submitText.classList.toggle("hidden");
+        form.reset();
         showAlert(
           "Contrato enviado com sucesso!",
           AlertType.SUCCESS,
           AlertPosition.TOP
         );
-        form.reset();
       } else {
         loadingBars.classList.toggle("hidden");
         submitText.classList.toggle("hidden");

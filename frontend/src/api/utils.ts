@@ -9,7 +9,13 @@ async function handleFetch(
 ): Promise<Response> {
   try {
     const response = await fetch(url, options);
-    // TODO: check if response is 401 and redirect to login
+    if (
+      window.location.pathname !== "/iniciar-sessao" &&
+      window.location.pathname !== "registo" &&
+      response.status === 401
+    ) {
+      window.location.href = "/iniciar-sessao";
+    }
     return response;
   } catch (error) {
     toggleElements();
