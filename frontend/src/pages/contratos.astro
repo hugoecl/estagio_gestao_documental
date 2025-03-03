@@ -141,17 +141,12 @@ import {
       if (!serviceSelect.value) return;
       // @ts-ignore
       title.innerHTML = `Upload - ${ContractLocations[locationSelect.value]} - ${ContractServices[event.currentTarget.value]}`;
-
-      // @ts-ignore
-      event.currentTarget.style.opacity = "1";
     });
 
     serviceSelect.addEventListener("change", (event) => {
       if (!locationSelect.value) return;
       // @ts-ignore
       title.innerHTML = `Upload - ${ContractLocations[locationSelect.value]} - ${ContractServices[event.currentTarget.value]}`;
-      // @ts-ignore
-      event.currentTarget.style.opacity = "1";
     });
 
     const selects = document.querySelectorAll(".select");
@@ -209,6 +204,10 @@ import {
   .input:hover::placeholder,
   .textarea:hover::placeholder {
     color: var(--color-base);
+  }
+
+  .select:not(.min-w-[230px]) {
+    opacity: 0.5;
   }
 
   input,

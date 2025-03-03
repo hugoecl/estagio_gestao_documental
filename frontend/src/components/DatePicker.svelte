@@ -192,12 +192,15 @@
   }
 
   .input {
-    opacity: 0.7;
     width: 100%;
+  }
+  input::placeholder {
+    color: var(--color-base);
+    opacity: 0.5;
   }
 
   input:hover::placeholder {
-    color: var(--color-base);
+    opacity: 1;
   }
 
   .input:hover,
