@@ -17,25 +17,27 @@ import {
       class="flex max-md:flex-col bg-base-100 gap-4 p-2 rounded-md shadow-sm border border-zinc-300"
     >
       <label class="select min-w-[230px] max-sm:min-w-auto">
-        <span class="label">Contrato</span>
-        <select required form="contract-form" name="service">
-          <option disabled selected hidden value="">Contrato</option>
-          {ContractServices.map((c, i) => <option value={i}>{c}</option>)}
-        </select>
-      </label>
-      <label class="select min-w-[230px] max-sm:min-w-auto">
         <span class="label">Local</span>
         <select required form="contract-form" name="location">
           <option disabled selected hidden value="">Local</option>
           {ContractLocations.map((l, i) => <option value={i}>{l}</option>)}
         </select>
       </label>
+      <label class="select min-w-[230px] max-sm:min-w-auto">
+        <span class="label">Contrato</span>
+        <select required form="contract-form" name="service">
+          <option disabled selected hidden value="">Contrato</option>
+          {ContractServices.map((c, i) => <option value={i}>{c}</option>)}
+        </select>
+      </label>
     </div>
     <SearchBar />
   </div>
 
-  <Collapse client:load title="Upload">
+  <Collapse client:load>
+    <span id="collapse-title" slot="title">Upload</span>
     <form
+      slot="content"
       id="contract-form"
       class="grid grid-cols-1 sm:grid-cols-2 gap-4 p-2 rounded-sm shadow-sm"
     >
@@ -111,20 +113,49 @@ import {
       </div>
     </form>
   </Collapse>
-  <Collapse title="Contratos" client:load>
-    <h1>Contratos</h1>
+  <Collapse client:load>
+    <span slot="title">Contratos</span>
+    <h2 slot="content">teste</h2>
   </Collapse>
 </Layout>
 
 <script>
   import { uploadContract } from "@api/utils";
   import { showAlert, AlertPosition, AlertType } from "@components/Alert/Alert";
+  import { ContractLocations, ContractServices } from "@lib/types/contracts";
   import { elementsToToggle } from "@stores";
 
   document.addEventListener("astro:page-load", () => {
     if (window.location.pathname !== "/contratos") return;
+
+    const locationSelect = document.querySelector(
+      'select[name="location"]'
+    )! as HTMLSelectElement;
+    const serviceSelect = document.querySelector(
+      'select[name="service"]'
+    )! as HTMLSelectElement;
+
+    const title = document.getElementById("collapse-title")!;
+
+    locationSelect.addEventListener("change", (event) => {
+      if (!serviceSelect.value) return;
+      // @ts-ignore
+      title.innerHTML = `Upload - ${ContractLocations[locationSelect.value]} - ${ContractServices[event.currentTarget.value]}`;
+
+      // @ts-ignore
+      event.currentTarget.style.opacity = "1";
+    });
+
+    serviceSelect.addEventListener("change", (event) => {
+      if (!locationSelect.value) return;
+      // @ts-ignore
+      title.innerHTML = `Upload - ${ContractLocations[locationSelect.value]} - ${ContractServices[event.currentTarget.value]}`;
+      // @ts-ignore
+      event.currentTarget.style.opacity = "1";
+    });
+
     const selects = document.querySelectorAll(".select");
-    for (let i = 0, len = selects.length; i < len; i++) {
+    for (let i = 2, len = selects.length; i < len; i++) {
       selects[i].addEventListener("change", (event) => {
         // @ts-ignore
         event.currentTarget.style.opacity = "1";

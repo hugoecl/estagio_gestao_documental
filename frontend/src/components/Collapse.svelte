@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
 
-  const { title, children }: { title: string; children: Snippet } = $props();
+  const { content, title }: { content: Snippet; title: Snippet } = $props();
 </script>
 
 <div
@@ -17,10 +17,10 @@
       parent.classList.toggle("collapse-close");
     }}
   />
-  <div class="collapse-title font-semibold">{title}</div>
+  <div class="collapse-title font-semibold">{@render title()}</div>
 
   <div class="collapse-content text-sm">
-    {@render children?.()}
+    {@render content()}
   </div>
 </div>
 
