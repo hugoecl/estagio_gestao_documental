@@ -15,6 +15,19 @@ pub struct UserCache {
     pub is_admin: bool,
 }
 
+pub struct ContractCache {
+    pub contract_number: u32,
+    pub date: String,
+    pub date_range: String,
+    pub description: String,
+    pub files: Vec<u8>,
+    pub location: String,
+    pub service: String,
+    pub status: i32,
+    pub supplier: String,
+    pub type_of_contract: i32,
+}
+
 pub struct Db {
     pub pool: MySqlPool,
 }
