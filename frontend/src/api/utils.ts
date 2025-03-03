@@ -9,6 +9,7 @@ async function handleFetch(
 ): Promise<Response> {
   try {
     const response = await fetch(url, options);
+    // TODO: check if response is 401 and redirect to login
     return response;
   } catch (error) {
     toggleElements();

@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS contracts (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
-  UNIQUE INDEX idx_contract_number (contract_number),
+  INDEX idx_contract_number (contract_number),
   INDEX idx_supplier (supplier),
   INDEX idx_status (status),
   INDEX idx_type (type)

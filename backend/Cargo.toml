@@ -30,7 +30,7 @@ sqlx = { version = "0.8.3", default-features = false, features = [
     "macros",
     "chrono",
 ] }
-tokio = { version = "1", features = ["fs", "macros"] }
+tokio = { version = "1", features = ["macros"] }
 
 [features]
 default = []

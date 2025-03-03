@@ -17,8 +17,8 @@ pub struct UserCache {
 }
 
 pub struct ContractFilesCache {
-    path: String,
-    uploaded_at: chrono::DateTime<chrono::Utc>,
+    pub path: String,
+    pub uploaded_at: chrono::DateTime<chrono::Utc>,
 }
 
 pub struct ContractCache {
@@ -46,6 +46,7 @@ pub struct Cache {
     pub last_user_id: AtomicU32,
     pub contracts: HashMap<u32, ContractCache, RandomState>,
     pub last_contract_id: AtomicU32,
+    pub last_contract_file_id: AtomicU32,
 }
 
 #[inline(always)]
@@ -91,7 +92,7 @@ async fn get_users_cache(
 
 async fn get_contracts_cache(
     pool: &sqlx::Pool<sqlx::MySql>,
-) -> Result<(HashMap<u32, ContractCache, RandomState>, u32), sqlx::Error> {
+) -> Result<(HashMap<u32, ContractCache, RandomState>, u32, u32), sqlx::Error> {
     let contracts = sqlx::query!("SELECT * FROM contracts")
         .fetch_all(pool)
         .await?;
@@ -105,6 +106,7 @@ async fn get_contracts_cache(
     let pinned_contracts_cache = contracts_cache.pin();
 
     let mut last_contract_id = 0;
+    let mut last_contract_file_id = 0;
 
     for (i, contract) in contracts.into_iter().enumerate() {
         let files = sqlx::query!(
@@ -113,14 +115,15 @@ async fn get_contracts_cache(
         )
         .fetch_all(pool)
         .await?;
+        let files_length = files.len();
 
         let file_cache = HashMap::builder()
             .hasher(RandomState::new())
-            .capacity(files.len())
+            .capacity(files_length)
             .build();
         let pinned_file_cache = file_cache.pin();
 
-        for file in files.into_iter() {
+        for (k, file) in files.into_iter().enumerate() {
             pinned_file_cache.insert(
                 file.id,
                 ContractFilesCache {
@@ -128,6 +131,9 @@ async fn get_contracts_cache(
                     uploaded_at: file.uploaded_at.unwrap(),
                 },
             );
+            if k == files_length - 1 && i == contracts_length - 1 {
+                last_contract_file_id = file.id;
+            }
         }
         drop(pinned_file_cache);
 
@@ -156,7 +162,7 @@ async fn get_contracts_cache(
 
     drop(pinned_contracts_cache);
 
-    Ok((contracts_cache, last_contract_id))
+    Ok((contracts_cache, last_contract_id, last_contract_file_id))
 }
 
 impl Db {
@@ -177,8 +183,10 @@ impl Db {
         .execute(&pool)
         .await?;
 
-        let ((users_cache, last_user_id), (contracts_cache, last_contract_id)) =
-            tokio::try_join!(get_users_cache(&pool), get_contracts_cache(&pool))?;
+        let (
+            (users_cache, last_user_id),
+            (contracts_cache, last_contract_id, last_contract_file_id),
+        ) = tokio::try_join!(get_users_cache(&pool), get_contracts_cache(&pool))?;
 
         println!("Connected to Database");
 
@@ -189,6 +197,7 @@ impl Db {
                 last_user_id: AtomicU32::new(last_user_id),
                 contracts: contracts_cache,
                 last_contract_id: AtomicU32::new(last_contract_id),
+                last_contract_file_id: AtomicU32::new(last_contract_file_id),
             },
         ))
     }
