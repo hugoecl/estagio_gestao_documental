@@ -1,6 +1,5 @@
 use std::sync::atomic::AtomicU32;
 
-use actix_web::http::header::LAST_MODIFIED;
 use ahash::RandomState;
 use papaya::HashMap;
 use sqlx::mysql::MySqlPool;
