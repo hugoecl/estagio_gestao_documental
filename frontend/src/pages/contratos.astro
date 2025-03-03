@@ -16,14 +16,14 @@ import {
     <div
       class="flex max-md:flex-col bg-base-100 gap-4 p-2 rounded-md shadow-sm border border-zinc-300"
     >
-      <label class="select min-w-[230px] max-sm:min-w-auto">
+      <label class="select min-w-[230px] max-sm:min-w-auto clear">
         <span class="label">Local</span>
         <select required form="contract-form" name="location">
           <option disabled selected hidden value="">Local</option>
           {ContractLocations.map((l, i) => <option value={i}>{l}</option>)}
         </select>
       </label>
-      <label class="select min-w-[230px] max-sm:min-w-auto">
+      <label class="select min-w-[230px] max-sm:min-w-auto clear">
         <span class="label">Contrato</span>
         <select required form="contract-form" name="service">
           <option disabled selected hidden value="">Contrato</option>
@@ -206,7 +206,7 @@ import {
     color: var(--color-base);
   }
 
-  .select:not(.min-w-[230px]) {
+  .select:not(.clear) {
     opacity: 0.5;
   }
 
