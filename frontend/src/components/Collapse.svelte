@@ -9,7 +9,6 @@
 >
   <input
     type="radio"
-    name={title}
     checked={true}
     onclick={(e) => {
       e.preventDefault();
