@@ -60,6 +60,7 @@ async fn main() -> std::io::Result<()> {
 
     #[cfg(feature = "log")]
     env_logger::init_from_env(env_logger::Env::new().default_filter_or(LOG_LEVEL));
+    // TODO: See the cookie warning
 
     if cfg!(feature = "log") {
         HttpServer::new(move || {
