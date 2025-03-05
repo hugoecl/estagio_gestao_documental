@@ -8,11 +8,15 @@ use papaya::HashMap;
 use crate::{
     State,
     models::contract,
-    utils::{memory_file::MemoryFile, session_utils::validate_session},
+    utils::{json_utils::json_response, memory_file::MemoryFile, session_utils::validate_session},
 };
 
-pub async fn get_contracts() -> impl Responder {
-    HttpResponse::Ok().body("Getting contracts")
+pub async fn get_contracts(session: Session, state: web::Data<State>) -> impl Responder {
+    if let Err(response) = validate_session(&session) {
+        return response;
+    }
+
+    json_response(&state.cache.contracts)
 }
 
 #[derive(MultipartForm)]

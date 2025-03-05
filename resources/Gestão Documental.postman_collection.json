@@ -7,112 +7,215 @@
 	},
 	"item": [
 		{
-			"name": "register",
-			"request": {
-				"method": "POST",
-				"header": [],
-				"body": {
-					"mode": "raw",
-					"raw": "{\r\n    \"username\": \"lucas\",\r\n    \"email\": \"lucas@gmail.com\",\r\n    \"password\": \"1234\"\r\n}",
-					"options": {
-						"raw": {
-							"language": "json"
+			"name": "users",
+			"item": [
+				{
+					"name": "register",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"username\": \"lucas\",\r\n    \"email\": \"lucas@gmail.com\",\r\n    \"password\": \"1234\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{host}}/users/register",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"users",
+								"register"
+							]
 						}
-					}
+					},
+					"response": []
 				},
-				"url": {
-					"raw": "{{host}}/users/register",
-					"host": [
-						"{{host}}"
-					],
-					"path": [
-						"users",
-						"register"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "login",
-			"request": {
-				"method": "POST",
-				"header": [],
-				"body": {
-					"mode": "raw",
-					"raw": "{\r\n    \"email\": \"lucas@gmail.com\",\r\n    \"password\": \"1234\"\r\n}",
-					"options": {
-						"raw": {
-							"language": "json"
+				{
+					"name": "login",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"email\": \"lucas@gmail.com\",\r\n    \"password\": \"1234\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{host}}/users/login",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"users",
+								"login"
+							]
 						}
-					}
+					},
+					"response": []
 				},
-				"url": {
-					"raw": "{{host}}/users/login",
-					"host": [
-						"{{host}}"
-					],
-					"path": [
-						"users",
-						"login"
-					]
+				{
+					"name": "logout",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{host}}/users/logout",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"users",
+								"logout"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "protected",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{host}}/users/protected",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"users",
+								"protected"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{host}}/users/check",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"users",
+								"check"
+							]
+						}
+					},
+					"response": []
 				}
-			},
-			"response": []
+			]
 		},
 		{
-			"name": "logout",
-			"request": {
-				"method": "POST",
-				"header": [],
-				"url": {
-					"raw": "{{host}}/users/logout",
-					"host": [
-						"{{host}}"
-					],
-					"path": [
-						"users",
-						"logout"
-					]
+			"name": "contracts",
+			"item": [
+				{
+					"name": "get_contracts",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{host}}/contracts",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"contracts"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "upload_contract",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "contract-number",
+									"value": "123123",
+									"type": "text"
+								},
+								{
+									"key": "date",
+									"value": "12/12/2024",
+									"type": "text"
+								},
+								{
+									"key": "date-range",
+									"value": "02/02/2025 - 06/06/2025",
+									"type": "text"
+								},
+								{
+									"key": "description",
+									"value": "teste descrição",
+									"type": "text"
+								},
+								{
+									"key": "files",
+									"type": "file",
+									"src": [
+										"postman-cloud:///1eff9aa2-049a-4ab0-92d1-253c5de0f316",
+										"postman-cloud:///1eff9aa2-04e8-4cb0-9766-dfb9e9363370"
+									]
+								},
+								{
+									"key": "location",
+									"value": "1",
+									"type": "text"
+								},
+								{
+									"key": "service",
+									"value": "0",
+									"type": "text"
+								},
+								{
+									"key": "status",
+									"value": "1",
+									"type": "text"
+								},
+								{
+									"key": "supplier",
+									"value": "siemens",
+									"type": "text"
+								},
+								{
+									"key": "type",
+									"value": "3",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{host}}/contracts/upload",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"contracts",
+								"upload"
+							]
+						}
+					},
+					"response": []
 				}
-			},
-			"response": []
-		},
-		{
-			"name": "protected",
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "{{host}}/users/protected",
-					"host": [
-						"{{host}}"
-					],
-					"path": [
-						"users",
-						"protected"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "check",
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "{{host}}/users/check",
-					"host": [
-						"{{host}}"
-					],
-					"path": [
-						"users",
-						"check"
-					]
-				}
-			},
-			"response": []
+			]
 		}
 	],
 	"variable": [

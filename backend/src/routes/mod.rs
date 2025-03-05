@@ -17,7 +17,6 @@ async fn serve_files(req: HttpRequest, session: Session) -> Result<actix_files::
     if !path.starts_with("media") {
         return Err(ErrorUnauthorized("Não autorizado"));
     }
-    println!("path: {}", path);
 
     let file = actix_files::NamedFile::open(path)?;
     Ok(file)

@@ -2,6 +2,7 @@ use std::sync::atomic::AtomicU32;
 
 use ahash::RandomState;
 use papaya::HashMap;
+use serde::Serialize;
 use sqlx::mysql::MySqlPool;
 
 use crate::models::contract;
@@ -16,11 +17,13 @@ pub struct UserCache {
     pub is_admin: bool,
 }
 
+#[derive(Serialize)]
 pub struct ContractFilesCache {
     pub path: String,
     pub uploaded_at: chrono::DateTime<chrono::Utc>,
 }
 
+#[derive(Serialize)]
 pub struct ContractCache {
     pub contract_number: u32,
     pub date: chrono::NaiveDate,

@@ -1,5 +1,3 @@
-#![feature(macro_metavar_expr)]
-
 use actix_cors::Cors;
 use actix_session::{SessionMiddleware, config::PersistentSession, storage::CookieSessionStore};
 use actix_web::{
