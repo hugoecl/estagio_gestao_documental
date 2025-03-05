@@ -71,6 +71,8 @@
       <tr>
         <th>ID</th>
         <th>Fornecedor</th>
+        <th>Local</th>
+        <th>Serviço</th>
         <th>Número de Contrato</th>
         <th>Data</th>
         <th>Data Início</th>
@@ -86,6 +88,8 @@
             <th><div class="skeleton h-4 w-8"></div></th>
             <td><div class="skeleton h-4 w-28"></div></td>
             <td><div class="skeleton h-4 w-36"></div></td>
+            <td><div class="skeleton h-4 w-24"></div></td>
+            <td><div class="skeleton h-4 w-24"></div></td>
             <td><div class="skeleton h-4 w-20"></div></td>
             <td><div class="skeleton h-4 w-20"></div></td>
             <td><div class="skeleton h-4 w-20"></div></td>
@@ -98,6 +102,8 @@
           <tr class="hover:bg-base-300">
             <th>{id}</th>
             <td>{contract.supplier}</td>
+            <td>{contract.location}</td>
+            <td>{contract.service}</td>
             <td>{contract.contractNumber}</td>
             <td>{contract.date}</td>
             <td>{contract.dateStart}</td>
