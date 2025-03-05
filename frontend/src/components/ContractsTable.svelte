@@ -6,9 +6,125 @@
   let currentPage = $state(1);
   let perPage = $state(10);
   let loading = $state(true);
+  let searchQuery = $state("");
 
-  const contractEntries = $derived(Object.entries(contracts));
-  const totalItems = $derived(contractEntries.length);
+  const enum SortDirection {
+    NONE,
+    ASC,
+    DESC,
+  }
+
+  const enum SortableColumn {
+    ID = "id",
+    SUPPLIER = "supplier",
+    LOCATION = "location",
+    SERVICE = "service",
+    CONTRACT_NUMBER = "contractNumber",
+    DATE = "date",
+    DATE_START = "dateStart",
+    DATE_END = "dateEnd",
+    TYPE = "type",
+    STATUS = "status",
+  }
+
+  let sortColumn = $state<SortableColumn | null>(null);
+  let sortDirection = $state<SortDirection>(SortDirection.NONE);
+
+  function getSortIndicator(column: SortableColumn): string {
+    if (sortColumn !== column) return "";
+    return sortDirection === SortDirection.ASC ? "↑" : "↓";
+  }
+
+  function toggleSort(column: SortableColumn): void {
+    if (sortColumn === column) {
+      // Cycle through: ASC -> DESC -> NONE
+      sortDirection =
+        sortDirection === SortDirection.ASC
+          ? SortDirection.DESC
+          : sortDirection === SortDirection.DESC
+            ? SortDirection.NONE
+            : SortDirection.ASC;
+
+      if (sortDirection === SortDirection.NONE) {
+        sortColumn = null;
+      }
+    } else {
+      sortColumn = column;
+      sortDirection = SortDirection.ASC;
+    }
+
+    currentPage = 1;
+  }
+
+  const filteredContractEntries = $derived.by(() => {
+    if (!searchQuery.trim()) return Object.entries(contracts);
+
+    const query = searchQuery.toLowerCase();
+    return Object.entries(contracts).filter(([id, contract]) => {
+      const searchableFields = [
+        id,
+        contract.supplier,
+        contract.location,
+        contract.service,
+        contract.contractNumber.toString(),
+        contract.date,
+        contract.dateStart,
+        contract.dateEnd,
+        contract.type,
+        contract.status,
+      ];
+
+      return searchableFields.some((field) =>
+        field.toString().toLowerCase().includes(query)
+      );
+    });
+  });
+
+  const sortedContractEntries = $derived.by(() => {
+    if (sortColumn === null || sortDirection === SortDirection.NONE) {
+      return filteredContractEntries;
+    }
+
+    return [...filteredContractEntries].sort((a, b) => {
+      const [idA, contractA] = a;
+      const [idB, contractB] = b;
+
+      // Special case for ID column which is the key, not in the contract object
+      if (sortColumn === SortableColumn.ID) {
+        return sortDirection === SortDirection.ASC
+          ? Number(idA) - Number(idB)
+          : Number(idB) - Number(idA);
+      }
+
+      const valueA = contractA[sortColumn as keyof typeof contractA];
+      const valueB = contractB[sortColumn as keyof typeof contractB];
+
+      // Handle numbers
+      if (typeof valueA === "number" && typeof valueB === "number") {
+        return sortDirection === SortDirection.ASC
+          ? valueA - valueB
+          : valueB - valueA;
+      }
+
+      // Handle dates
+      if (sortColumn === SortableColumn.DATE) {
+        return sortDirection === SortDirection.ASC
+          ? // @ts-ignore values are Dates here
+            valueA.getTime() - valueB.getTime()
+          : // @ts-ignore values are Dates here
+            valueA.getTime() - valueB.getTime();
+      }
+
+      // Handle strings
+      const strA = String(valueA).toLowerCase();
+      const strB = String(valueB).toLowerCase();
+      return sortDirection === SortDirection.ASC
+        ? strA.localeCompare(strB)
+        : strB.localeCompare(strA);
+    });
+  });
+
+  const totalItems = $derived(sortedContractEntries.length);
   const totalPages = $derived(Math.ceil(totalItems / perPage));
 
   function generatePageNumbers(
@@ -31,7 +147,7 @@
   const displayedContracts = $derived.by(() => {
     const startIndex = (currentPage - 1) * perPage;
     const endIndex = Math.min(startIndex + perPage, totalItems);
-    return contractEntries.slice(startIndex, endIndex);
+    return sortedContractEntries.slice(startIndex, endIndex);
   });
 
   function goToPage(page: number) {
@@ -64,19 +180,103 @@
 <div
   class="overflow-x-auto rounded-box border border-base-content/5 bg-base-200"
 >
-  <table class="table">
+  <div class="p-2 border-b border-zinc-200">
+    <div class="join w-full max-w-md mx-auto">
+      <div
+        class="join-item flex items-center px-3 bg-base-100 border border-zinc-300"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+          class="w-4 h-4"
+        >
+          <path
+            fill-rule="evenodd"
+            d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
+            clip-rule="evenodd"
+          />
+        </svg>
+      </div>
+      <input
+        type="text"
+        placeholder="Pesquisar contratos..."
+        class="input input-bordered join-item w-full"
+        bind:value={searchQuery}
+      />
+      <button
+        class="btn join-item"
+        onclick={() => (searchQuery = "")}
+        disabled={!searchQuery}
+      >
+        ×
+      </button>
+    </div>
+  </div>
+
+  <table class="table table-pin-rows">
     <thead>
       <tr>
-        <th>ID</th>
-        <th>Fornecedor</th>
-        <th class="hidden sm:table-cell">Local</th>
-        <th class="hidden sm:table-cell">Serviço</th>
-        <th>Número de Contrato</th>
-        <th class="hidden md:table-cell">Data</th>
-        <th class="hidden lg:table-cell">Data Início</th>
-        <th class="hidden lg:table-cell">Data Fim</th>
-        <th class="hidden md:table-cell">Tipo</th>
-        <th>Status</th>
+        <th
+          onclick={() => toggleSort(SortableColumn.ID)}
+          class="cursor-pointer"
+        >
+          ID {getSortIndicator(SortableColumn.ID)}
+        </th>
+        <th
+          onclick={() => toggleSort(SortableColumn.SUPPLIER)}
+          class="cursor-pointer"
+        >
+          Fornecedor {getSortIndicator(SortableColumn.SUPPLIER)}
+        </th>
+        <th
+          onclick={() => toggleSort(SortableColumn.LOCATION)}
+          class="hidden sm:table-cell cursor-pointer"
+        >
+          Local {getSortIndicator(SortableColumn.LOCATION)}
+        </th>
+        <th
+          onclick={() => toggleSort(SortableColumn.SERVICE)}
+          class="hidden sm:table-cell cursor-pointer"
+        >
+          Serviço {getSortIndicator(SortableColumn.SERVICE)}
+        </th>
+        <th
+          onclick={() => toggleSort(SortableColumn.CONTRACT_NUMBER)}
+          class="cursor-pointer"
+        >
+          Número de Contrato {getSortIndicator(SortableColumn.CONTRACT_NUMBER)}
+        </th>
+        <th
+          onclick={() => toggleSort(SortableColumn.DATE)}
+          class="hidden md:table-cell cursor-pointer"
+        >
+          Data {getSortIndicator(SortableColumn.DATE)}
+        </th>
+        <th
+          onclick={() => toggleSort(SortableColumn.DATE_START)}
+          class="hidden lg:table-cell cursor-pointer"
+        >
+          Data Início {getSortIndicator(SortableColumn.DATE_START)}
+        </th>
+        <th
+          onclick={() => toggleSort(SortableColumn.DATE_END)}
+          class="hidden lg:table-cell cursor-pointer"
+        >
+          Data Fim {getSortIndicator(SortableColumn.DATE_END)}
+        </th>
+        <th
+          onclick={() => toggleSort(SortableColumn.TYPE)}
+          class="hidden md:table-cell cursor-pointer"
+        >
+          Tipo {getSortIndicator(SortableColumn.TYPE)}
+        </th>
+        <th
+          onclick={() => toggleSort(SortableColumn.STATUS)}
+          class="cursor-pointer"
+        >
+          Status {getSortIndicator(SortableColumn.STATUS)}
+        </th>
       </tr>
     </thead>
     <tbody>
@@ -115,6 +315,14 @@
             </td>
           </tr>
         {/each}
+      {:else if totalItems === 0}
+        <tr>
+          <td colspan="10" class="text-center py-8 text-base-content/70">
+            {searchQuery
+              ? "Nenhum resultado encontrado"
+              : "Nenhum contrato disponível"}
+          </td>
+        </tr>
       {:else}
         {#each displayedContracts as [id, contract]}
           <tr class="hover:bg-base-300">
@@ -123,9 +331,15 @@
             <td class="hidden sm:table-cell">{contract.location}</td>
             <td class="hidden sm:table-cell">{contract.service}</td>
             <td>{contract.contractNumber}</td>
-            <td class="hidden md:table-cell">{contract.date}</td>
-            <td class="hidden lg:table-cell">{contract.dateStart}</td>
-            <td class="hidden lg:table-cell">{contract.dateEnd}</td>
+            <td class="hidden md:table-cell"
+              >{contract.date.toLocaleDateString("pt-PT")}</td
+            >
+            <td class="hidden lg:table-cell"
+              >{contract.dateStart.toLocaleDateString("pt-PT")}</td
+            >
+            <td class="hidden lg:table-cell"
+              >{contract.dateEnd.toLocaleDateString("pt-PT")}</td
+            >
             <td class="hidden md:table-cell">{contract.type}</td>
             <td>{contract.status}</td>
           </tr>
@@ -133,18 +347,17 @@
       {/if}
     </tbody>
   </table>
-
   {#if loading}
     <div
       class="flex justify-between items-center p-2 bg-base-100 border border-zinc-200 rounded-box"
     >
-      <div class="skeleton h-8 w-40"></div>
-      <div class="skeleton h-6 w-64"></div>
-      <div class="skeleton h-10 w-80"></div>
+      <div class="skeleton h-8 w-20 sm:w-40"></div>
+      <div class="skeleton h-6 w-32 sm:w-64"></div>
+      <div class="skeleton h-10 w-40 sm:w-80"></div>
     </div>
   {:else}
     <div
-      class="flex justify-between items-center p-2 bg-base-100 border border-zinc-200 rounded-box"
+      class="flex flex-wrap justify-between items-center gap-2 p-2 bg-base-100 border border-zinc-200 rounded-box"
     >
       <div class="flex items-center gap-2">
         <span>Mostrar</span>
@@ -161,16 +374,18 @@
         </label>
       </div>
 
-      <span
-        >A mostrar {(currentPage - 1) * perPage + 1} a {Math.min(
-          currentPage * perPage,
-          totalItems
-        )} de {totalItems} resultados</span
-      >
+      <span class="text-sm md:text-base">
+        {totalItems === 0
+          ? "Sem resultados"
+          : `A mostrar ${(currentPage - 1) * perPage + 1} a ${Math.min(
+              currentPage * perPage,
+              totalItems
+            )} de ${totalItems} resultados`}
+      </span>
 
       <div class="join">
         <button
-          class="join-item btn"
+          class="join-item btn btn-sm md:btn-md"
           disabled={currentPage === 1}
           onclick={() => goToPage(1)}
         >
@@ -178,7 +393,7 @@
         </button>
 
         <button
-          class="join-item btn"
+          class="join-item btn btn-sm md:btn-md"
           disabled={currentPage === 1}
           onclick={() => goToPage(currentPage - 1)}
         >
@@ -187,12 +402,15 @@
 
         {#each generatePageNumbers(currentPage, totalPages) as page}
           {#if page === null}
-            <button class="join-item btn btn-disabled border border-zinc-200"
+            <button
+              class="join-item btn btn-sm md:btn-md btn-disabled border border-zinc-200"
               >...</button
             >
           {:else}
             <button
-              class="join-item btn {page === currentPage ? 'btn-active' : ''}"
+              class="join-item btn btn-sm md:btn-md {page === currentPage
+                ? 'btn-active'
+                : ''}"
               onclick={() => goToPage(page)}
             >
               {page}
@@ -201,7 +419,7 @@
         {/each}
 
         <button
-          class="join-item btn"
+          class="join-item btn btn-sm md:btn-md"
           disabled={currentPage === totalPages}
           onclick={() => goToPage(currentPage + 1)}
         >
@@ -209,7 +427,7 @@
         </button>
 
         <button
-          class="join-item btn"
+          class="join-item btn btn-sm md:btn-md"
           disabled={currentPage === totalPages}
           onclick={() => goToPage(totalPages)}
         >

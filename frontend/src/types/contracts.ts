@@ -14,15 +14,16 @@ export const ContractLocations = [
 export const ContractStatus = ["Ativo", "Inativo"] as const;
 export const ContractTypes = ["Adenda", "Novo", "Renovação"] as const;
 
+// TODO: See createdAt and updatedAt
 export interface ContractFiles {
   path: string;
   uploadedAt: string;
 }
 export interface Contract {
   contractNumber: number;
-  date: string;
-  dateStart: string;
-  dateEnd: string;
+  date: Date;
+  dateStart: Date;
+  dateEnd: Date;
   description: string;
   location: (typeof ContractLocations)[number];
   service: (typeof ContractServices)[number];

@@ -10,6 +10,13 @@ use crate::utils::hashing_utils::hash;
 
 const SCHEMA: &str = include_str!("../sql/schema.sql");
 
+fn serialize_date_dmy<S>(date: &chrono::NaiveDate, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    serializer.serialize_str(&date.format("%d/%m/%Y").to_string())
+}
+
 pub struct UserCache {
     pub username: String,
     pub email: String,
@@ -28,10 +35,13 @@ pub struct ContractFilesCache {
 pub struct ContractCache {
     #[serde(rename = "contractNumber")]
     pub contract_number: u32,
+    #[serde(serialize_with = "serialize_date_dmy")]
     pub date: chrono::NaiveDate,
     #[serde(rename = "dateStart")]
+    #[serde(serialize_with = "serialize_date_dmy")]
     pub date_start: chrono::NaiveDate,
     #[serde(rename = "dateEnd")]
+    #[serde(serialize_with = "serialize_date_dmy")]
     pub date_end: chrono::NaiveDate,
     pub description: String,
     pub location: contract::Location,

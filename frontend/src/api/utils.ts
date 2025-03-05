@@ -97,6 +97,9 @@ export async function getContracts(): Promise<Contracts | null> {
       service: keyof typeof ContractServices;
       status: keyof typeof ContractStatus;
       type: keyof typeof ContractTypes;
+      date: Date;
+      dateStart: Date;
+      dateEnd: Date;
     }[];
     for (let i = 0, len = entries.length; i < len; i++) {
       entries[i].location = ContractLocations[
@@ -111,6 +114,9 @@ export async function getContracts(): Promise<Contracts | null> {
       entries[i].type = ContractTypes[
         entries[i].type
       ] as keyof typeof ContractTypes;
+      entries[i].date = new Date(entries[i].date);
+      entries[i].dateStart = new Date(entries[i].dateStart);
+      entries[i].dateEnd = new Date(entries[i].dateEnd);
     }
     return json;
   }
