@@ -7,9 +7,7 @@
   let perPage = $state(10);
   let loading = $state(true);
 
-  const contractEntries = $derived.by(() => {
-    return Object.entries(contracts);
-  });
+  const contractEntries = $derived(Object.entries(contracts));
   const totalItems = $derived(contractEntries.length);
   const totalPages = $derived(Math.ceil(totalItems / perPage));
 
