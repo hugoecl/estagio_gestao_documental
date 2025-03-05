@@ -6,13 +6,19 @@ use crate::utils::session_utils::validate_session;
 pub mod contract_routes;
 pub mod user_routes;
 
-#[get("/media/{filename:.*}")]
+#[get("/{filename:.*}")]
 async fn serve_files(req: HttpRequest, session: Session) -> Result<actix_files::NamedFile, Error> {
     if let Err(_) = validate_session(&session) {
         return Err(ErrorUnauthorized("Não autorizado"));
     }
 
     let path = req.match_info().query("filename");
+
+    if !path.starts_with("media") {
+        return Err(ErrorUnauthorized("Não autorizado"));
+    }
+    println!("path: {}", path);
+
     let file = actix_files::NamedFile::open(path)?;
     Ok(file)
 }
