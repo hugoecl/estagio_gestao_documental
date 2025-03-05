@@ -71,13 +71,13 @@
       <tr>
         <th>ID</th>
         <th>Fornecedor</th>
-        <th>Local</th>
-        <th>Serviço</th>
+        <th class="hidden sm:table-cell">Local</th>
+        <th class="hidden sm:table-cell">Serviço</th>
         <th>Número de Contrato</th>
-        <th>Data</th>
-        <th>Data Início</th>
-        <th>Data Fim</th>
-        <th>Tipo</th>
+        <th class="hidden md:table-cell">Data</th>
+        <th class="hidden lg:table-cell">Data Início</th>
+        <th class="hidden lg:table-cell">Data Fim</th>
+        <th class="hidden md:table-cell">Tipo</th>
         <th>Status</th>
       </tr>
     </thead>
@@ -85,16 +85,36 @@
       {#if loading}
         {#each { length: 5 } as _}
           <tr>
-            <th><div class="skeleton h-4 w-8"></div></th>
-            <td><div class="skeleton h-4 w-28"></div></td>
-            <td><div class="skeleton h-4 w-36"></div></td>
-            <td><div class="skeleton h-4 w-24"></div></td>
-            <td><div class="skeleton h-4 w-24"></div></td>
-            <td><div class="skeleton h-4 w-20"></div></td>
-            <td><div class="skeleton h-4 w-20"></div></td>
-            <td><div class="skeleton h-4 w-20"></div></td>
-            <td><div class="skeleton h-4 w-16"></div></td>
-            <td><div class="skeleton h-4 w-16"></div></td>
+            <th>
+              <div class="skeleton h-4 w-4 md:w-6"></div>
+            </th>
+            <td>
+              <div class="skeleton h-4 w-10 sm:w-16 md:w-24"></div>
+            </td>
+            <td class="hidden sm:table-cell">
+              <div class="skeleton h-4 w-12 md:w-18"></div>
+            </td>
+            <td class="hidden sm:table-cell">
+              <div class="skeleton h-4 w-12 md:w-18"></div>
+            </td>
+            <td>
+              <div class="skeleton h-4 w-10 sm:w-16 md:w-20"></div>
+            </td>
+            <td class="hidden md:table-cell">
+              <div class="skeleton h-4 w-16"></div>
+            </td>
+            <td class="hidden lg:table-cell">
+              <div class="skeleton h-4 w-16"></div>
+            </td>
+            <td class="hidden lg:table-cell">
+              <div class="skeleton h-4 w-16"></div>
+            </td>
+            <td class="hidden md:table-cell">
+              <div class="skeleton h-4 w-10"></div>
+            </td>
+            <td>
+              <div class="skeleton h-4 w-8 md:w-12"></div>
+            </td>
           </tr>
         {/each}
       {:else}
@@ -102,13 +122,13 @@
           <tr class="hover:bg-base-300">
             <th>{id}</th>
             <td>{contract.supplier}</td>
-            <td>{contract.location}</td>
-            <td>{contract.service}</td>
+            <td class="hidden sm:table-cell">{contract.location}</td>
+            <td class="hidden sm:table-cell">{contract.service}</td>
             <td>{contract.contractNumber}</td>
-            <td>{contract.date}</td>
-            <td>{contract.dateStart}</td>
-            <td>{contract.dateEnd}</td>
-            <td>{contract.type}</td>
+            <td class="hidden md:table-cell">{contract.date}</td>
+            <td class="hidden lg:table-cell">{contract.dateStart}</td>
+            <td class="hidden lg:table-cell">{contract.dateEnd}</td>
+            <td class="hidden md:table-cell">{contract.type}</td>
             <td>{contract.status}</td>
           </tr>
         {/each}
