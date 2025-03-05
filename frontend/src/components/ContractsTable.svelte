@@ -3,6 +3,44 @@
   import { onMount } from "svelte";
 
   let contracts: Contracts = $state({});
+  let currentPage = $state(1);
+  let perPage = $state(10);
+
+  const contractEntries = $derived.by(() => {
+    return Object.entries(contracts);
+  });
+  const totalItems = $derived(contractEntries.length);
+  const totalPages = $derived(Math.ceil(totalItems / perPage));
+
+  function generatePageNumbers(
+    current: number,
+    total: number
+  ): (number | null)[] {
+    if (total <= 7) {
+      return Array.from({ length: total }, (_, i) => i + 1);
+    }
+
+    if (current < 4) {
+      return [1, 2, 3, 4, 5, null, total];
+    } else if (current > total - 3) {
+      return [1, null, total - 4, total - 3, total - 2, total - 1, total];
+    } else {
+      return [1, null, current - 1, current, current + 1, null, total];
+    }
+  }
+
+  const displayedContracts = $derived.by(() => {
+    const startIndex = (currentPage - 1) * perPage;
+    const endIndex = Math.min(startIndex + perPage, totalItems);
+    return contractEntries.slice(startIndex, endIndex);
+  });
+
+  function goToPage(page: number) {
+    if (page >= 1 && page <= totalPages) {
+      currentPage = page;
+    }
+  }
+
   onMount(async () => {
     const [{ getContracts }, { AlertPosition, AlertType, showAlert }] =
       await Promise.all([
@@ -39,7 +77,7 @@
       </tr>
     </thead>
     <tbody>
-      {#each Object.entries(contracts) as [id, contract]}
+      {#each displayedContracts as [id, contract]}
         <tr class="hover:bg-base-300">
           <th>{id}</th>
           <td>{contract.supplier}</td>
@@ -53,14 +91,79 @@
       {/each}
     </tbody>
   </table>
-  <div class="flex justify-between items-center p-2 bg-base-100">
-    <span>A mostrar 1 a 10 de 97 resultados</span>
+
+  <div
+    class="flex justify-between items-center p-2 bg-base-100 border border-zinc-200 rounded-box"
+  >
+    <div class="flex items-center gap-2">
+      <span>Mostrar</span>
+      <label class="join">
+        <input
+          type="number"
+          min="1"
+          max="100"
+          class="input input-bordered join-item w-20"
+          value={perPage}
+          onchange={(e) => (perPage = parseInt(e.currentTarget.value) || 10)}
+        />
+        <span class="join-item flex items-center px-2">por página</span>
+      </label>
+    </div>
+
+    <span
+      >A mostrar {(currentPage - 1) * perPage + 1} a {Math.min(
+        currentPage * perPage,
+        totalItems
+      )} de {totalItems} resultados</span
+    >
+
     <div class="join">
-      <button class="join-item btn">1</button>
-      <button class="join-item btn">2</button>
-      <button class="join-item btn btn-disabled">...</button>
-      <button class="join-item btn">99</button>
-      <button class="join-item btn">100</button>
+      <button
+        class="join-item btn"
+        disabled={currentPage === 1}
+        onclick={() => goToPage(1)}
+      >
+        «
+      </button>
+
+      <button
+        class="join-item btn"
+        disabled={currentPage === 1}
+        onclick={() => goToPage(currentPage - 1)}
+      >
+        ‹
+      </button>
+
+      {#each generatePageNumbers(currentPage, totalPages) as page}
+        {#if page === null}
+          <button class="join-item btn btn-disabled border border-zinc-200"
+            >...</button
+          >
+        {:else}
+          <button
+            class="join-item btn {page === currentPage ? 'btn-active' : ''}"
+            onclick={() => goToPage(page)}
+          >
+            {page}
+          </button>
+        {/if}
+      {/each}
+
+      <button
+        class="join-item btn"
+        disabled={currentPage === totalPages}
+        onclick={() => goToPage(currentPage + 1)}
+      >
+        ›
+      </button>
+
+      <button
+        class="join-item btn"
+        disabled={currentPage === totalPages}
+        onclick={() => goToPage(totalPages)}
+      >
+        »
+      </button>
     </div>
   </div>
 </div>
