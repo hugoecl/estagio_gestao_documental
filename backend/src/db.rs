@@ -20,22 +20,29 @@ pub struct UserCache {
 #[derive(Serialize)]
 pub struct ContractFilesCache {
     pub path: String,
+    #[serde(rename = "uploadedAt")]
     pub uploaded_at: chrono::DateTime<chrono::Utc>,
 }
 
 #[derive(Serialize)]
 pub struct ContractCache {
+    #[serde(rename = "contractNumber")]
     pub contract_number: u32,
     pub date: chrono::NaiveDate,
+    #[serde(rename = "dateStart")]
     pub date_start: chrono::NaiveDate,
+    #[serde(rename = "dateEnd")]
     pub date_end: chrono::NaiveDate,
     pub description: String,
     pub location: contract::Location,
     pub service: contract::Service,
     pub status: contract::Status,
     pub supplier: String,
+    #[serde(rename = "type")]
     pub type_of_contract: contract::Type,
+    #[serde(rename = "createdAt")]
     pub created_at: chrono::DateTime<chrono::Utc>,
+    #[serde(rename = "uploadedAt")]
     pub updated_at: chrono::DateTime<chrono::Utc>,
     pub files: HashMap<u32, ContractFilesCache, RandomState>,
 }

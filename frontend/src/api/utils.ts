@@ -1,6 +1,13 @@
 import API_BASE_URL from "@api/base-url";
 
 import { showAlert, AlertPosition, AlertType } from "@components/Alert/Alert";
+import {
+  ContractLocations,
+  ContractServices,
+  ContractStatus,
+  ContractTypes,
+  type Contracts,
+} from "@lib/types/contracts";
 import { toggleElements } from "@stores";
 
 async function handleFetch(
@@ -75,4 +82,37 @@ export async function uploadContract(formData: FormData): Promise<boolean> {
     body: formData,
   });
   return response.ok;
+}
+
+export async function getContracts(): Promise<Contracts | null> {
+  const response = await handleFetch(`${API_BASE_URL}/contracts`, {
+    method: "GET",
+    credentials: "include",
+  });
+
+  if (response.ok) {
+    const json = await response.json();
+    const entries = Object.values(json) as {
+      location: keyof typeof ContractLocations;
+      service: keyof typeof ContractServices;
+      status: keyof typeof ContractStatus;
+      type: keyof typeof ContractTypes;
+    }[];
+    for (let i = 0, len = entries.length; i < len; i++) {
+      entries[i].location = ContractLocations[
+        entries[i].location
+      ] as keyof typeof ContractLocations;
+      entries[i].service = ContractServices[
+        entries[i].service
+      ] as keyof typeof ContractServices;
+      entries[i].status = ContractStatus[
+        entries[i].status
+      ] as keyof typeof ContractStatus;
+      entries[i].type = ContractTypes[
+        entries[i].type
+      ] as keyof typeof ContractTypes;
+    }
+    return json;
+  }
+  return null;
 }

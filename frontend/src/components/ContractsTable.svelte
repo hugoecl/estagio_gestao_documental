@@ -1,4 +1,25 @@
 <script lang="ts">
+  import type { Contracts } from "@lib/types/contracts";
+  import { onMount } from "svelte";
+
+  let contracts: Contracts = $state({});
+  onMount(async () => {
+    const [{ getContracts }, { AlertPosition, AlertType, showAlert }] =
+      await Promise.all([
+        import("@api/utils"),
+        import("@components/Alert/Alert"),
+      ]);
+    const contractsOrNull = await getContracts();
+    if (!contractsOrNull) {
+      showAlert(
+        "Erro ao carregar contratos",
+        AlertType.ERROR,
+        AlertPosition.TOP
+      );
+      return;
+    }
+    contracts = contractsOrNull;
+  });
 </script>
 
 <div
@@ -7,7 +28,7 @@
   <table class="table">
     <thead>
       <tr>
-        <th>#</th>
+        <th>ID</th>
         <th>Fornecedor</th>
         <th>Número de Contrato</th>
         <th>Data</th>
@@ -18,46 +39,18 @@
       </tr>
     </thead>
     <tbody>
-      <tr class="hover:bg-base-300">
-        <th>1</th>
-        <td>Cy Ganderton</td>
-        <td>123123</td>
-        <td>12/01/2025</td>
-        <td>06/02/2025</td>
-        <td>06/04/2025</td>
-        <td>Novo</td>
-        <td>Ativo</td>
-      </tr>
-      <tr class="hover:bg-base-300">
-        <th>2</th>
-        <td>Cy Ganderton</td>
-        <td>123123</td>
-        <td>12/01/2025</td>
-        <td>06/02/2025</td>
-        <td>06/04/2025</td>
-        <td>Novo</td>
-        <td>Ativo</td>
-      </tr>
-      <tr class="hover:bg-base-300">
-        <th>3</th>
-        <td>Cy Ganderton</td>
-        <td>123123</td>
-        <td>12/01/2025</td>
-        <td>06/02/2025</td>
-        <td>06/04/2025</td>
-        <td>Novo</td>
-        <td>Ativo</td>
-      </tr>
-      <tr class="hover:bg-base-300">
-        <th>4</th>
-        <td>Cy Ganderton</td>
-        <td>123123</td>
-        <td>12/01/2025</td>
-        <td>06/02/2025</td>
-        <td>06/04/2025</td>
-        <td>Novo</td>
-        <td>Ativo</td>
-      </tr>
+      {#each Object.entries(contracts) as [id, contract]}
+        <tr class="hover:bg-base-300">
+          <th>{id}</th>
+          <td>{contract.supplier}</td>
+          <td>{contract.contractNumber}</td>
+          <td>{contract.date}</td>
+          <td>{contract.dateStart}</td>
+          <td>{contract.dateEnd}</td>
+          <td>{contract.type}</td>
+          <td>{contract.status}</td>
+        </tr>
+      {/each}
     </tbody>
   </table>
   <div class="flex justify-between items-center p-2 bg-base-100">
