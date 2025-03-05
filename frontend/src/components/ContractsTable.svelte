@@ -5,6 +5,7 @@
   let contracts: Contracts = $state({});
   let currentPage = $state(1);
   let perPage = $state(10);
+  let loading = $state(true);
 
   const contractEntries = $derived.by(() => {
     return Object.entries(contracts);
@@ -54,9 +55,11 @@
         AlertType.ERROR,
         AlertPosition.TOP
       );
+      loading = false;
       return;
     }
     contracts = contractsOrNull;
+    loading = false;
   });
 </script>
 
@@ -77,93 +80,118 @@
       </tr>
     </thead>
     <tbody>
-      {#each displayedContracts as [id, contract]}
-        <tr class="hover:bg-base-300">
-          <th>{id}</th>
-          <td>{contract.supplier}</td>
-          <td>{contract.contractNumber}</td>
-          <td>{contract.date}</td>
-          <td>{contract.dateStart}</td>
-          <td>{contract.dateEnd}</td>
-          <td>{contract.type}</td>
-          <td>{contract.status}</td>
-        </tr>
-      {/each}
+      {#if loading}
+        {#each Array(5) as _}
+          <tr>
+            <th><div class="skeleton h-4 w-8"></div></th>
+            <td><div class="skeleton h-4 w-28"></div></td>
+            <td><div class="skeleton h-4 w-36"></div></td>
+            <td><div class="skeleton h-4 w-20"></div></td>
+            <td><div class="skeleton h-4 w-20"></div></td>
+            <td><div class="skeleton h-4 w-20"></div></td>
+            <td><div class="skeleton h-4 w-16"></div></td>
+            <td><div class="skeleton h-4 w-16"></div></td>
+          </tr>
+        {/each}
+      {:else}
+        {#each displayedContracts as [id, contract]}
+          <tr class="hover:bg-base-300">
+            <th>{id}</th>
+            <td>{contract.supplier}</td>
+            <td>{contract.contractNumber}</td>
+            <td>{contract.date}</td>
+            <td>{contract.dateStart}</td>
+            <td>{contract.dateEnd}</td>
+            <td>{contract.type}</td>
+            <td>{contract.status}</td>
+          </tr>
+        {/each}
+      {/if}
     </tbody>
   </table>
 
-  <div
-    class="flex justify-between items-center p-2 bg-base-100 border border-zinc-200 rounded-box"
-  >
-    <div class="flex items-center gap-2">
-      <span>Mostrar</span>
-      <label class="join">
-        <input
-          type="number"
-          min="1"
-          max="100"
-          class="input input-bordered join-item w-20"
-          value={perPage}
-          onchange={(e) => (perPage = parseInt(e.currentTarget.value) || 10)}
-        />
-        <span class="join-item flex items-center px-2">por página</span>
-      </label>
-    </div>
-
-    <span
-      >A mostrar {(currentPage - 1) * perPage + 1} a {Math.min(
-        currentPage * perPage,
-        totalItems
-      )} de {totalItems} resultados</span
+  {#if loading}
+    <div
+      class="flex justify-between items-center p-2 bg-base-100 border border-zinc-200 rounded-box"
     >
-
-    <div class="join">
-      <button
-        class="join-item btn"
-        disabled={currentPage === 1}
-        onclick={() => goToPage(1)}
-      >
-        «
-      </button>
-
-      <button
-        class="join-item btn"
-        disabled={currentPage === 1}
-        onclick={() => goToPage(currentPage - 1)}
-      >
-        ‹
-      </button>
-
-      {#each generatePageNumbers(currentPage, totalPages) as page}
-        {#if page === null}
-          <button class="join-item btn btn-disabled border border-zinc-200"
-            >...</button
-          >
-        {:else}
-          <button
-            class="join-item btn {page === currentPage ? 'btn-active' : ''}"
-            onclick={() => goToPage(page)}
-          >
-            {page}
-          </button>
-        {/if}
-      {/each}
-
-      <button
-        class="join-item btn"
-        disabled={currentPage === totalPages}
-        onclick={() => goToPage(currentPage + 1)}
-      >
-        ›
-      </button>
-
-      <button
-        class="join-item btn"
-        disabled={currentPage === totalPages}
-        onclick={() => goToPage(totalPages)}
-      >
-        »
-      </button>
+      <div class="skeleton h-8 w-40"></div>
+      <div class="skeleton h-6 w-64"></div>
+      <div class="skeleton h-10 w-80"></div>
     </div>
-  </div>
+  {:else}
+    <div
+      class="flex justify-between items-center p-2 bg-base-100 border border-zinc-200 rounded-box"
+    >
+      <div class="flex items-center gap-2">
+        <span>Mostrar</span>
+        <label class="join">
+          <input
+            type="number"
+            min="1"
+            max="100"
+            class="input input-bordered join-item w-20"
+            value={perPage}
+            onchange={(e) => (perPage = parseInt(e.currentTarget.value) || 10)}
+          />
+          <span class="join-item flex items-center px-2">por página</span>
+        </label>
+      </div>
+
+      <span
+        >A mostrar {(currentPage - 1) * perPage + 1} a {Math.min(
+          currentPage * perPage,
+          totalItems
+        )} de {totalItems} resultados</span
+      >
+
+      <div class="join">
+        <button
+          class="join-item btn"
+          disabled={currentPage === 1}
+          onclick={() => goToPage(1)}
+        >
+          «
+        </button>
+
+        <button
+          class="join-item btn"
+          disabled={currentPage === 1}
+          onclick={() => goToPage(currentPage - 1)}
+        >
+          ‹
+        </button>
+
+        {#each generatePageNumbers(currentPage, totalPages) as page}
+          {#if page === null}
+            <button class="join-item btn btn-disabled border border-zinc-200"
+              >...</button
+            >
+          {:else}
+            <button
+              class="join-item btn {page === currentPage ? 'btn-active' : ''}"
+              onclick={() => goToPage(page)}
+            >
+              {page}
+            </button>
+          {/if}
+        {/each}
+
+        <button
+          class="join-item btn"
+          disabled={currentPage === totalPages}
+          onclick={() => goToPage(currentPage + 1)}
+        >
+          ›
+        </button>
+
+        <button
+          class="join-item btn"
+          disabled={currentPage === totalPages}
+          onclick={() => goToPage(totalPages)}
+        >
+          »
+        </button>
+      </div>
+    </div>
+  {/if}
 </div>
