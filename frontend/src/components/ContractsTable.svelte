@@ -81,7 +81,7 @@
     </thead>
     <tbody>
       {#if loading}
-        {#each Array(5) as _}
+        {#each { length: 5 } as _}
           <tr>
             <th><div class="skeleton h-4 w-8"></div></th>
             <td><div class="skeleton h-4 w-28"></div></td>
