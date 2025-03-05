@@ -180,11 +180,11 @@
 <div
   class="overflow-x-auto rounded-box border border-base-content/5 bg-base-200"
 >
-  <div class="p-2 border-b border-zinc-200">
-    <div class="join w-full max-w-md mx-auto">
-      <div
-        class="join-item flex items-center px-3 bg-base-100 border border-zinc-300"
-      >
+  <div class="p-2 flex justify-center">
+    <div
+      class="join w-full max-w-md mx-auto border border-zinc-300 rounded-box"
+    >
+      <div class="join-item flex items-center px-3 bg-base-100">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 20 20"
@@ -205,7 +205,7 @@
         bind:value={searchQuery}
       />
       <button
-        class="btn join-item"
+        class="btn join-item bg-base-300"
         onclick={() => (searchQuery = "")}
         disabled={!searchQuery}
       >
