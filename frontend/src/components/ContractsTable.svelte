@@ -382,7 +382,7 @@
             )} de ${totalItems} resultados`}
       </span>
 
-      <div class="join">
+      <div class="join max-sm:w-full justify-center">
         <button
           class="join-item btn btn-sm md:btn-md"
           disabled={currentPage === 1}
