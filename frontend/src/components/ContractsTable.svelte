@@ -67,15 +67,15 @@
         contract.location,
         contract.service,
         contract.contractNumber.toString(),
-        contract.date,
-        contract.dateStart,
-        contract.dateEnd,
+        contract.dateString,
+        contract.dateStartString,
+        contract.dateEndString,
         contract.type,
         contract.status,
       ];
 
       return searchableFields.some((field) =>
-        field.toString().toLowerCase().includes(query)
+        field.toLowerCase().includes(query)
       );
     });
   });
