@@ -91,33 +91,38 @@
 
       // Special case for ID column which is the key, not in the contract object
       if (sortColumn === SortableColumn.ID) {
-        return sortDirection === SortDirection.ASC
-          ? Number(idA) - Number(idB)
-          : Number(idB) - Number(idA);
+        // @ts-ignore we don't need to convert to number javascript does the math anyways with less overhead
+        return sortDirection === SortDirection.ASC ? idA - idB : idB - idA;
       }
 
       const valueA = contractA[sortColumn as keyof typeof contractA];
       const valueB = contractB[sortColumn as keyof typeof contractB];
 
-      // Handle numbers
-      if (typeof valueA === "number" && typeof valueB === "number") {
+      if (sortColumn === SortableColumn.CONTRACT_NUMBER) {
         return sortDirection === SortDirection.ASC
-          ? valueA - valueB
-          : valueB - valueA;
+          ? // @ts-ignore we don't need to convert to number javascript does the math anyways with less overhead
+            valueA - valueB
+          : // @ts-ignore we don't need to convert to number javascript does the math anyways with less overhead
+            valueB - valueA;
       }
 
       // Handle dates
-      if (sortColumn === SortableColumn.DATE) {
+      if (
+        sortColumn === SortableColumn.DATE ||
+        sortColumn === SortableColumn.DATE_START ||
+        sortColumn === SortableColumn.DATE_END
+      ) {
         return sortDirection === SortDirection.ASC
           ? // @ts-ignore values are Dates here
             valueA.getTime() - valueB.getTime()
           : // @ts-ignore values are Dates here
-            valueA.getTime() - valueB.getTime();
+            valueB.getTime() - valueA.getTime();
       }
 
       // Handle strings
-      const strA = String(valueA).toLowerCase();
-      const strB = String(valueB).toLowerCase();
+      // the values are guaranteed to be strings here
+      const strA = (valueA as string).toLowerCase();
+      const strB = (valueB as string).toLowerCase();
       return sortDirection === SortDirection.ASC
         ? strA.localeCompare(strB)
         : strB.localeCompare(strA);
