@@ -5,78 +5,65 @@
     ContractLocations,
     ContractStatus,
     ContractTypes,
-    type ContractFiles,
   } from "@lib/types/contracts";
   import DatePicker from "./DatePicker.svelte";
+  import { onMount } from "svelte";
 
   const {
     contractId,
     contract,
-    onClose,
-    onSave,
     isVisible,
   }: {
     contractId: string;
     contract: Contract;
-    onClose: () => void;
-    onSave: (updatedContract: Contract) => Promise<boolean>;
     isVisible: boolean;
   } = $props();
 
-  $effect(() => {
-    const modal = document.getElementById(
-      "contract-modal"
-    ) as HTMLDialogElement;
-    if (modal) {
-      if (isVisible) {
-        modal.showModal();
-      } else {
-        modal.close();
-      }
-    }
-  });
-
   // Local state
-  let editedContract: Contract = $state({
-    ...contract,
-    files: contract.files || {},
-  });
+  let editedContract: Contract = $state({} as Contract);
   let newFiles = $state<File[]>([]);
-  let isSubmitting = $state(false);
   let fileInput = $state<HTMLInputElement | null>(null);
+  let isSubmitting = $state(false);
 
   // Confirmation modal state
   let confirmationAction = $state<"deleteContract" | "deleteFile" | null>(null);
   let fileToDeleteId = $state<string | null>(null);
   let isDeleteSubmitting = $state(false);
 
+  $effect(() => {
+    if (contract) {
+      console.log("contract", contract);
+      editedContract = {
+        ...contract,
+      };
+    }
+  });
+
   // Get existing files as array for easier rendering
   const existingFiles = $derived(
-    Object.entries(editedContract.files).map(([id, file]) => ({
-      id,
-      ...file,
-      uploadedAt: new Date(file.uploadedAt),
-    }))
+    editedContract.files
+      ? // @ts-ignore
+        Object.entries(editedContract.files).map(([id, file]) => ({
+          id,
+          // @ts-ignore
+          ...file,
+          // @ts-ignore
+          uploadedAt: new Date(file.uploadedAt),
+        }))
+      : null
   );
-
-  // Parse dates for form inputs (handles both Date objects and strings)
-  function formatDateForInput(date: Date | string) {
-    const d = date instanceof Date ? date : new Date(date);
-    return d.toISOString().split("T")[0];
-  }
 
   async function handleSubmit(e: SubmitEvent) {
     e.preventDefault();
-    isSubmitting = true;
 
     try {
-      // Save contract updates
-      const success = await onSave(editedContract);
+      const { updateContract, uploadContractFiles } = await import(
+        "@api/utils"
+      );
+      const success = await updateContract(contractId, editedContract);
 
       // Upload new files if contract was saved successfully
       if (success && newFiles.length > 0) {
-        const { uploadContractFiles } = await import("@api/utils");
-
         // TODO: maybe do something with ok here
         await uploadContractFiles(contractId, newFiles);
 
@@ -190,227 +177,227 @@
       "contract-modal"
     ) as HTMLDialogElement;
     if (modal) modal.close();
-    onClose();
   }
 </script>
 
 <dialog id="contract-modal" class="modal">
   <div class="modal-box w-11/12 max-w-5xl">
-    <div class="flex justify-between items-center mb-4">
-      <h3 class="font-bold text-xl">
-        Contrato #{editedContract.contractNumber} - {editedContract.supplier}
-      </h3>
+    {#if isVisible}
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="font-bold text-xl">
+          Contrato #{editedContract.contractNumber} - {editedContract.supplier}
+        </h3>
 
-      <button
-        type="button"
-        class="btn btn-ghost btn-sm btn-circle"
-        onclick={closeModal}
-      >
-        ✕
-      </button>
-    </div>
-    <form onsubmit={handleSubmit} class="space-y-4">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <fieldset class="fieldset">
-          <legend class="fieldset-legend"> Número do Contrato </legend>
-          <input
-            type="number"
-            name="contractNumber"
-            class="input input-bordered w-full"
-            value={editedContract.contractNumber}
-            required
-          />
-        </fieldset>
-
-        <fieldset class="fieldset">
-          <legend class="fieldset-legend">Fornecedor</legend>
-          <input
-            type="text"
-            name="supplier"
-            class="input input-bordered w-full"
-            value={editedContract.supplier}
-            required
-          />
-        </fieldset>
-
-        <fieldset class="fieldset">
-          <legend class="fieldset-legend">Local</legend>
-          <select
-            name="location"
-            class="select select-bordered w-full"
-            required
-          >
-            {#each ContractLocations as location, i}
-              <option value={i} selected={editedContract.location === location}>
-                {location}
-              </option>
-            {/each}
-          </select>
-        </fieldset>
-
-        <fieldset class="fieldset">
-          <legend class="fieldset-legend">Serviço</legend>
-          <select name="service" class="select select-bordered w-full" required>
-            {#each ContractServices as service, i}
-              <option value={i} selected={editedContract.service === service}>
-                {service}
-              </option>
-            {/each}
-          </select>
-        </fieldset>
-
-        <fieldset class="fieldset">
-          <legend class="fieldset-legend">Data de Início - Fim</legend>
-          <DatePicker
-            formName="date"
-            range={false}
-            value={editedContract.dateString}
-          />
-        </fieldset>
-
-        <fieldset class="fieldset">
-          <legend class="fieldset-legend">Data de Início - Fim</legend>
-          <DatePicker
-            formName="date-range"
-            range={true}
-            value={`${editedContract.dateStartString} - ${editedContract.dateEndString}`}
-          />
-        </fieldset>
-
-        <fieldset class="fieldset">
-          <legend class="fieldset-legend">Tipo</legend>
-          <select name="type" class="select select-bordered w-full" required>
-            {#each ContractTypes as type, i}
-              <option value={i} selected={editedContract.type === type}>
-                {type}
-              </option>
-            {/each}
-          </select>
-        </fieldset>
-
-        <fieldset class="fieldset">
-          <legend class="fieldset-legend">Estado</legend>
-          <select name="status" class="select select-bordered w-full" required>
-            {#each ContractStatus as status, i}
-              <option value={i} selected={editedContract.status === status}>
-                {status}
-              </option>
-            {/each}
-          </select>
-        </fieldset>
-
-        <fieldset class="fieldset md:col-span-2">
-          <legend class="fieldset-legend">Descrição</legend>
-          <textarea name="description" class="textarea textarea-bordered w-full"
-            >{editedContract.description}</textarea
-          >
-        </fieldset>
+        <button type="button" class="btn btn-ghost btn-sm" onclick={closeModal}>
+          ✕
+        </button>
       </div>
+      <form onsubmit={handleSubmit} class="space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <fieldset class="fieldset">
+            <legend class="fieldset-legend"> Número do Contrato </legend>
+            <input
+              type="number"
+              name="contractNumber"
+              class="input input-bordered w-full"
+              value={editedContract.contractNumber}
+              required
+            />
+          </fieldset>
 
-      <!-- Files section -->
-      <div class="divider">Ficheiros</div>
+          <fieldset class="fieldset">
+            <legend class="fieldset-legend">Fornecedor</legend>
+            <input
+              type="text"
+              name="supplier"
+              class="input input-bordered w-full"
+              value={editedContract.supplier}
+              required
+            />
+          </fieldset>
 
-      <!-- Existing files -->
-      {#if existingFiles.length > 0}
-        <div class="overflow-x-auto">
-          <table class="table table-compact w-full">
-            <thead>
-              <tr>
-                <th>Nome</th>
-                <th>Data de upload</th>
-                <th class="w-24">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {#each existingFiles as file}
-                <tr>
-                  <td>{file.name}</td>
-                  <td>{file.uploadedAt.toLocaleString("pt-PT")}</td>
-                  <td>
-                    <div class="flex justify-end space-x-2">
-                      <a
-                        href={file.path}
-                        target="_blank"
-                        class="btn btn-xs btn-outline"
-                      >
-                        Ver
-                      </a>
-                      <button
-                        type="button"
-                        class="btn btn-xs btn-error"
-                        onclick={() => showDeleteFileConfirmation(file.id)}
-                      >
-                        Eliminar
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              {/each}
-            </tbody>
-          </table>
-        </div>
-      {:else}
-        <div class="text-center py-4 text-base-content/70">
-          Nenhum ficheiro associado a este contrato.
-        </div>
-      {/if}
-
-      <!-- New files section -->
-      <div>
-        <!-- New files UI remains the same... -->
-        <div class="flex items-center justify-between">
-          <h4 class="font-semibold">Novos Ficheiros</h4>
-          <button
-            type="button"
-            class="btn btn-sm btn-secondary"
-            onclick={openFileSelector}
-          >
-            Adicionar Ficheiros
-          </button>
-          <input
-            type="file"
-            name="newFiles"
-            bind:this={fileInput}
-            onchange={handleFileSelection}
-            class="hidden"
-            multiple
-          />
-        </div>
-
-        {#if newFiles.length > 0}
-          <div class="mt-2 space-y-2">
-            {#each newFiles as file, i}
-              <div
-                class="flex items-center justify-between p-2 bg-base-200 rounded"
-              >
-                <span class="text-sm truncate max-w-[80%]">{file.name}</span>
-                <button
-                  type="button"
-                  class="btn btn-xs btn-ghost"
-                  onclick={() => removeNewFile(i)}
+          <fieldset class="fieldset">
+            <legend class="fieldset-legend">Local</legend>
+            <select
+              name="location"
+              class="select select-bordered w-full"
+              required
+            >
+              {#each ContractLocations as location, i}
+                <option
+                  value={i}
+                  selected={editedContract.location === location}
                 >
-                  ×
-                </button>
-              </div>
-            {/each}
+                  {location}
+                </option>
+              {/each}
+            </select>
+          </fieldset>
+
+          <fieldset class="fieldset">
+            <legend class="fieldset-legend">Serviço</legend>
+            <select
+              name="service"
+              class="select select-bordered w-full"
+              required
+            >
+              {#each ContractServices as service, i}
+                <option value={i} selected={editedContract.service === service}>
+                  {service}
+                </option>
+              {/each}
+            </select>
+          </fieldset>
+
+          <fieldset class="fieldset">
+            <legend class="fieldset-legend">Data de Início - Fim</legend>
+            <DatePicker
+              formName="date"
+              range={false}
+              value={editedContract.dateString}
+            />
+          </fieldset>
+
+          <fieldset class="fieldset">
+            <legend class="fieldset-legend">Data de Início - Fim</legend>
+            <DatePicker
+              formName="date-range"
+              range={true}
+              value={`${editedContract.dateStartString} - ${editedContract.dateEndString}`}
+            />
+          </fieldset>
+
+          <fieldset class="fieldset">
+            <legend class="fieldset-legend">Tipo</legend>
+            <select name="type" class="select select-bordered w-full" required>
+              {#each ContractTypes as type, i}
+                <option value={i} selected={editedContract.type === type}>
+                  {type}
+                </option>
+              {/each}
+            </select>
+          </fieldset>
+
+          <fieldset class="fieldset">
+            <legend class="fieldset-legend">Estado</legend>
+            <select
+              name="status"
+              class="select select-bordered w-full"
+              required
+            >
+              {#each ContractStatus as status, i}
+                <option value={i} selected={editedContract.status === status}>
+                  {status}
+                </option>
+              {/each}
+            </select>
+          </fieldset>
+
+          <fieldset class="fieldset md:col-span-2">
+            <legend class="fieldset-legend">Descrição</legend>
+            <textarea
+              name="description"
+              class="textarea textarea-bordered w-full"
+              >{editedContract.description}</textarea
+            >
+          </fieldset>
+        </div>
+
+        <!-- Files section -->
+        <div class="divider">Ficheiros</div>
+
+        <!-- Existing files -->
+        {#if existingFiles !== null}
+          <div class="overflow-x-auto">
+            <table class="table table-compact w-full">
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>Data de upload</th>
+                  <th class="w-24">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {#each existingFiles as file}
+                  <tr>
+                    <td>{file.name}</td>
+                    <td>{file.uploadedAt.toLocaleString("pt-PT")}</td>
+                    <td>
+                      <div class="flex justify-end space-x-2">
+                        <a
+                          href={file.path}
+                          target="_blank"
+                          class="btn btn-xs btn-outline"
+                        >
+                          Ver
+                        </a>
+                        <button
+                          type="button"
+                          class="btn btn-xs btn-error"
+                          onclick={() => showDeleteFileConfirmation(file.id)}
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
           </div>
         {:else}
           <div class="text-center py-4 text-base-content/70">
-            Clique no botão acima para adicionar novos ficheiros.
+            Nenhum ficheiro associado a este contrato.
           </div>
         {/if}
-      </div>
 
-      <div class="modal-action flex justify-between">
+        <!-- New files section -->
         <div>
-          <button
-            type="button"
-            class="btn mr-2"
-            onclick={closeModal}
-            disabled={isSubmitting}
-          >
-            Cancelar
-          </button>
+          <!-- New files UI remains the same... -->
+          <div class="flex items-center justify-between">
+            <h4 class="font-semibold">Novos Ficheiros</h4>
+            <button
+              type="button"
+              class="btn btn-sm btn-secondary"
+              onclick={openFileSelector}
+            >
+              Adicionar Ficheiros
+            </button>
+            <input
+              type="file"
+              name="newFiles"
+              bind:this={fileInput}
+              onchange={handleFileSelection}
+              class="hidden"
+              multiple
+            />
+          </div>
+
+          {#if newFiles.length > 0}
+            <div class="mt-2 space-y-2">
+              {#each newFiles as file, i}
+                <div
+                  class="flex items-center justify-between p-2 bg-base-200 rounded"
+                >
+                  <span class="text-sm truncate max-w-[80%]">{file.name}</span>
+                  <button
+                    type="button"
+                    class="btn btn-xs btn-ghost"
+                    onclick={() => removeNewFile(i)}
+                  >
+                    ×
+                  </button>
+                </div>
+              {/each}
+            </div>
+          {:else}
+            <div class="text-center py-4 text-base-content/70">
+              Clique no botão acima para adicionar novos ficheiros.
+            </div>
+          {/if}
+        </div>
+
+        <div class="modal-action flex justify-between">
           <button
             type="button"
             class="btn btn-error"
@@ -419,15 +406,15 @@
           >
             Eliminar Contrato
           </button>
+          <button type="submit" class="btn btn-primary" disabled={isSubmitting}>
+            {isSubmitting ? "A guardar..." : "Guardar alterações"}
+          </button>
         </div>
-        <button type="submit" class="btn btn-primary" disabled={isSubmitting}>
-          {isSubmitting ? "A guardar..." : "Guardar alterações"}
-        </button>
-      </div>
-    </form>
+      </form>
+    {/if}
   </div>
   <form method="dialog" class="modal-backdrop">
-    <button onclick={onClose}>close</button>
+    <button>close</button>
   </form>
 </dialog>
 

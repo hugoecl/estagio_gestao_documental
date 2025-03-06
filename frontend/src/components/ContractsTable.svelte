@@ -181,7 +181,7 @@
 
   function openContractModal(id: string, contract: Contract) {
     selectedContractId = id;
-    console.log("contract:", contract);
+    // console.log("contract:", contract);
     selectedContract = $state.snapshot(contract); // Deep copy to prevent direct mutations
     isModalOpen = true;
 
@@ -504,19 +504,8 @@
   {/if}
 </div>
 
-<!-- {#if isModalOpen && selectedContractId && selectedContract}
-  <ContractModal
-    contractId={selectedContractId}
-    contract={selectedContract}
-    onClose={handleModalClose}
-    onSave={handleContractSave}
-  />
-{/if} -->
-
 <ContractModal
-  contractId={selectedContractId || ""}
-  contract={selectedContract || ({} as Contract)}
-  onClose={handleModalClose}
-  onSave={handleContractSave}
+  contractId={selectedContractId!}
+  contract={selectedContract!}
   isVisible={isModalOpen}
 />

@@ -126,7 +126,7 @@ import {
   import { uploadContract } from "@api/utils";
   import { showAlert, AlertPosition, AlertType } from "@components/Alert/Alert";
   import { ContractLocations, ContractServices } from "@lib/types/contracts";
-  import { elementsToToggle } from "@stores";
+  import { elementsToToggle } from "@stores/loadingStores";
 
   document.addEventListener("astro:page-load", () => {
     if (window.location.pathname !== "/contratos") return;

@@ -9,7 +9,7 @@ import {
   type Contract,
   type Contracts,
 } from "@lib/types/contracts";
-import { toggleElements } from "@stores";
+import { toggleElements } from "src/stores/loadingStores";
 
 async function handleFetch(
   url: string | URL,
