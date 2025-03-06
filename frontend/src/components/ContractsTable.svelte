@@ -87,6 +87,12 @@
     return result;
   });
 
+  $effect(() => {
+    if (searchQuery) {
+      currentPage = 1;
+    }
+  });
+
   const sortedContractEntries = $derived.by(() => {
     if (sortColumn === null || sortDirection === SortDirection.NONE) {
       return filteredContractEntries;
