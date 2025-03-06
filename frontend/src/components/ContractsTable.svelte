@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Contract, Contracts } from "@lib/types/contracts";
   import { onMount } from "svelte";
+  import ContractModal from "@components/ContractModal.svelte";
 
   let contracts: Contracts = $state({});
   let currentPage = $state(1);
@@ -174,6 +175,52 @@
     }
   }
 
+  let selectedContractId: string | null = $state(null);
+  let selectedContract = $state<Contract | null>(null);
+  let isModalOpen = $state(false);
+
+  function openContractModal(id: string, contract: Contract) {
+    selectedContractId = id;
+    console.log("contract:", contract);
+    selectedContract = $state.snapshot(contract); // Deep copy to prevent direct mutations
+    isModalOpen = true;
+
+    const modal = document.getElementById(
+      "contract-modal"
+    ) as HTMLDialogElement;
+    modal.showModal();
+  }
+
+  async function handleContractSave(
+    updatedContract: Contract
+  ): Promise<boolean> {
+    try {
+      const { updateContract } = await import("@api/utils");
+      const success = await updateContract(
+        selectedContractId!,
+        updatedContract
+      );
+
+      if (success) {
+        // Update the contract in local state
+        // @ts-ignore javascript acceps numeric strings as indexes
+        contracts[selectedContractId!] = updatedContract;
+        contractEntries = Object.entries(contracts);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Error saving contract:", error);
+      return false;
+    }
+  }
+
+  function handleModalClose() {
+    isModalOpen = false;
+    selectedContractId = null;
+    selectedContract = null;
+  }
+
   onMount(async () => {
     const [{ getContracts }, { AlertPosition, AlertType, showAlert }] =
       await Promise.all([
@@ -344,7 +391,13 @@
         </tr>
       {:else}
         {#each displayedContracts as [id, contract]}
-          <tr class="hover:bg-base-300">
+          <tr
+            class="hover:bg-base-300"
+            onclick={(e) => {
+              e.preventDefault();
+              openContractModal(id, contract);
+            }}
+          >
             <th>{id}</th>
             <td>{contract.supplier}</td>
             <td class="hidden sm:table-cell">{contract.location}</td>
@@ -450,3 +503,20 @@
     </div>
   {/if}
 </div>
+
+<!-- {#if isModalOpen && selectedContractId && selectedContract}
+  <ContractModal
+    contractId={selectedContractId}
+    contract={selectedContract}
+    onClose={handleModalClose}
+    onSave={handleContractSave}
+  />
+{/if} -->
+
+<ContractModal
+  contractId={selectedContractId || ""}
+  contract={selectedContract || ({} as Contract)}
+  onClose={handleModalClose}
+  onSave={handleContractSave}
+  isVisible={isModalOpen}
+/>

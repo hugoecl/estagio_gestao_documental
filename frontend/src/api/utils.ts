@@ -137,8 +137,38 @@ export async function getContracts(): Promise<Contracts | null> {
       entries[i].__searchType = (entries[i].type as string).toLowerCase();
       entries[i].__searchStatus = (entries[i].status as string).toLowerCase();
       entries[i].__searchContractNumber = entries[i].contractNumber.toString();
+
+      const files = entries[i].files;
+      for (const key in files) {
+        files[key].name = files[key].path.split("/").at(-1)!;
+      }
     }
     return json;
   }
   return null;
+}
+
+export async function uploadContractFiles(
+  contractId: string,
+  files: File[]
+): Promise<boolean> {
+  return false;
+}
+
+export async function deleteContractFile(
+  contractId: string,
+  fileId: string
+): Promise<boolean> {
+  return false;
+}
+
+export async function deleteContract(contractId: string): Promise<boolean> {
+  return false;
+}
+
+export async function updateContract(
+  contractId: string,
+  contract: Contract
+): Promise<boolean> {
+  return false;
 }
