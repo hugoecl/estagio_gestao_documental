@@ -178,16 +178,13 @@
   let selectedContractId: string | null = $state(null);
   let selectedContract = $state<Contract | null>(null);
   let isModalOpen = $state(false);
+  let modal: HTMLDialogElement;
 
   function openContractModal(id: string, contract: Contract) {
     selectedContractId = id;
-    // console.log("contract:", contract);
     selectedContract = $state.snapshot(contract); // Deep copy to prevent direct mutations
     isModalOpen = true;
 
-    const modal = document.getElementById(
-      "contract-modal"
-    ) as HTMLDialogElement;
     modal.showModal();
   }
 
@@ -239,6 +236,8 @@
     }
     contracts = contractsOrNull;
     contractEntries = Object.entries(contracts);
+    modal = document.getElementById("contract-modal") as HTMLDialogElement;
+
     loading = false;
   });
 </script>
@@ -285,61 +284,61 @@
       <tr>
         <th
           onclick={() => toggleSort(SortableColumn.ID)}
-          class="cursor-pointer"
+          class="cursor-pointer select-none"
         >
           ID {getSortIndicator(SortableColumn.ID)}
         </th>
         <th
           onclick={() => toggleSort(SortableColumn.SUPPLIER)}
-          class="cursor-pointer"
+          class="cursor-pointer select-none"
         >
           Fornecedor {getSortIndicator(SortableColumn.SUPPLIER)}
         </th>
         <th
           onclick={() => toggleSort(SortableColumn.LOCATION)}
-          class="hidden sm:table-cell cursor-pointer"
+          class="hidden sm:table-cell cursor-pointer select-none"
         >
           Local {getSortIndicator(SortableColumn.LOCATION)}
         </th>
         <th
           onclick={() => toggleSort(SortableColumn.SERVICE)}
-          class="hidden sm:table-cell cursor-pointer"
+          class="hidden sm:table-cell cursor-pointer select-none"
         >
           Serviço {getSortIndicator(SortableColumn.SERVICE)}
         </th>
         <th
           onclick={() => toggleSort(SortableColumn.CONTRACT_NUMBER)}
-          class="cursor-pointer"
+          class="cursor-pointer select-none"
         >
           Número de Contrato {getSortIndicator(SortableColumn.CONTRACT_NUMBER)}
         </th>
         <th
           onclick={() => toggleSort(SortableColumn.DATE)}
-          class="hidden md:table-cell cursor-pointer"
+          class="hidden md:table-cell cursor-pointer select-none"
         >
           Data {getSortIndicator(SortableColumn.DATE)}
         </th>
         <th
           onclick={() => toggleSort(SortableColumn.DATE_START)}
-          class="hidden lg:table-cell cursor-pointer"
+          class="hidden lg:table-cell cursor-pointer select-none"
         >
           Data Início {getSortIndicator(SortableColumn.DATE_START)}
         </th>
         <th
           onclick={() => toggleSort(SortableColumn.DATE_END)}
-          class="hidden lg:table-cell cursor-pointer"
+          class="hidden lg:table-cell cursor-pointer select-none"
         >
           Data Fim {getSortIndicator(SortableColumn.DATE_END)}
         </th>
         <th
           onclick={() => toggleSort(SortableColumn.TYPE)}
-          class="hidden md:table-cell cursor-pointer"
+          class="hidden md:table-cell cursor-pointer select-none"
         >
           Tipo {getSortIndicator(SortableColumn.TYPE)}
         </th>
         <th
           onclick={() => toggleSort(SortableColumn.STATUS)}
-          class="cursor-pointer"
+          class="cursor-pointer select-none"
         >
           Status {getSortIndicator(SortableColumn.STATUS)}
         </th>
@@ -506,6 +505,6 @@
 
 <ContractModal
   contractId={selectedContractId!}
-  contract={selectedContract!}
+  contract={selectedContract ? selectedContract : ({} as Contract)}
   isVisible={isModalOpen}
 />

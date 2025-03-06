@@ -82,7 +82,7 @@ pub async fn upload_contract(
         pinned_contract_files_cache.insert(
             file_id,
             crate::db::ContractFilesCache {
-                path: format!("media/contracts/{}/{}", new_contract_id, file.file_name),
+                path: format!("/media/contracts/{}/{}", new_contract_id, file.file_name),
                 uploaded_at: now,
             },
         );
@@ -155,7 +155,10 @@ pub async fn upload_contract(
 
         query_builder.push_values(file_names, |mut b, file_name| {
             b.push_bind(new_contract_id)
-                .push_bind(format!("media/contracts/{}/{}", new_contract_id, file_name))
+                .push_bind(format!(
+                    "/media/contracts/{}/{}",
+                    new_contract_id, file_name
+                ))
                 .push_bind(now);
         });
 

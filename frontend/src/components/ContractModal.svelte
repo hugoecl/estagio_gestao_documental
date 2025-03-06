@@ -7,7 +7,7 @@
     ContractTypes,
   } from "@lib/types/contracts";
   import DatePicker from "./DatePicker.svelte";
-  import { onMount } from "svelte";
+  import API_BASE_URL from "@api/base-url";
 
   const {
     contractId,
@@ -20,7 +20,6 @@
   } = $props();
 
   // Local state
-  let editedContract: Contract = $state({} as Contract);
   let newFiles = $state<File[]>([]);
   let fileInput = $state<HTMLInputElement | null>(null);
   let isSubmitting = $state(false);
@@ -30,20 +29,11 @@
   let fileToDeleteId = $state<string | null>(null);
   let isDeleteSubmitting = $state(false);
 
-  $effect(() => {
-    if (contract) {
-      console.log("contract", contract);
-      editedContract = {
-        ...contract,
-      };
-    }
-  });
-
   // Get existing files as array for easier rendering
   const existingFiles = $derived(
-    editedContract.files
+    contract.files
       ? // @ts-ignore
-        Object.entries(editedContract.files).map(([id, file]) => ({
+        Object.entries(contract.files).map(([id, file]) => ({
           id,
           // @ts-ignore
           ...file,
@@ -60,14 +50,33 @@
       const { updateContract, uploadContractFiles } = await import(
         "@api/utils"
       );
-      const success = await updateContract(contractId, editedContract);
+
+      const formData = new FormData(e.target as HTMLFormElement);
+      const [dateStart, dateEnd] = (
+        formData.get("date-range")! as string
+      ).split(" - ");
+      const editedContract: Contract = {
+        ...contract,
+        contractNumber: Number(formData.get("contractNumber")),
+        supplier: formData.get("supplier") as string,
+        location: ContractLocations[Number(formData.get("location"))],
+        service: ContractServices[Number(formData.get("service"))],
+        dateString: formData.get("date") as string,
+        dateStartString: dateStart,
+        dateEndString: dateEnd,
+        type: ContractTypes[Number(formData.get("type"))],
+        status: ContractStatus[Number(formData.get("status"))],
+        description: formData.get("description") as string,
+      };
+      console.log(JSON.stringify(editedContract) === JSON.stringify(contract));
+
+      const success = await updateContract(contractId, contract);
 
       // Upload new files if contract was saved successfully
       if (success && newFiles.length > 0) {
         // TODO: maybe do something with ok here
         await uploadContractFiles(contractId, newFiles);
 
-        // Clear new files list
         newFiles = [];
       }
 
@@ -121,11 +130,11 @@
       const success = await deleteContractFile(contractId, fileToDeleteId);
 
       if (success) {
-        // Remove file from editedContract
-        const updatedFiles = { ...editedContract.files };
+        // Remove file from contract
+        const updatedFiles = { ...contract.files };
         // @ts-ignore we don't need to convert fileToDeleteId to number here because it is a numeric string and javascript can take that as indexes
         delete updatedFiles[fileToDeleteId];
-        editedContract.files = updatedFiles;
+        contract.files = updatedFiles;
       }
     } catch (error) {
       console.error("Error deleting file:", error);
@@ -185,7 +194,7 @@
     {#if isVisible}
       <div class="flex justify-between items-center mb-4">
         <h3 class="font-bold text-xl">
-          Contrato #{editedContract.contractNumber} - {editedContract.supplier}
+          Contrato #{contract.contractNumber} - {contract.supplier}
         </h3>
 
         <button type="button" class="btn btn-ghost btn-sm" onclick={closeModal}>
@@ -200,7 +209,7 @@
               type="number"
               name="contractNumber"
               class="input input-bordered w-full"
-              value={editedContract.contractNumber}
+              value={contract.contractNumber}
               required
             />
           </fieldset>
@@ -211,7 +220,7 @@
               type="text"
               name="supplier"
               class="input input-bordered w-full"
-              value={editedContract.supplier}
+              value={contract.supplier}
               required
             />
           </fieldset>
@@ -224,10 +233,7 @@
               required
             >
               {#each ContractLocations as location, i}
-                <option
-                  value={i}
-                  selected={editedContract.location === location}
-                >
+                <option value={i} selected={contract.location === location}>
                   {location}
                 </option>
               {/each}
@@ -242,7 +248,7 @@
               required
             >
               {#each ContractServices as service, i}
-                <option value={i} selected={editedContract.service === service}>
+                <option value={i} selected={contract.service === service}>
                   {service}
                 </option>
               {/each}
@@ -254,7 +260,7 @@
             <DatePicker
               formName="date"
               range={false}
-              value={editedContract.dateString}
+              value={contract.dateString}
             />
           </fieldset>
 
@@ -263,7 +269,7 @@
             <DatePicker
               formName="date-range"
               range={true}
-              value={`${editedContract.dateStartString} - ${editedContract.dateEndString}`}
+              value={`${contract.dateStartString} - ${contract.dateEndString}`}
             />
           </fieldset>
 
@@ -271,7 +277,7 @@
             <legend class="fieldset-legend">Tipo</legend>
             <select name="type" class="select select-bordered w-full" required>
               {#each ContractTypes as type, i}
-                <option value={i} selected={editedContract.type === type}>
+                <option value={i} selected={contract.type === type}>
                   {type}
                 </option>
               {/each}
@@ -286,7 +292,7 @@
               required
             >
               {#each ContractStatus as status, i}
-                <option value={i} selected={editedContract.status === status}>
+                <option value={i} selected={contract.status === status}>
                   {status}
                 </option>
               {/each}
@@ -298,15 +304,13 @@
             <textarea
               name="description"
               class="textarea textarea-bordered w-full"
-              >{editedContract.description}</textarea
+              >{contract.description}</textarea
             >
           </fieldset>
         </div>
 
-        <!-- Files section -->
         <div class="divider">Ficheiros</div>
 
-        <!-- Existing files -->
         {#if existingFiles !== null}
           <div class="overflow-x-auto">
             <table class="table table-compact w-full">
@@ -325,7 +329,7 @@
                     <td>
                       <div class="flex justify-end space-x-2">
                         <a
-                          href={file.path}
+                          href={API_BASE_URL + file.path}
                           target="_blank"
                           class="btn btn-xs btn-outline"
                         >
@@ -351,9 +355,7 @@
           </div>
         {/if}
 
-        <!-- New files section -->
         <div>
-          <!-- New files UI remains the same... -->
           <div class="flex items-center justify-between">
             <h4 class="font-semibold">Novos Ficheiros</h4>
             <button
@@ -422,10 +424,11 @@
 <dialog id="confirm-modal" class="modal">
   <div class="modal-box">
     <h3 class="font-bold text-lg">
+      Eliminar
       {#if confirmationAction === "deleteFile"}
-        Eliminar Ficheiro
+        Ficheiro
       {:else if confirmationAction === "deleteContract"}
-        Eliminar Contrato
+        Contrato
       {/if}
     </h3>
 
