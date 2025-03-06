@@ -6,6 +6,7 @@ import {
   ContractServices,
   ContractStatus,
   ContractTypes,
+  type Contract,
   type Contracts,
 } from "@lib/types/contracts";
 import { toggleElements } from "@stores";
@@ -84,6 +85,24 @@ export async function uploadContract(formData: FormData): Promise<boolean> {
   return response.ok;
 }
 
+interface ContractResponse
+  extends Omit<Contract, "location" | "service" | "status" | "type"> {
+  location: keyof typeof ContractLocations;
+  service: keyof typeof ContractServices;
+  status: keyof typeof ContractStatus;
+  type: keyof typeof ContractTypes;
+  dateString: string;
+  dateStartString: string;
+  dateEndString: string;
+  // lowercase versions for not having to convert them to string/lowercase on each search
+  __searchSupplier: string;
+  __searchLocation: string;
+  __searchService: string;
+  __searchType: string;
+  __searchStatus: string;
+  __searchContractNumber: string;
+}
+
 export async function getContracts(): Promise<Contracts | null> {
   const response = await handleFetch(`${API_BASE_URL}/contracts`, {
     method: "GET",
@@ -92,18 +111,7 @@ export async function getContracts(): Promise<Contracts | null> {
 
   if (response.ok) {
     const json = await response.json();
-    const entries = Object.values(json) as {
-      location: keyof typeof ContractLocations;
-      service: keyof typeof ContractServices;
-      status: keyof typeof ContractStatus;
-      type: keyof typeof ContractTypes;
-      date: Date;
-      dateString: string;
-      dateStart: Date;
-      dateStartString: string;
-      dateEnd: Date;
-      dateEndString: string;
-    }[];
+    const entries = Object.values(json) as ContractResponse[];
     for (let i = 0, len = entries.length; i < len; i++) {
       entries[i].location = ContractLocations[
         entries[i].location
@@ -120,6 +128,15 @@ export async function getContracts(): Promise<Contracts | null> {
       entries[i].date = new Date(entries[i].dateString);
       entries[i].dateStart = new Date(entries[i].dateStartString);
       entries[i].dateEnd = new Date(entries[i].dateEndString);
+
+      entries[i].__searchSupplier = entries[i].supplier.toLowerCase();
+      entries[i].__searchLocation = (
+        entries[i].location as string
+      ).toLowerCase();
+      entries[i].__searchService = (entries[i].service as string).toLowerCase();
+      entries[i].__searchType = (entries[i].type as string).toLowerCase();
+      entries[i].__searchStatus = (entries[i].status as string).toLowerCase();
+      entries[i].__searchContractNumber = entries[i].contractNumber.toString();
     }
     return json;
   }

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Contracts } from "@lib/types/contracts";
+  import type { Contract, Contracts } from "@lib/types/contracts";
   import { onMount } from "svelte";
 
   let contracts: Contracts = $state({});
@@ -56,28 +56,35 @@
     currentPage = 1;
   }
 
+  let contractEntries: [string, Contract][] = $state([]);
+
   const filteredContractEntries = $derived.by(() => {
-    if (!searchQuery.trim()) return Object.entries(contracts);
+    if (!searchQuery.trim()) return contractEntries;
 
     const query = searchQuery.toLowerCase();
-    return Object.entries(contracts).filter(([id, contract]) => {
-      const searchableFields = [
-        id,
-        contract.supplier,
-        contract.location,
-        contract.service,
-        contract.contractNumber.toString(),
-        contract.dateString,
-        contract.dateStartString,
-        contract.dateEndString,
-        contract.type,
-        contract.status,
-      ];
+    const result = [];
 
-      return searchableFields.some((field) =>
-        field.toLowerCase().includes(query)
-      );
-    });
+    for (let i = 0, len = contractEntries.length; i < len; i++) {
+      const entry = contractEntries[i];
+      const [id, contract] = entry;
+
+      if (
+        id.includes(query) ||
+        contract.__searchSupplier.includes(query) ||
+        contract.__searchLocation.includes(query) ||
+        contract.__searchService.includes(query) ||
+        contract.__searchContractNumber.includes(query) ||
+        contract.dateString.includes(query) ||
+        contract.dateStartString.includes(query) ||
+        contract.dateEndString.includes(query) ||
+        contract.__searchType.includes(query) ||
+        contract.__searchStatus.includes(query)
+      ) {
+        result.push(entry);
+      }
+    }
+
+    return result;
   });
 
   const sortedContractEntries = $derived.by(() => {
@@ -178,6 +185,7 @@
       return;
     }
     contracts = contractsOrNull;
+    contractEntries = Object.entries(contracts);
     loading = false;
   });
 </script>

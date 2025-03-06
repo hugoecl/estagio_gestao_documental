@@ -36,5 +36,13 @@ export interface Contract {
   createdAt: string;
   updatedAt: string;
   files: Record<number, ContractFiles>;
+
+  // lowercase versions for performance reasons
+  __searchSupplier: string;
+  __searchLocation: string;
+  __searchService: string;
+  __searchContractNumber: string;
+  __searchType: string;
+  __searchStatus: string;
 }
 export type Contracts = Record<number, Contract>;
