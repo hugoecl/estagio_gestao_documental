@@ -98,8 +98,11 @@ export async function getContracts(): Promise<Contracts | null> {
       status: keyof typeof ContractStatus;
       type: keyof typeof ContractTypes;
       date: Date;
+      dateString: string;
       dateStart: Date;
+      dateStartString: string;
       dateEnd: Date;
+      dateEndString: string;
     }[];
     for (let i = 0, len = entries.length; i < len; i++) {
       entries[i].location = ContractLocations[
@@ -114,9 +117,9 @@ export async function getContracts(): Promise<Contracts | null> {
       entries[i].type = ContractTypes[
         entries[i].type
       ] as keyof typeof ContractTypes;
-      entries[i].date = new Date(entries[i].date);
-      entries[i].dateStart = new Date(entries[i].dateStart);
-      entries[i].dateEnd = new Date(entries[i].dateEnd);
+      entries[i].date = new Date(entries[i].dateString);
+      entries[i].dateStart = new Date(entries[i].dateStartString);
+      entries[i].dateEnd = new Date(entries[i].dateEndString);
     }
     return json;
   }

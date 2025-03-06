@@ -22,8 +22,11 @@ export interface ContractFiles {
 export interface Contract {
   contractNumber: number;
   date: Date;
+  dateString: string;
   dateStart: Date;
+  dateStartString: string;
   dateEnd: Date;
+  dateEndString: string;
   description: string;
   location: (typeof ContractLocations)[number];
   service: (typeof ContractServices)[number];

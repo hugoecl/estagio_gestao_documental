@@ -35,12 +35,13 @@ pub struct ContractFilesCache {
 pub struct ContractCache {
     #[serde(rename = "contractNumber")]
     pub contract_number: u32,
+    #[serde(rename = "dateString")]
     #[serde(serialize_with = "serialize_date_dmy")]
     pub date: chrono::NaiveDate,
-    #[serde(rename = "dateStart")]
+    #[serde(rename = "dateStartString")]
     #[serde(serialize_with = "serialize_date_dmy")]
     pub date_start: chrono::NaiveDate,
-    #[serde(rename = "dateEnd")]
+    #[serde(rename = "dateEndString")]
     #[serde(serialize_with = "serialize_date_dmy")]
     pub date_end: chrono::NaiveDate,
     pub description: String,

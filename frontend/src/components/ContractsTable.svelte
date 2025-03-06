@@ -124,8 +124,8 @@
       const strA = (valueA as string).toLowerCase();
       const strB = (valueB as string).toLowerCase();
       return sortDirection === SortDirection.ASC
-        ? strA.localeCompare(strB)
-        : strB.localeCompare(strA);
+        ? strA.localeCompare(strB, "pt-PT")
+        : strB.localeCompare(strA, "pt-PT");
     });
   });
 
@@ -336,15 +336,9 @@
             <td class="hidden sm:table-cell">{contract.location}</td>
             <td class="hidden sm:table-cell">{contract.service}</td>
             <td>{contract.contractNumber}</td>
-            <td class="hidden md:table-cell"
-              >{contract.date.toLocaleDateString("pt-PT")}</td
-            >
-            <td class="hidden lg:table-cell"
-              >{contract.dateStart.toLocaleDateString("pt-PT")}</td
-            >
-            <td class="hidden lg:table-cell"
-              >{contract.dateEnd.toLocaleDateString("pt-PT")}</td
-            >
+            <td class="hidden md:table-cell">{contract.dateString}</td>
+            <td class="hidden lg:table-cell">{contract.dateStartString}</td>
+            <td class="hidden lg:table-cell">{contract.dateEndString}</td>
             <td class="hidden md:table-cell">{contract.type}</td>
             <td>{contract.status}</td>
           </tr>
