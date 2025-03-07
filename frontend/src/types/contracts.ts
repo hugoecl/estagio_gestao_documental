@@ -14,7 +14,7 @@ export const ContractLocations = [
 export const ContractStatus = ["Ativo", "Inativo"] as const;
 export const ContractTypes = ["Adenda", "Novo", "Renovação"] as const;
 
-// TODO: See createdAt and updatedAt
+// TODO: See createdAt and updatedAt maybe show them in the modal
 export interface ContractFiles {
   name: string;
   path: string;
