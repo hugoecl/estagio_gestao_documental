@@ -56,17 +56,47 @@
       const { updateContract, uploadContractFiles } = await import(
         "@api/utils"
       );
-      const editedContract = { ...contract, files: undefined };
-      console.log(JSON.stringify(editedContract) === origianlContractJson);
 
-      const success = await updateContract(contractId, contract);
+      const editedContract = {
+        ...contract,
+        files: undefined,
+      } as unknown as Contract;
+      const hasContractChanged =
+        JSON.stringify(editedContract) !== origianlContractJson;
 
-      // Upload new files if contract was saved successfully
-      if (success && newFiles.length > 0) {
-        // TODO: maybe do something with ok here
-        await uploadContractFiles(contractId, newFiles);
+      const hasNewFiles = newFiles.length > 0;
 
-        newFiles = [];
+      let success = true;
+
+      // Scenario 1: Both contract data and files have changed
+      if (hasContractChanged && hasNewFiles) {
+        const [contractResult, filesResult] = await Promise.all([
+          updateContract(contractId, editedContract),
+          uploadContractFiles(contractId, newFiles),
+        ]);
+
+        success = contractResult && filesResult;
+
+        if (success) {
+          newFiles = [];
+        }
+      }
+      // Scenario 2: Only contract data has changed
+      else if (hasContractChanged) {
+        success = await updateContract(contractId, editedContract);
+      }
+      // Scenario 3: Only files have changed
+      else if (hasNewFiles) {
+        success = await uploadContractFiles(contractId, newFiles);
+
+        if (success) {
+          newFiles = [];
+        }
+      }
+      // Scenario 4: Nothing has changed
+      else {
+        closeModal();
+        return;
       }
 
       if (success) {
