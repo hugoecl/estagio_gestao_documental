@@ -360,3 +360,48 @@ pub async fn upload_contract_files(
 
     HttpResponse::Ok().finish()
 }
+
+pub async fn delete_contract_file(
+    session: Session,
+    state: web::Data<State>,
+    path: web::Path<(u32, u32)>,
+) -> impl Responder {
+    if let Err(response) = validate_session(&session) {
+        return response;
+    }
+
+    let (contract_id, file_id) = path.into_inner();
+
+    let pinned_contracts_cache = state.cache.contracts.pin();
+
+    let contract = pinned_contracts_cache.get(&contract_id);
+    let contract = if let Some(contract) = contract {
+        contract
+    } else {
+        return HttpResponse::NotFound().finish();
+    };
+
+    let pinned_contract_files_cache = contract.files.pin();
+
+    // let file_path = file.path.clone();
+    // tokio::task::spawn_blocking(move || {
+    //     std::fs::remove_file(format!("media{}", file_path))
+    // })
+
+    let contract_file = pinned_contract_files_cache.remove(&file_id);
+    if let None = contract_file {
+        return HttpResponse::NotFound().finish();
+    }
+
+    drop(pinned_contract_files_cache);
+    drop(pinned_contracts_cache);
+
+    tokio::spawn(async move {
+        sqlx::query!("DELETE FROM contract_files WHERE id = ?", file_id)
+            .execute(&state.db.pool)
+            .await
+            .unwrap();
+    });
+
+    HttpResponse::Ok().finish()
+}

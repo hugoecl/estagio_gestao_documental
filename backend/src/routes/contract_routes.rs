@@ -22,6 +22,10 @@ pub fn init(cfg: &mut web::ServiceConfig) {
             .route(
                 "/{id}/files",
                 web::post().to(crate::handlers::contract_handlers::upload_contract_files),
+            )
+            .route(
+                "/{id}/files/{file_id}",
+                web::delete().to(crate::handlers::contract_handlers::delete_contract_file),
             ),
     );
 }
