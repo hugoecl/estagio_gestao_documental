@@ -215,7 +215,6 @@
             <legend class="fieldset-legend"> Número do Contrato </legend>
             <input
               type="number"
-              name="contractNumber"
               class="input input-bordered w-full"
               bind:value={contract.contractNumber}
               required
@@ -226,7 +225,6 @@
             <legend class="fieldset-legend">Fornecedor</legend>
             <input
               type="text"
-              name="supplier"
               class="input input-bordered w-full"
               bind:value={contract.supplier}
               required
@@ -235,11 +233,7 @@
 
           <fieldset class="fieldset">
             <legend class="fieldset-legend">Local</legend>
-            <select
-              name="location"
-              class="select select-bordered w-full"
-              required
-            >
+            <select class="select select-bordered w-full" required>
               {#each ContractLocations as location, i}
                 <option value={i} selected={contract.location === location}>
                   {location}
@@ -250,11 +244,7 @@
 
           <fieldset class="fieldset">
             <legend class="fieldset-legend">Serviço</legend>
-            <select
-              name="service"
-              class="select select-bordered w-full"
-              required
-            >
+            <select class="select select-bordered w-full" required>
               {#each ContractServices as service, i}
                 <option value={i} selected={contract.service === service}>
                   {service}
@@ -265,17 +255,12 @@
 
           <fieldset class="fieldset">
             <legend class="fieldset-legend">Data de Início - Fim</legend>
-            <DatePicker
-              formName="date"
-              range={false}
-              bind:value={contract.dateString}
-            />
+            <DatePicker range={false} bind:value={contract.dateString} />
           </fieldset>
 
           <fieldset class="fieldset">
             <legend class="fieldset-legend">Data de Início - Fim</legend>
             <DatePicker
-              formName="date-range"
               range={true}
               bind:value={() =>
                 `${contract.dateStartString} - ${contract.dateEndString}`,
@@ -285,7 +270,7 @@
 
           <fieldset class="fieldset">
             <legend class="fieldset-legend">Tipo</legend>
-            <select name="type" class="select select-bordered w-full" required>
+            <select class="select select-bordered w-full" required>
               {#each ContractTypes as type, i}
                 <option value={i} selected={contract.type === type}>
                   {type}
@@ -296,11 +281,7 @@
 
           <fieldset class="fieldset">
             <legend class="fieldset-legend">Estado</legend>
-            <select
-              name="status"
-              class="select select-bordered w-full"
-              required
-            >
+            <select class="select select-bordered w-full" required>
               {#each ContractStatus as status, i}
                 <option value={i} selected={contract.status === status}>
                   {status}
@@ -312,7 +293,6 @@
           <fieldset class="fieldset md:col-span-2">
             <legend class="fieldset-legend">Descrição</legend>
             <textarea
-              name="description"
               class="textarea textarea-bordered w-full"
               bind:value={contract.description}
             ></textarea>
@@ -377,7 +357,6 @@
             </button>
             <input
               type="file"
-              name="newFiles"
               bind:this={fileInput}
               onchange={handleFileSelection}
               class="hidden"

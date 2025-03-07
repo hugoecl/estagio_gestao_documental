@@ -10,7 +10,7 @@
     value = $bindable(),
   }: {
     range: boolean;
-    formName: string;
+    formName?: string;
     value?: string;
   } = $props();
 
