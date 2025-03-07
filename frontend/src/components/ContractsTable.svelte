@@ -177,12 +177,15 @@
 
   let selectedContractId: string | null = $state(null);
   let selectedContract = $state<Contract | null>(null);
+  let originalContractJson = $state<string | null>(null);
   let isModalOpen = $state(false);
   let modal: HTMLDialogElement;
 
   function openContractModal(id: string, contract: Contract) {
     selectedContractId = id;
     selectedContract = $state.snapshot(contract); // Deep copy to prevent direct mutations
+    originalContractJson = JSON.stringify(selectedContract);
+
     isModalOpen = true;
 
     modal.showModal();
@@ -506,5 +509,6 @@
 <ContractModal
   contractId={selectedContractId!}
   contract={selectedContract ? selectedContract : ({} as Contract)}
+  origianlContractJson={originalContractJson!}
   isVisible={isModalOpen}
 />

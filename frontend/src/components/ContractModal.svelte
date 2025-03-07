@@ -12,17 +12,23 @@
   const {
     contractId,
     contract,
+    origianlContractJson,
     isVisible,
   }: {
     contractId: string;
     contract: Contract;
+    origianlContractJson: string;
     isVisible: boolean;
   } = $props();
+
+  let modal: HTMLDialogElement;
+  let confirmModal: HTMLDialogElement;
 
   // Local state
   let newFiles = $state<File[]>([]);
   let fileInput = $state<HTMLInputElement | null>(null);
   let isSubmitting = $state(false);
+  let dateRange = $state("");
 
   // Confirmation modal state
   let confirmationAction = $state<"deleteContract" | "deleteFile" | null>(null);
@@ -51,24 +57,7 @@
         "@api/utils"
       );
 
-      const formData = new FormData(e.target as HTMLFormElement);
-      const [dateStart, dateEnd] = (
-        formData.get("date-range")! as string
-      ).split(" - ");
-      const editedContract: Contract = {
-        ...contract,
-        contractNumber: Number(formData.get("contractNumber")),
-        supplier: formData.get("supplier") as string,
-        location: ContractLocations[Number(formData.get("location"))],
-        service: ContractServices[Number(formData.get("service"))],
-        dateString: formData.get("date") as string,
-        dateStartString: dateStart,
-        dateEndString: dateEnd,
-        type: ContractTypes[Number(formData.get("type"))],
-        status: ContractStatus[Number(formData.get("status"))],
-        description: formData.get("description") as string,
-      };
-      console.log(JSON.stringify(editedContract) === JSON.stringify(contract));
+      console.log(JSON.stringify(contract) === origianlContractJson);
 
       const success = await updateContract(contractId, contract);
 
@@ -93,18 +82,12 @@
   function showDeleteFileConfirmation(fileId: string) {
     fileToDeleteId = fileId;
     confirmationAction = "deleteFile";
-    const confirmModal = document.getElementById(
-      "confirm-modal"
-    ) as HTMLDialogElement;
-    if (confirmModal) confirmModal.showModal();
+    confirmModal.showModal();
   }
 
   function showDeleteContractConfirmation() {
     confirmationAction = "deleteContract";
-    const confirmModal = document.getElementById(
-      "confirm-modal"
-    ) as HTMLDialogElement;
-    if (confirmModal) confirmModal.showModal();
+    confirmModal.showModal();
   }
 
   async function handleDeleteConfirmed() {
@@ -130,7 +113,7 @@
       const success = await deleteContractFile(contractId, fileToDeleteId);
 
       if (success) {
-        // Remove file from contract
+        // Remove file fromselectedContract
         const updatedFiles = { ...contract.files };
         // @ts-ignore we don't need to convert fileToDeleteId to number here because it is a numeric string and javascript can take that as indexes
         delete updatedFiles[fileToDeleteId];
@@ -158,10 +141,7 @@
   }
 
   function closeConfirmationModal() {
-    const confirmModal = document.getElementById(
-      "confirm-modal"
-    ) as HTMLDialogElement;
-    if (confirmModal) confirmModal.close();
+    confirmModal.close();
     confirmationAction = null;
     fileToDeleteId = null;
   }
@@ -182,14 +162,12 @@
   }
 
   function closeModal() {
-    const modal = document.getElementById(
-      "contract-modal"
-    ) as HTMLDialogElement;
-    if (modal) modal.close();
+    modal.close();
+    newFiles = [];
   }
 </script>
 
-<dialog id="contract-modal" class="modal">
+<dialog id="contract-modal" class="modal" bind:this={modal}>
   <div class="modal-box w-11/12 max-w-5xl">
     {#if isVisible}
       <div class="flex justify-between items-center mb-4">
@@ -209,7 +187,7 @@
               type="number"
               name="contractNumber"
               class="input input-bordered w-full"
-              value={contract.contractNumber}
+              bind:value={contract.contractNumber}
               required
             />
           </fieldset>
@@ -220,7 +198,7 @@
               type="text"
               name="supplier"
               class="input input-bordered w-full"
-              value={contract.supplier}
+              bind:value={contract.supplier}
               required
             />
           </fieldset>
@@ -260,7 +238,7 @@
             <DatePicker
               formName="date"
               range={false}
-              value={contract.dateString}
+              bind:value={contract.dateString}
             />
           </fieldset>
 
@@ -269,7 +247,9 @@
             <DatePicker
               formName="date-range"
               range={true}
-              value={`${contract.dateStartString} - ${contract.dateEndString}`}
+              bind:value={() =>
+                `${contract.dateStartString} - ${contract.dateEndString}`,
+              (value) => (dateRange = value)}
             />
           </fieldset>
 
@@ -304,8 +284,8 @@
             <textarea
               name="description"
               class="textarea textarea-bordered w-full"
-              >{contract.description}</textarea
-            >
+              bind:value={contract.description}
+            ></textarea>
           </fieldset>
         </div>
 
@@ -421,7 +401,7 @@
 </dialog>
 
 <!-- Confirmation Modal -->
-<dialog id="confirm-modal" class="modal">
+<dialog id="confirm-modal" class="modal" bind:this={confirmModal}>
   <div class="modal-box">
     <h3 class="font-bold text-lg">
       Eliminar

@@ -4,11 +4,15 @@
   import nextIcon from "@assets/previous_icon.svg?raw";
   import { onMount } from "svelte";
 
-  const {
+  let {
     range,
     formName,
-    value,
-  }: { range: boolean; formName: string; value?: string } = $props();
+    value = $bindable(),
+  }: {
+    range: boolean;
+    formName: string;
+    value?: string;
+  } = $props();
 
   let dropdownPosition = $state("dropdown-center");
 
@@ -151,7 +155,7 @@
       <input
         class="cursor-pointer"
         bind:this={dateValue}
-        {value}
+        bind:value
         placeholder={range ? "dd/mm/aaaa" : "dd/mm/aaaa - dd/mm/aaaa"}
         name={formName}
         onkeydown={(e) => e.preventDefault()}
