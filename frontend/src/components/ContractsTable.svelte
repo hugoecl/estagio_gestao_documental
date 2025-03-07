@@ -184,7 +184,10 @@
   function openContractModal(id: string, contract: Contract) {
     selectedContractId = id;
     selectedContract = $state.snapshot(contract); // Deep copy to prevent direct mutations
-    originalContractJson = JSON.stringify(selectedContract);
+    originalContractJson = JSON.stringify({
+      ...selectedContract,
+      files: undefined,
+    });
 
     isModalOpen = true;
 

@@ -56,8 +56,8 @@
       const { updateContract, uploadContractFiles } = await import(
         "@api/utils"
       );
-
-      console.log(JSON.stringify(contract) === origianlContractJson);
+      const editedContract = { ...contract, files: undefined };
+      console.log(JSON.stringify(editedContract) === origianlContractJson);
 
       const success = await updateContract(contractId, contract);
 
