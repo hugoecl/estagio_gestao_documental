@@ -8,7 +8,7 @@ pub fn init(cfg: &mut web::ServiceConfig) {
                 web::get().to(crate::handlers::contract_handlers::get_contracts),
             )
             .route(
-                "/upload",
+                "",
                 web::post().to(crate::handlers::contract_handlers::upload_contract),
             ),
     );

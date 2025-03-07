@@ -77,7 +77,7 @@ export async function logoutUser(): Promise<boolean> {
 }
 
 export async function uploadContract(formData: FormData): Promise<boolean> {
-  const response = await handleFetch(`${API_BASE_URL}/contracts/upload`, {
+  const response = await handleFetch(`${API_BASE_URL}/contracts`, {
     method: "POST",
     credentials: "include",
     body: formData,
