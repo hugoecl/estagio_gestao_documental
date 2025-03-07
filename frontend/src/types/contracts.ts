@@ -30,10 +30,14 @@ export interface Contract {
   dateEndString: string;
   description: string;
   location: (typeof ContractLocations)[number];
+  locationValue: number;
   service: (typeof ContractServices)[number];
+  serviceValue: number;
   status: (typeof ContractStatus)[number];
+  statusValue: number;
   supplier: string;
   type: (typeof ContractTypes)[number];
+  typeValue: number;
   createdAt: string;
   updatedAt: string;
   files: Record<number, ContractFiles>;

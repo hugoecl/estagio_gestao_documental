@@ -233,9 +233,13 @@
 
           <fieldset class="fieldset">
             <legend class="fieldset-legend">Local</legend>
-            <select class="select select-bordered w-full" required>
+            <select
+              class="select select-bordered w-full"
+              required
+              bind:value={contract.locationValue}
+            >
               {#each ContractLocations as location, i}
-                <option value={i} selected={contract.location === location}>
+                <option value={i}>
                   {location}
                 </option>
               {/each}
@@ -244,9 +248,13 @@
 
           <fieldset class="fieldset">
             <legend class="fieldset-legend">Serviço</legend>
-            <select class="select select-bordered w-full" required>
+            <select
+              class="select select-bordered w-full"
+              required
+              bind:value={contract.serviceValue}
+            >
               {#each ContractServices as service, i}
-                <option value={i} selected={contract.service === service}>
+                <option value={i}>
                   {service}
                 </option>
               {/each}
@@ -270,9 +278,13 @@
 
           <fieldset class="fieldset">
             <legend class="fieldset-legend">Tipo</legend>
-            <select class="select select-bordered w-full" required>
+            <select
+              class="select select-bordered w-full"
+              required
+              bind:value={contract.typeValue}
+            >
               {#each ContractTypes as type, i}
-                <option value={i} selected={contract.type === type}>
+                <option value={i}>
                   {type}
                 </option>
               {/each}
@@ -281,9 +293,13 @@
 
           <fieldset class="fieldset">
             <legend class="fieldset-legend">Estado</legend>
-            <select class="select select-bordered w-full" required>
+            <select
+              class="select select-bordered w-full"
+              required
+              bind:value={contract.statusValue}
+            >
               {#each ContractStatus as status, i}
-                <option value={i} selected={contract.status === status}>
+                <option value={i}>
                   {status}
                 </option>
               {/each}

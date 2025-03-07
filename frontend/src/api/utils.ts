@@ -88,9 +88,13 @@ export async function uploadContract(formData: FormData): Promise<boolean> {
 interface ContractResponse
   extends Omit<Contract, "location" | "service" | "status" | "type"> {
   location: keyof typeof ContractLocations;
+  locationValue: number;
   service: keyof typeof ContractServices;
+  serviceValue: number;
   status: keyof typeof ContractStatus;
+  statusValue: number;
   type: keyof typeof ContractTypes;
+  typeValue: number;
   dateString: string;
   dateStartString: string;
   dateEndString: string;
@@ -113,32 +117,33 @@ export async function getContracts(): Promise<Contracts | null> {
     const json = await response.json();
     const entries = Object.values(json) as ContractResponse[];
     for (let i = 0, len = entries.length; i < len; i++) {
-      entries[i].location = ContractLocations[
-        entries[i].location
+      const entry = entries[i];
+      entry.locationValue = entry.location as number;
+      entry.location = ContractLocations[
+        entry.location
       ] as keyof typeof ContractLocations;
-      entries[i].service = ContractServices[
-        entries[i].service
+      entry.serviceValue = entry.service as number;
+      entry.service = ContractServices[
+        entry.service
       ] as keyof typeof ContractServices;
-      entries[i].status = ContractStatus[
-        entries[i].status
+      entry.statusValue = entry.status as number;
+      entry.status = ContractStatus[
+        entry.status
       ] as keyof typeof ContractStatus;
-      entries[i].type = ContractTypes[
-        entries[i].type
-      ] as keyof typeof ContractTypes;
-      entries[i].date = new Date(entries[i].dateString);
-      entries[i].dateStart = new Date(entries[i].dateStartString);
-      entries[i].dateEnd = new Date(entries[i].dateEndString);
+      entry.typeValue = entry.type as number;
+      entry.type = ContractTypes[entry.type] as keyof typeof ContractTypes;
+      entry.date = new Date(entry.dateString);
+      entry.dateStart = new Date(entry.dateStartString);
+      entry.dateEnd = new Date(entry.dateEndString);
 
-      entries[i].__searchSupplier = entries[i].supplier.toLowerCase();
-      entries[i].__searchLocation = (
-        entries[i].location as string
-      ).toLowerCase();
-      entries[i].__searchService = (entries[i].service as string).toLowerCase();
-      entries[i].__searchType = (entries[i].type as string).toLowerCase();
-      entries[i].__searchStatus = (entries[i].status as string).toLowerCase();
-      entries[i].__searchContractNumber = entries[i].contractNumber.toString();
+      entry.__searchSupplier = entry.supplier.toLowerCase();
+      entry.__searchLocation = (entry.location as string).toLowerCase();
+      entry.__searchService = (entry.service as string).toLowerCase();
+      entry.__searchType = (entry.type as string).toLowerCase();
+      entry.__searchStatus = (entry.status as string).toLowerCase();
+      entry.__searchContractNumber = entry.contractNumber.toString();
 
-      const files = entries[i].files;
+      const files = entry.files;
       for (const key in files) {
         files[key].name = files[key].path.split("/").at(-1)!;
       }
