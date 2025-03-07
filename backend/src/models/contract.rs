@@ -1,16 +1,19 @@
 use crate::impl_enum_conversions;
 
+#[derive(Clone)]
 pub enum Status {
     Active,
     Inactive,
 }
 
+#[derive(Clone)]
 pub enum Type {
     Addendum,
     New,
     Renew,
 }
 
+#[derive(Clone)]
 pub enum Service {
     Electricity,
     Water,
@@ -19,6 +22,7 @@ pub enum Service {
     Comunications,
 }
 
+#[derive(Clone)]
 pub enum Location {
     VianaDoCastelo,
     Braga,

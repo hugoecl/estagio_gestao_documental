@@ -10,6 +10,10 @@ pub fn init(cfg: &mut web::ServiceConfig) {
             .route(
                 "",
                 web::post().to(crate::handlers::contract_handlers::upload_contract),
+            )
+            .route(
+                "/{id}",
+                web::put().to(crate::handlers::contract_handlers::update_contract),
             ),
     );
 }

@@ -24,14 +24,14 @@ pub struct UserCache {
     pub is_admin: bool,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct ContractFilesCache {
     pub path: String,
     #[serde(rename = "uploadedAt")]
     pub uploaded_at: chrono::DateTime<chrono::Utc>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct ContractCache {
     #[serde(rename = "contractNumber")]
     pub contract_number: u32,

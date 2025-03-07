@@ -4,11 +4,16 @@ use actix_web::{HttpResponse, Responder, web};
 use ahash::RandomState;
 use chrono::NaiveDate;
 use papaya::HashMap;
+use serde::Deserialize;
 
 use crate::{
     State,
     models::contract,
-    utils::{json_utils::json_response, memory_file::MemoryFile, session_utils::validate_session},
+    utils::{
+        json_utils::{Json, json_response},
+        memory_file::MemoryFile,
+        session_utils::validate_session,
+    },
 };
 
 pub async fn get_contracts(session: Session, state: web::Data<State>) -> impl Responder {
@@ -163,6 +168,85 @@ pub async fn upload_contract(
         });
 
         query_builder.build().execute(&state.db.pool).await.unwrap();
+    });
+
+    HttpResponse::Ok().finish()
+}
+
+#[derive(Deserialize, Debug)]
+pub struct UpdateContractRequest {
+    contract_number: u32,
+    date: String,
+    date_start: String,
+    date_end: String,
+    description: String,
+    location: i8,
+    service: i8,
+    status: i8,
+    supplier: String,
+    type_of_contract: i8,
+}
+
+pub async fn update_contract(
+    session: Session,
+    state: web::Data<State>,
+    data: web::Bytes,
+    contract_id: web::Path<u32>,
+) -> impl Responder {
+    if let Err(response) = validate_session(&session) {
+        return response;
+    }
+
+    let contract_id = contract_id.into_inner();
+    let Json(req): Json<UpdateContractRequest> = Json::from_bytes(data).unwrap();
+
+    let now = chrono::Utc::now();
+
+    let pinned_contracts_cache = state.cache.contracts.pin();
+
+    let date = NaiveDate::parse_from_str(&req.date, "%d/%m/%Y").unwrap();
+    let date_start = NaiveDate::parse_from_str(&req.date_start, "%d/%m/%Y").unwrap();
+    let date_end = NaiveDate::parse_from_str(&req.date_end, "%d/%m/%Y").unwrap();
+
+    let contract = pinned_contracts_cache.update(contract_id, |contract| {
+        let mut new_contract = (*contract).clone();
+
+        new_contract.contract_number = req.contract_number;
+        new_contract.date = date;
+        new_contract.date_start = date_start;
+        new_contract.date_end = date_end;
+        new_contract.description = req.description.clone();
+        new_contract.location = contract::Location::from(req.location);
+        new_contract.service = contract::Service::from(req.service);
+        new_contract.status = contract::Status::from(req.status);
+        new_contract.supplier = req.supplier.clone();
+        new_contract.type_of_contract = contract::Type::from(req.type_of_contract);
+        new_contract.updated_at = now;
+
+        new_contract
+    });
+    if let None = contract {
+        return HttpResponse::NotFound().finish();
+    }
+
+    drop(pinned_contracts_cache);
+
+    tokio::spawn(async move {
+        sqlx::query!(
+            "UPDATE contracts SET contract_number = ?, date = ?, date_start = ?, date_end = ?, description = ?, location = ?, service = ?, status = ?, supplier = ?, type = ?, updated_at = ? WHERE id = ?",
+            req.contract_number,
+            date,
+            date_start,
+            date_end,
+            req.description,
+            req.location,
+            req.service,
+            req.status,
+            req.supplier,
+            req.type_of_contract,
+            now,
+            contract_id
+        ).execute(&state.db.pool).await.unwrap();
     });
 
     HttpResponse::Ok().finish()

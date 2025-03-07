@@ -175,5 +175,28 @@ export async function updateContract(
   contractId: string,
   contract: Contract
 ): Promise<boolean> {
-  return false;
+  const response = await handleFetch(
+    `${API_BASE_URL}/contracts/${contractId}`,
+    {
+      method: "PUT",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        contract_number: contract.contractNumber,
+        date: contract.dateString,
+        date_start: contract.dateStartString,
+        date_end: contract.dateEndString,
+        description: contract.description,
+        location: contract.locationValue,
+        service: contract.serviceValue,
+        status: contract.statusValue,
+        supplier: contract.supplier,
+        type_of_contract: contract.typeValue,
+      }),
+    }
+  );
+
+  return response.ok;
 }
