@@ -251,3 +251,33 @@ pub async fn update_contract(
 
     HttpResponse::Ok().finish()
 }
+
+pub async fn delete_contract(
+    session: Session,
+    state: web::Data<State>,
+    contract_id: web::Path<u32>,
+) -> impl Responder {
+    if let Err(response) = validate_session(&session) {
+        return response;
+    }
+
+    let contract_id = contract_id.into_inner();
+
+    let pinned_contracts_cache = state.cache.contracts.pin();
+
+    let contract = pinned_contracts_cache.remove(&contract_id);
+    if let None = contract {
+        return HttpResponse::NotFound().finish();
+    }
+
+    drop(pinned_contracts_cache);
+
+    tokio::spawn(async move {
+        sqlx::query!("DELETE FROM contracts WHERE id = ?", contract_id)
+            .execute(&state.db.pool)
+            .await
+            .unwrap();
+    });
+
+    HttpResponse::Ok().finish()
+}

@@ -168,7 +168,15 @@ export async function deleteContractFile(
 }
 
 export async function deleteContract(contractId: string): Promise<boolean> {
-  return false;
+  const response = await handleFetch(
+    `${API_BASE_URL}/contracts/${contractId}`,
+    {
+      method: "DELETE",
+      credentials: "include",
+    }
+  );
+
+  return response.ok;
 }
 
 export async function updateContract(
