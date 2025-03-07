@@ -149,7 +149,7 @@
 							"formdata": [
 								{
 									"key": "contract-number",
-									"value": "123123",
+									"value": "8888",
 									"type": "text"
 								},
 								{
@@ -203,13 +203,39 @@
 							]
 						},
 						"url": {
-							"raw": "{{host}}/contracts/upload",
+							"raw": "{{host}}/contracts",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"contracts"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "update_contract",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"contract_number\": 5467123,\r\n    \"date\": \"12/12/2012\",\r\n    \"date_start\": \"13/12/2012\",\r\n    \"date_end\": \"02/04/2015\",\r\n    \"description\": \"teste description\",\r\n    \"location\": 2,\r\n    \"service\": 2,\r\n    \"status\": 1,\r\n    \"supplier\": \"E Redes\",\r\n    \"type_of_contract\": 1\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{host}}/contracts/1",
 							"host": [
 								"{{host}}"
 							],
 							"path": [
 								"contracts",
-								"upload"
+								"1"
 							]
 						}
 					},
