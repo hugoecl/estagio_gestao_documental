@@ -252,6 +252,7 @@ pub async fn update_contract(
     HttpResponse::Ok().finish()
 }
 
+// TODO: Perguntar se é preciso aparecer os ficheiros no disco
 pub async fn delete_contract(
     session: Session,
     state: web::Data<State>,
@@ -277,6 +278,84 @@ pub async fn delete_contract(
             .execute(&state.db.pool)
             .await
             .unwrap();
+    });
+
+    HttpResponse::Ok().finish()
+}
+
+#[derive(MultipartForm)]
+pub struct ContractFilesFormRequest {
+    files: Vec<MemoryFile>,
+}
+
+pub async fn upload_contract_files(
+    session: Session,
+    state: web::Data<State>,
+    contract_id: web::Path<u32>,
+    MultipartForm(form): MultipartForm<ContractFilesFormRequest>,
+) -> impl Responder {
+    if let Err(response) = validate_session(&session) {
+        return response;
+    }
+
+    let contract_id = contract_id.into_inner();
+
+    let files_length = form.files.len();
+
+    let pinned_contracts_cache = state.cache.contracts.pin();
+
+    let contract = pinned_contracts_cache.get(&contract_id);
+    let contract = if let Some(contract) = contract {
+        contract
+    } else {
+        return HttpResponse::NotFound().finish();
+    };
+
+    let pinned_contract_files_cache = contract.files.pin();
+    let now = chrono::Utc::now();
+
+    let new_contract_file_id = state
+        .cache
+        .last_contract_file_id
+        .fetch_add(files_length as u32, std::sync::atomic::Ordering::SeqCst)
+        + 1;
+
+    let mut file_names = Vec::with_capacity(files_length);
+
+    for (i, file) in form.files.into_iter().enumerate() {
+        let file_id = new_contract_file_id + i as u32;
+
+        pinned_contract_files_cache.insert(
+            file_id,
+            crate::db::ContractFilesCache {
+                path: format!("/media/contracts/{}/{}", contract_id, file.file_name),
+                uploaded_at: now,
+            },
+        );
+        file_names.push(file.file_name.clone());
+
+        tokio::task::spawn_blocking(move || {
+            std::fs::write(
+                format!("media/contracts/{}/{}", contract_id, file.file_name),
+                &file.data,
+            )
+        });
+    }
+    drop(pinned_contract_files_cache);
+    drop(pinned_contracts_cache);
+
+    tokio::spawn(async move {
+        let mut query_builder = sqlx::QueryBuilder::new(
+            "INSERT INTO contract_files (contract_id, file_path, uploaded_at)",
+        );
+
+        query_builder.push_values(file_names, |mut b, file_name| {
+            b.push_bind(contract_id)
+                .push_bind(format!("/media/contracts/{}/{}", contract_id, file_name))
+                .push_bind(now);
+        });
+
+        query_builder.build().execute(&state.db.pool).await.unwrap();
     });
 
     HttpResponse::Ok().finish()

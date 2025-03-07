@@ -123,6 +123,40 @@
 			"name": "contracts",
 			"item": [
 				{
+					"name": "contract_files",
+					"item": [
+						{
+							"name": "upload_contract_files",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "formdata",
+									"formdata": [
+										{
+											"key": "files",
+											"type": "file",
+											"src": "postman-cloud:///1effb4e0-3f65-41b0-ab44-ea9a748ee974"
+										}
+									]
+								},
+								"url": {
+									"raw": "{{host}}/contracts/1/files",
+									"host": [
+										"{{host}}"
+									],
+									"path": [
+										"contracts",
+										"1",
+										"files"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
 					"name": "get_contracts",
 					"request": {
 						"method": "GET",

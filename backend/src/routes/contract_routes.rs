@@ -18,6 +18,10 @@ pub fn init(cfg: &mut web::ServiceConfig) {
             .route(
                 "/{id}",
                 web::delete().to(crate::handlers::contract_handlers::delete_contract),
+            )
+            .route(
+                "/{id}/files",
+                web::post().to(crate::handlers::contract_handlers::upload_contract_files),
             ),
     );
 }

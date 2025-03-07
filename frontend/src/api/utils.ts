@@ -157,7 +157,21 @@ export async function uploadContractFiles(
   contractId: string,
   files: File[]
 ): Promise<boolean> {
-  return false;
+  const formData = new FormData();
+  for (let i = 0, len = files.length; i < len; i++) {
+    formData.append("files", files[i]);
+  }
+
+  const response = await handleFetch(
+    `${API_BASE_URL}/contracts/${contractId}/files`,
+    {
+      method: "POST",
+      credentials: "include",
+      body: formData,
+    }
+  );
+
+  return response.ok;
 }
 
 export async function deleteContractFile(
