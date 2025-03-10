@@ -32,7 +32,11 @@
 
   // Confirmation modal state
   // TODO: Make this a const enum
-  let confirmationAction = $state<"deleteContract" | "deleteFile" | null>(null);
+  const enum ConfirmationAction {
+    DELETE_CONTRACT,
+    DELETE_FILE,
+  }
+  let confirmationAction = $state<ConfirmationAction | null>(null);
   let fileToDeleteId = $state<string | null>(null);
   let isDeleteSubmitting = $state(false);
 
@@ -121,12 +125,12 @@
 
   function showDeleteFileConfirmation(fileId: string) {
     fileToDeleteId = fileId;
-    confirmationAction = "deleteFile";
+    confirmationAction = ConfirmationAction.DELETE_FILE;
     confirmModal.showModal();
   }
 
   function showDeleteContractConfirmation() {
-    confirmationAction = "deleteContract";
+    confirmationAction = ConfirmationAction.DELETE_CONTRACT;
     confirmModal.showModal();
   }
 
@@ -134,9 +138,12 @@
     isDeleteSubmitting = true;
 
     try {
-      if (confirmationAction === "deleteFile" && fileToDeleteId) {
+      if (
+        confirmationAction === ConfirmationAction.DELETE_FILE &&
+        fileToDeleteId
+      ) {
         await handleDeleteFile();
-      } else if (confirmationAction === "deleteContract") {
+      } else if (confirmationAction === ConfirmationAction.DELETE_CONTRACT) {
         await handleDeleteContract();
       }
     } finally {
@@ -461,18 +468,18 @@
   <div class="modal-box">
     <h3 class="font-bold text-lg">
       Eliminar
-      {#if confirmationAction === "deleteFile"}
+      {#if confirmationAction === ConfirmationAction.DELETE_FILE}
         Ficheiro
-      {:else if confirmationAction === "deleteContract"}
+      {:else if confirmationAction === ConfirmationAction.DELETE_CONTRACT}
         Contrato
       {/if}
     </h3>
 
     <p class="py-4">
-      {#if confirmationAction === "deleteFile"}
+      {#if confirmationAction === ConfirmationAction.DELETE_FILE}
         Tem certeza que deseja eliminar este ficheiro? Esta ação não pode ser
         desfeita.
-      {:else if confirmationAction === "deleteContract"}
+      {:else if confirmationAction === ConfirmationAction.DELETE_CONTRACT}
         <span class="text-error font-bold">ATENÇÃO:</span> Tem certeza que deseja
         eliminar este contrato? Esta ação não pode ser desfeita e todos os ficheiros
         associados serão eliminados.
