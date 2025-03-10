@@ -236,7 +236,7 @@
   }
 </script>
 
-<dialog class="modal" bind:this={modal}>
+<dialog id="contract-modal" class="modal" bind:this={modal}>
   <div class="modal-box w-11/12 max-w-5xl">
     {#if isVisible}
       <div class="flex justify-between mb-4">
