@@ -34,7 +34,6 @@
   let newFiles = $state<File[]>([]);
   let fileInput = $state<HTMLInputElement | null>(null);
   let isSubmitting = $state(false);
-  let dateRange = $state("");
 
   const enum ConfirmationAction {
     DELETE_CONTRACT,
@@ -332,7 +331,13 @@
               range={true}
               bind:value={
                 () => `${contract.dateStartString} - ${contract.dateEndString}`,
-                (value) => (dateRange = value)
+                (value) => {
+                  const start = value.slice(0, 10);
+                  const end = value.slice(13, 23);
+
+                  contract.dateStartString = start;
+                  contract.dateEndString = end;
+                }
               }
             />
           </fieldset>

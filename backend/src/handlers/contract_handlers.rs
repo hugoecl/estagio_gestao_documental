@@ -103,7 +103,8 @@ pub async fn upload_contract(
     drop(pinned_contract_files_cache);
     let contract_number = form.contract_number.into_inner();
     let date = NaiveDate::parse_from_str(&form.date.into_inner(), "%d/%m/%Y").unwrap();
-    let (date_start, date_end) = form.date_range.split_once(" - ").unwrap();
+    let date_start = &form.date_range[0..10];
+    let date_end = &form.date_range[13..23];
     let date_start = NaiveDate::parse_from_str(date_start, "%d/%m/%Y").unwrap();
     let date_end = NaiveDate::parse_from_str(date_end, "%d/%m/%Y").unwrap();
     let description = form.description.into_inner();

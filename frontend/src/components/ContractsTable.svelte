@@ -196,7 +196,6 @@
   function handleContractUpdated(updatedContract: Contract) {
     // @ts-ignore javascript can take string as indexes
     contracts[selectedContractId!] = updatedContract;
-
     contractEntries = Object.entries(contracts);
   }
 
@@ -210,7 +209,6 @@
   function handleFileDeleted(contractId: string, fileId: string) {
     // @ts-ignore javascript can take string as indexes
     delete contracts[contractId].files[fileId];
-
     contractEntries = Object.entries(contracts);
   }
 
