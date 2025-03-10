@@ -56,6 +56,7 @@
 
   async function handleSubmit(e: SubmitEvent) {
     e.preventDefault();
+    isSubmitting = true;
 
     const [
       { updateContract, uploadContractFiles },
@@ -109,6 +110,7 @@
         AlertType.INFO,
         AlertPosition.TOP
       );
+      isSubmitting = false;
       return;
     }
 
@@ -237,12 +239,16 @@
 <dialog id="contract-modal" class="modal" bind:this={modal}>
   <div class="modal-box w-11/12 max-w-5xl">
     {#if isVisible}
-      <div class="flex justify-between items-center mb-4">
+      <div class="flex justify-between mb-4">
         <h3 class="font-bold text-xl">
           Contrato #{contract.contractNumber} - {contract.supplier}
         </h3>
 
-        <button type="button" class="btn btn-ghost btn-sm" onclick={closeModal}>
+        <button
+          class="btn btn-ghost btn-sm"
+          onclick={closeModal}
+          disabled={isSubmitting}
+        >
           ✕
         </button>
       </div>
@@ -382,6 +388,7 @@
                         <button
                           type="button"
                           class="btn btn-xs btn-error"
+                          disabled={isSubmitting}
                           onclick={() => showDeleteFileConfirmation(file.id)}
                         >
                           Eliminar
@@ -405,6 +412,7 @@
             <button
               type="button"
               class="btn btn-sm btn-secondary"
+              disabled={isSubmitting}
               onclick={openFileSelector}
             >
               Adicionar Ficheiros
@@ -451,29 +459,42 @@
           >
             Eliminar Contrato
           </button>
-          <button type="submit" class="btn btn-primary" disabled={isSubmitting}>
-            {isSubmitting ? "A guardar..." : "Guardar alterações"}
+          <button type="submit" class="btn btn-primary">
+            {#if isSubmitting}
+              <span class="loading loading-bars loading-md"></span>
+            {:else}
+              Guardar alterações
+            {/if}
           </button>
         </div>
       </form>
     {/if}
   </div>
   <form method="dialog" class="modal-backdrop">
-    <button>close</button>
+    <button disabled={isSubmitting}>close</button>
   </form>
 </dialog>
 
 <!-- Confirmation Modal -->
 <dialog id="confirm-modal" class="modal" bind:this={confirmModal}>
   <div class="modal-box">
-    <h3 class="font-bold text-lg">
-      Eliminar
-      {#if confirmationAction === ConfirmationAction.DELETE_FILE}
-        Ficheiro
-      {:else if confirmationAction === ConfirmationAction.DELETE_CONTRACT}
-        Contrato
-      {/if}
-    </h3>
+    <div class="flex justify-between">
+      <h3 class="font-bold text-lg">
+        Eliminar
+        {#if confirmationAction === ConfirmationAction.DELETE_FILE}
+          Ficheiro
+        {:else if confirmationAction === ConfirmationAction.DELETE_CONTRACT}
+          Contrato
+        {/if}
+      </h3>
+      <button
+        class="btn btn-ghost btn-sm"
+        onclick={closeConfirmationModal}
+        disabled={isDeleteSubmitting}
+      >
+        ✕
+      </button>
+    </div>
 
     <p class="py-4">
       {#if confirmationAction === ConfirmationAction.DELETE_FILE}
@@ -486,7 +507,7 @@
       {/if}
     </p>
 
-    <div class="modal-action">
+    <div class="modal-action flex justify-between">
       <button
         class="btn"
         onclick={closeConfirmationModal}
@@ -494,16 +515,18 @@
       >
         Cancelar
       </button>
-      <button
-        class="btn btn-error"
-        onclick={handleDeleteConfirmed}
-        disabled={isDeleteSubmitting}
-      >
-        {isDeleteSubmitting ? "Eliminando..." : "Sim, Eliminar"}
+      <button class="btn btn-error" onclick={handleDeleteConfirmed}>
+        {#if isDeleteSubmitting}
+          <span class="loading loading-bars loading-md"></span>
+        {:else}
+          Sim, Eliminar
+        {/if}
       </button>
     </div>
   </div>
   <form method="dialog" class="modal-backdrop">
-    <button onclick={closeConfirmationModal}>close</button>
+    <button onclick={closeConfirmationModal} disabled={isDeleteSubmitting}
+      >close</button
+    >
   </form>
 </dialog>
