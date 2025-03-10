@@ -236,7 +236,7 @@
   }
 </script>
 
-<dialog id="contract-modal" class="modal" bind:this={modal}>
+<dialog class="modal" bind:this={modal}>
   <div class="modal-box w-11/12 max-w-5xl">
     {#if isVisible}
       <div class="flex justify-between mb-4">
@@ -379,7 +379,7 @@
                     <td>
                       <div class="flex justify-end space-x-2">
                         <a
-                          href={API_BASE_URL + file.path}
+                          href={`${API_BASE_URL}${file.path}`}
                           target="_blank"
                           class="btn btn-xs btn-outline"
                         >
@@ -471,12 +471,11 @@
     {/if}
   </div>
   <form method="dialog" class="modal-backdrop">
-    <button disabled={isSubmitting}>close</button>
+    <button disabled={isSubmitting}>c</button>
   </form>
 </dialog>
 
-<!-- Confirmation Modal -->
-<dialog id="confirm-modal" class="modal" bind:this={confirmModal}>
+<dialog class="modal" bind:this={confirmModal}>
   <div class="modal-box">
     <div class="flex justify-between">
       <h3 class="font-bold text-lg">
@@ -526,7 +525,7 @@
   </div>
   <form method="dialog" class="modal-backdrop">
     <button onclick={closeConfirmationModal} disabled={isDeleteSubmitting}
-      >close</button
+      >c</button
     >
   </form>
 </dialog>
