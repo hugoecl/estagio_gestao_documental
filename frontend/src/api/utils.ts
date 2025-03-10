@@ -178,7 +178,6 @@ export async function deleteContractFile(
   contractId: string,
   fileId: string
 ): Promise<boolean> {
-  await new Promise((resolve) => setTimeout(resolve, 10000));
   const response = await handleFetch(
     `${API_BASE_URL}/contracts/${contractId}/files/${fileId}`,
     {
@@ -206,9 +205,6 @@ export async function updateContract(
   contractId: string,
   contract: Contract
 ): Promise<boolean> {
-  // sleep for 10 secons
-  await new Promise((resolve) => setTimeout(resolve, 10000));
-
   const response = await handleFetch(
     `${API_BASE_URL}/contracts/${contractId}`,
     {
