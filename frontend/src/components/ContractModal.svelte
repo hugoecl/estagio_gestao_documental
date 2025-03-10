@@ -90,15 +90,13 @@
 
       success = contractResult && filesResult;
 
-      if (success) {
-        for (let i = 0, len = newFiles.length; i < len; i++) {
-          const file = newFiles[i];
-          files[filesBaseId + i] = {
-            name: file.name,
-            path: `/media/contracts/${contractId}/${file.name}`,
-            uploadedAt: new Date().toLocaleDateString("pt-PT"),
-          };
-        }
+      for (let i = 0, len = newFiles.length; i < len; i++) {
+        const file = newFiles[i];
+        files[filesBaseId + i] = {
+          name: file.name,
+          path: `/media/contracts/${contractId}/${file.name}`,
+          uploadedAt: new Date().toLocaleDateString("pt-PT"),
+        };
       }
     }
     // Scenario 2: Only contract data has changed
