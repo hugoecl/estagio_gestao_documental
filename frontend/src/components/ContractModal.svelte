@@ -93,7 +93,7 @@
         const file = newFiles[i];
         files[filesBaseId + i] = {
           name: file.name,
-          path: `/media/contracts/${contractId}/${file.name}`,
+          path: `media/contracts/${contractId}/${file.name}`,
           uploadedAt: new Date().toLocaleDateString("pt-PT"),
         };
       }
@@ -112,7 +112,7 @@
         const file = newFiles[i];
         files[filesBaseId + i] = {
           name: file.name,
-          path: `/media/contracts/${contractId}/${file.name}`,
+          path: `media/contracts/${contractId}/${file.name}`,
           uploadedAt: new Date().toLocaleString("pt-PT"),
         };
       }
@@ -401,7 +401,7 @@
                     <td>
                       <div class="flex justify-end space-x-2">
                         <a
-                          href={`${API_BASE_URL}${file.path}`}
+                          href={`${API_BASE_URL}/${file.path}`}
                           target="_blank"
                           class="btn btn-xs btn-outline"
                         >
