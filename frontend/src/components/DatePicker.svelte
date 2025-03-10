@@ -16,6 +16,32 @@
 
   let dropdownPosition = $state("dropdown-center");
 
+  // for checking if the value has really changed or if the user just chenged week/month/date on the calendar
+  let oldValue: string;
+  const callyValue = $derived.by(() => {
+    if (value) {
+      // callyValue comes in the format dd/mm/yyyy - dd/mm/yyyy
+      const firstYear = value.substring(6, 10);
+      const firstMonth = value.substring(3, 5);
+      const firstDay = value.substring(0, 2);
+      if (range) {
+        const secondYear = value.substring(19, 23);
+        const secondMonth = value.substring(16, 18);
+        const secondDay = value.substring(13, 15);
+
+        const result = `${firstYear}-${firstMonth}-${firstDay}/${secondYear}-${secondMonth}-${secondDay}`;
+        oldValue = result;
+        return result;
+      }
+      // callyValue comes in the format dd/mm/yyyy
+      else {
+        const result = `${firstYear}-${firstMonth}-${firstDay}`;
+        oldValue = result;
+        return result;
+      }
+    }
+  });
+
   let cally: HTMLDivElement;
   let yearSelectElement: HTMLSelectElement;
   let dateValue: HTMLInputElement;
@@ -71,11 +97,6 @@
       window.addEventListener("resize", setDropdownPosition);
     }
 
-    // for checking if the value has really changed or if the user just chenged week/month/date on the calendar
-    let oldValue: string;
-
-    // on svelte 7.0.4 and cally 0.8.0 we have to add the event listener like this
-    // for some reason the onchange svelte event is not working
     calendar?.addEventListener("focusday", (e: any) => {
       yearSelectElement.value = e.detail.getUTCFullYear();
 
@@ -84,13 +105,21 @@
         oldValue !== e.currentTarget.value
       ) {
         oldValue = e.currentTarget.value;
+
+        // e.currentTarget.value is something like 2012/12/24-2012/12/25
+        const firstYear = e.currentTarget.value.substring(0, 4);
+        const firstMonth = e.currentTarget.value.substring(5, 7);
+        const firstDay = e.currentTarget.value.substring(8, 10);
         if (range) {
-          const [start, _] = e.currentTarget.value.split("/");
-          dateValue.value = `${new Date(start).toLocaleDateString(
-            "pt-PT"
-          )} - ${e.detail.toLocaleDateString("pt-PT")}`;
+          const secondYear = e.currentTarget.value.substring(11, 15);
+          const secondMonth = e.currentTarget.value.substring(16, 18);
+          const secondDay = e.currentTarget.value.substring(19, 21);
+
+          dateValue.value = `${firstDay}/${firstMonth}/${firstYear} - ${secondDay}/${secondMonth}/${secondYear}`;
+          value = dateValue.value;
         } else {
-          dateValue.value = e.detail.toLocaleDateString("pt-PT");
+          dateValue.value = `${firstDay}/${firstMonth}/${firstYear}`;
+          value = dateValue.value;
         }
 
         // @ts-ignore
@@ -114,10 +143,11 @@
       bind:this={yearSelectElement}
       class="select select-secondary"
       onchange={(e) => {
-        const date = new Date(calendar.value);
-        // @ts-ignore
-        date.setUTCFullYear(e.currentTarget.value);
-        calendar.focusedDate = date.toISOString().slice(0, 10);
+        const currentYear = calendar.value.substring(0, 4);
+        calendar.focusedDate = calendar.value.replace(
+          currentYear,
+          e.currentTarget.value
+        );
       }}
     >
       {#each dates as year}
@@ -171,7 +201,12 @@
     bind:this={dropdownContent}
   >
     {#if range}
-      <calendar-range class="cally" months={2} bind:this={calendar}>
+      <calendar-range
+        class="cally"
+        months={2}
+        bind:this={calendar}
+        value={callyValue}
+      >
         {@render yearSelect()}
         {@html previousIcon}
         {@html nextIcon}
@@ -181,7 +216,7 @@
         </div>
       </calendar-range>
     {:else}
-      <calendar-date class="cally" bind:this={calendar}>
+      <calendar-date class="cally" bind:this={calendar} value={callyValue}>
         {@render yearSelect()}
         {@html previousIcon}
         {@html nextIcon}
