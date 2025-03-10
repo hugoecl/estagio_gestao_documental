@@ -408,11 +408,21 @@
   </table>
   {#if loading}
     <div
-      class="flex justify-between items-center p-2 bg-base-100 border border-zinc-200 rounded-box"
+      class="flex flex-wrap justify-between items-center gap-2 p-2 bg-base-100 border border-zinc-200 rounded-box"
     >
-      <div class="skeleton h-8 w-20 sm:w-40"></div>
-      <div class="skeleton h-6 w-32 sm:w-64"></div>
-      <div class="skeleton h-10 w-40 sm:w-80"></div>
+      <!-- For "items per page" -->
+      <div class="flex items-center gap-1">
+        <div class="skeleton h-4 w-16"></div>
+        <div class="skeleton h-8 w-16"></div>
+      </div>
+
+      <!-- For results text -->
+      <div class="skeleton h-5 w-24 sm:w-40"></div>
+
+      <!-- For pagination - full width on mobile -->
+      <div class="flex justify-center w-full sm:w-auto">
+        <div class="skeleton h-8 w-[240px] sm:w-[320px]"></div>
+      </div>
     </div>
   {:else}
     <div
