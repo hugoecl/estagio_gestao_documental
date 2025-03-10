@@ -190,38 +190,28 @@
     });
 
     isModalOpen = true;
-
     modal.showModal();
   }
 
-  async function handleContractSave(
-    updatedContract: Contract
-  ): Promise<boolean> {
-    try {
-      const { updateContract } = await import("@api/utils");
-      const success = await updateContract(
-        selectedContractId!,
-        updatedContract
-      );
+  function handleContractUpdated(updatedContract: Contract) {
+    // @ts-ignore javascript can take string as indexes
+    contracts[selectedContractId!] = updatedContract;
 
-      if (success) {
-        // Update the contract in local state
-        // @ts-ignore javascript acceps numeric strings as indexes
-        contracts[selectedContractId!] = updatedContract;
-        contractEntries = Object.entries(contracts);
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error("Error saving contract:", error);
-      return false;
-    }
+    contractEntries = Object.entries(contracts);
   }
 
-  function handleModalClose() {
+  function handleContractDeleted(deletedId: string) {
+    // @ts-ignore javascript can take string as indexes
+    delete contracts[deletedId];
+    contractEntries = Object.entries(contracts);
     isModalOpen = false;
-    selectedContractId = null;
-    selectedContract = null;
+  }
+
+  function handleFileDeleted(contractId: string, fileId: string) {
+    // @ts-ignore javascript can take string as indexes
+    delete contracts[contractId].files[fileId];
+
+    contractEntries = Object.entries(contracts);
   }
 
   onMount(async () => {
@@ -514,4 +504,7 @@
   contract={selectedContract ? selectedContract : ({} as Contract)}
   origianlContractJson={originalContractJson!}
   isVisible={isModalOpen}
+  onContractUpdated={handleContractUpdated}
+  onContractDeleted={handleContractDeleted}
+  onFileDeleted={handleFileDeleted}
 />

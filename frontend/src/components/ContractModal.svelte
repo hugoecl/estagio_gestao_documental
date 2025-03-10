@@ -14,24 +14,28 @@
     contract,
     origianlContractJson,
     isVisible,
+    onContractUpdated,
+    onContractDeleted,
+    onFileDeleted,
   }: {
+    // TODO: see passing this as a number instead of a string
     contractId: string;
     contract: Contract;
     origianlContractJson: string;
     isVisible: boolean;
+    onContractUpdated: (updatedContract: Contract) => void;
+    onContractDeleted: (deletedId: string) => void;
+    onFileDeleted: (contractId: string, fileId: string) => void;
   } = $props();
 
   let modal: HTMLDialogElement;
   let confirmModal: HTMLDialogElement;
 
-  // Local state
   let newFiles = $state<File[]>([]);
   let fileInput = $state<HTMLInputElement | null>(null);
   let isSubmitting = $state(false);
   let dateRange = $state("");
 
-  // Confirmation modal state
-  // TODO: Make this a const enum
   const enum ConfirmationAction {
     DELETE_CONTRACT,
     DELETE_FILE,
@@ -40,7 +44,6 @@
   let fileToDeleteId = $state<string | null>(null);
   let isDeleteSubmitting = $state(false);
 
-  // Get existing files as array for easier rendering
   const existingFiles = $derived(
     contract.files
       ? // @ts-ignore
@@ -49,7 +52,7 @@
           // @ts-ignore
           ...file,
           // @ts-ignore
-          uploadedAt: new Date(file.uploadedAt),
+          uploadedAt: file.uploadedAt,
         }))
       : null
   );
@@ -66,6 +69,7 @@
       import("@components/Alert/Alert"),
     ]);
 
+    const files = contract.files;
     const editedContract = {
       ...contract,
       files: undefined,
@@ -79,7 +83,7 @@
 
     // Scenario 1: Both contract data and files have changed
     if (hasContractChanged && hasNewFiles) {
-      const [contractResult, filesResult] = await Promise.all([
+      const [contractResult, [filesResult, filesBaseId]] = await Promise.all([
         updateContract(contractId, editedContract),
         uploadContractFiles(contractId, newFiles),
       ]);
@@ -87,7 +91,14 @@
       success = contractResult && filesResult;
 
       if (success) {
-        newFiles = [];
+        for (let i = 0, len = newFiles.length; i < len; i++) {
+          const file = newFiles[i];
+          files[filesBaseId + i] = {
+            name: file.name,
+            path: `/media/contracts/${contractId}/${file.name}`,
+            uploadedAt: new Date().toLocaleDateString("pt-PT"),
+          };
+        }
       }
     }
     // Scenario 2: Only contract data has changed
@@ -96,10 +107,17 @@
     }
     // Scenario 3: Only files have changed
     else if (hasNewFiles) {
-      success = await uploadContractFiles(contractId, newFiles);
+      const result = await uploadContractFiles(contractId, newFiles);
+      success = result[0];
+      const filesBaseId = result[1];
 
-      if (success) {
-        newFiles = [];
+      for (let i = 0, len = newFiles.length; i < len; i++) {
+        const file = newFiles[i];
+        files[filesBaseId + i] = {
+          name: file.name,
+          path: `/media/contracts/${contractId}/${file.name}`,
+          uploadedAt: new Date().toLocaleString("pt-PT"),
+        };
       }
     }
     // Scenario 4: Nothing has changed
@@ -121,6 +139,7 @@
         AlertType.SUCCESS,
         AlertPosition.TOP
       );
+      onContractUpdated({ ...editedContract, files });
     }
     isSubmitting = false;
   }
@@ -173,6 +192,7 @@
         AlertType.SUCCESS,
         AlertPosition.TOP
       );
+      onFileDeleted(contractId, fileToDeleteId);
     } else {
       showAlert(
         "Erro ao eliminar ficheiro",
@@ -197,9 +217,8 @@
         AlertType.SUCCESS,
         AlertPosition.TOP
       );
-      // Refresh the contracts list (you might want to handle this via a callback)
-      // TODO: check this
-      window.location.reload();
+
+      onContractDeleted(contractId);
     } else {
       showAlert(
         "Erro ao eliminar contrato",
@@ -375,7 +394,7 @@
                 {#each existingFiles as file}
                   <tr>
                     <td>{file.name}</td>
-                    <td>{file.uploadedAt.toLocaleString("pt-PT")}</td>
+                    <td>{file.uploadedAt}</td>
                     <td>
                       <div class="flex justify-end space-x-2">
                         <a
@@ -471,7 +490,7 @@
     {/if}
   </div>
   <form method="dialog" class="modal-backdrop">
-    <button disabled={isSubmitting}>c</button>
+    <button disabled={isSubmitting} onclick={closeModal}>c</button>
   </form>
 </dialog>
 

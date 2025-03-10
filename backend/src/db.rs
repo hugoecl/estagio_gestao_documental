@@ -17,6 +17,16 @@ where
     serializer.serialize_str(&date.format("%d/%m/%Y").to_string())
 }
 
+fn serialize_datetime_dmy<S>(
+    date: &chrono::DateTime<chrono::Utc>,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    serializer.serialize_str(&date.format("%d/%m/%Y, %H:%M:%S").to_string())
+}
+
 pub struct UserCache {
     pub username: String,
     pub email: String,
@@ -28,6 +38,7 @@ pub struct UserCache {
 pub struct ContractFilesCache {
     pub path: String,
     #[serde(rename = "uploadedAt")]
+    #[serde(serialize_with = "serialize_datetime_dmy")]
     pub uploaded_at: chrono::DateTime<chrono::Utc>,
 }
 
@@ -52,8 +63,10 @@ pub struct ContractCache {
     #[serde(rename = "type")]
     pub type_of_contract: contract::Type,
     #[serde(rename = "createdAt")]
+    #[serde(serialize_with = "serialize_datetime_dmy")]
     pub created_at: chrono::DateTime<chrono::Utc>,
     #[serde(rename = "uploadedAt")]
+    #[serde(serialize_with = "serialize_datetime_dmy")]
     pub updated_at: chrono::DateTime<chrono::Utc>,
     pub files: HashMap<u32, ContractFilesCache, RandomState>,
 }

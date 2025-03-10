@@ -153,10 +153,13 @@ export async function getContracts(): Promise<Contracts | null> {
   return null;
 }
 
+/**
+ * @returns baseId (the id of the first file uploaded) and a boolean indicating if the request was successful
+ */
 export async function uploadContractFiles(
   contractId: string,
   files: File[]
-): Promise<boolean> {
+): Promise<[boolean, number]> {
   const formData = new FormData();
   for (let i = 0, len = files.length; i < len; i++) {
     formData.append("files", files[i]);
@@ -170,8 +173,13 @@ export async function uploadContractFiles(
       body: formData,
     }
   );
+  if (!response.ok) {
+    return [false, -1];
+  }
 
-  return response.ok;
+  const text = await response.text();
+  const baseId = Number(text);
+  return [response.ok, baseId];
 }
 
 export async function deleteContractFile(

@@ -252,7 +252,6 @@ pub async fn update_contract(
     HttpResponse::Ok().finish()
 }
 
-// TODO: Perguntar se é preciso aparecer os ficheiros no disco
 pub async fn delete_contract(
     session: Session,
     state: web::Data<State>,
@@ -265,6 +264,10 @@ pub async fn delete_contract(
     let contract_id = contract_id.into_inner();
 
     let pinned_contracts_cache = state.cache.contracts.pin();
+
+    tokio::task::spawn_blocking(move || {
+        std::fs::remove_dir_all(format!("media/contracts/{}", contract_id))
+    });
 
     let contract = pinned_contracts_cache.remove(&contract_id);
     if let None = contract {
@@ -288,6 +291,7 @@ pub struct ContractFilesFormRequest {
     files: Vec<MemoryFile>,
 }
 
+// TODO: Optimize paths strings
 pub async fn upload_contract_files(
     session: Session,
     state: web::Data<State>,
@@ -358,7 +362,7 @@ pub async fn upload_contract_files(
         query_builder.build().execute(&state.db.pool).await.unwrap();
     });
 
-    HttpResponse::Ok().finish()
+    HttpResponse::Ok().body(new_contract_file_id.to_string())
 }
 
 pub async fn delete_contract_file(
@@ -383,15 +387,12 @@ pub async fn delete_contract_file(
 
     let pinned_contract_files_cache = contract.files.pin();
 
-    // let file_path = file.path.clone();
-    // tokio::task::spawn_blocking(move || {
-    //     std::fs::remove_file(format!("media{}", file_path))
-    // })
-
     let contract_file = pinned_contract_files_cache.remove(&file_id);
     if let None = contract_file {
         return HttpResponse::NotFound().finish();
     }
+    let file_path = contract_file.unwrap().path.clone();
+    tokio::task::spawn_blocking(move || std::fs::remove_file(format!("media{}", file_path)));
 
     drop(pinned_contract_files_cache);
     drop(pinned_contracts_cache);
