@@ -6,7 +6,7 @@
     ContractStatus,
     ContractTypes,
   } from "@lib/types/contracts";
-  import DatePicker from "./DatePicker.svelte";
+  import DatePicker from "@components/DatePicker.svelte";
   import API_BASE_URL from "@api/base-url";
 
   const {
@@ -31,6 +31,7 @@
   let dateRange = $state("");
 
   // Confirmation modal state
+  // TODO: Make this a const enum
   let confirmationAction = $state<"deleteContract" | "deleteFile" | null>(null);
   let fileToDeleteId = $state<string | null>(null);
   let isDeleteSubmitting = $state(false);
@@ -52,61 +53,70 @@
   async function handleSubmit(e: SubmitEvent) {
     e.preventDefault();
 
-    try {
-      const { updateContract, uploadContractFiles } = await import(
-        "@api/utils"
-      );
+    const [
+      { updateContract, uploadContractFiles },
+      { showAlert, AlertType, AlertPosition },
+    ] = await Promise.all([
+      import("@api/utils"),
+      import("@components/Alert/Alert"),
+    ]);
 
-      const editedContract = {
-        ...contract,
-        files: undefined,
-      } as unknown as Contract;
-      const hasContractChanged =
-        JSON.stringify(editedContract) !== origianlContractJson;
+    const editedContract = {
+      ...contract,
+      files: undefined,
+    } as unknown as Contract;
+    const hasContractChanged =
+      JSON.stringify(editedContract) !== origianlContractJson;
 
-      const hasNewFiles = newFiles.length > 0;
+    const hasNewFiles = newFiles.length > 0;
 
-      let success = true;
+    let success = true;
 
-      // Scenario 1: Both contract data and files have changed
-      if (hasContractChanged && hasNewFiles) {
-        const [contractResult, filesResult] = await Promise.all([
-          updateContract(contractId, editedContract),
-          uploadContractFiles(contractId, newFiles),
-        ]);
+    // Scenario 1: Both contract data and files have changed
+    if (hasContractChanged && hasNewFiles) {
+      const [contractResult, filesResult] = await Promise.all([
+        updateContract(contractId, editedContract),
+        uploadContractFiles(contractId, newFiles),
+      ]);
 
-        success = contractResult && filesResult;
-
-        if (success) {
-          newFiles = [];
-        }
-      }
-      // Scenario 2: Only contract data has changed
-      else if (hasContractChanged) {
-        success = await updateContract(contractId, editedContract);
-      }
-      // Scenario 3: Only files have changed
-      else if (hasNewFiles) {
-        success = await uploadContractFiles(contractId, newFiles);
-
-        if (success) {
-          newFiles = [];
-        }
-      }
-      // Scenario 4: Nothing has changed
-      else {
-        closeModal();
-        return;
-      }
+      success = contractResult && filesResult;
 
       if (success) {
-        closeModal();
+        newFiles = [];
       }
-    } catch (error) {
-      console.error("Error saving contract:", error);
-    } finally {
-      isSubmitting = false;
     }
+    // Scenario 2: Only contract data has changed
+    else if (hasContractChanged) {
+      success = await updateContract(contractId, editedContract);
+    }
+    // Scenario 3: Only files have changed
+    else if (hasNewFiles) {
+      success = await uploadContractFiles(contractId, newFiles);
+
+      if (success) {
+        newFiles = [];
+      }
+    }
+    // Scenario 4: Nothing has changed
+    else {
+      closeModal();
+      showAlert(
+        "Nenhuma alteração detetada",
+        AlertType.INFO,
+        AlertPosition.TOP
+      );
+      return;
+    }
+
+    if (success) {
+      closeModal();
+      showAlert(
+        "Contrato atualizado com sucesso",
+        AlertType.SUCCESS,
+        AlertPosition.TOP
+      );
+    }
+    isSubmitting = false;
   }
 
   function showDeleteFileConfirmation(fileId: string) {
@@ -138,35 +148,55 @@
   async function handleDeleteFile() {
     if (!fileToDeleteId) return;
 
-    try {
-      const { deleteContractFile } = await import("@api/utils");
-      const success = await deleteContractFile(contractId, fileToDeleteId);
+    const [{ deleteContractFile }, { showAlert, AlertType, AlertPosition }] =
+      await Promise.all([
+        import("@api/utils"),
+        import("@components/Alert/Alert"),
+      ]);
+    const success = await deleteContractFile(contractId, fileToDeleteId);
 
-      if (success) {
-        // Remove file fromselectedContract
-        const updatedFiles = { ...contract.files };
-        // @ts-ignore we don't need to convert fileToDeleteId to number here because it is a numeric string and javascript can take that as indexes
-        delete updatedFiles[fileToDeleteId];
-        contract.files = updatedFiles;
-      }
-    } catch (error) {
-      console.error("Error deleting file:", error);
+    if (success) {
+      // @ts-ignore we don't need to convert fileToDeleteId to number here because it is a numeric string and javascript can take that as indexes
+      delete contract.files[fileToDeleteId];
+
+      showAlert(
+        "Ficheiro eliminado com sucesso",
+        AlertType.SUCCESS,
+        AlertPosition.TOP
+      );
+    } else {
+      showAlert(
+        "Erro ao eliminar ficheiro",
+        AlertType.ERROR,
+        AlertPosition.TOP
+      );
     }
   }
 
   async function handleDeleteContract() {
-    try {
-      const { deleteContract } = await import("@api/utils");
-      const success = await deleteContract(contractId);
+    const [{ deleteContract }, { showAlert, AlertType, AlertPosition }] =
+      await Promise.all([
+        import("@api/utils"),
+        import("@components/Alert/Alert"),
+      ]);
+    const success = await deleteContract(contractId);
 
-      if (success) {
-        closeModal();
-        // Refresh the contracts list (you might want to handle this via a callback)
-        // TODO: check this
-        window.location.reload();
-      }
-    } catch (error) {
-      console.error("Error deleting contract:", error);
+    if (success) {
+      closeModal();
+      showAlert(
+        "Contrato eliminado com sucesso",
+        AlertType.SUCCESS,
+        AlertPosition.TOP
+      );
+      // Refresh the contracts list (you might want to handle this via a callback)
+      // TODO: check this
+      window.location.reload();
+    } else {
+      showAlert(
+        "Erro ao eliminar contrato",
+        AlertType.ERROR,
+        AlertPosition.TOP
+      );
     }
   }
 
@@ -270,9 +300,10 @@
             <legend class="fieldset-legend">Data de Início - Fim</legend>
             <DatePicker
               range={true}
-              bind:value={() =>
-                `${contract.dateStartString} - ${contract.dateEndString}`,
-              (value) => (dateRange = value)}
+              bind:value={
+                () => `${contract.dateStartString} - ${contract.dateEndString}`,
+                (value) => (dateRange = value)
+              }
             />
           </fieldset>
 
