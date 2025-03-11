@@ -25,7 +25,7 @@ futures-util = "0.3"
 mimalloc = "0.1.43"
 papaya = { version = "0.2", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
-sonic-rs = "0.3"
+sonic-rs = "0.4"
 sqlx = { version = "0.8.3", default-features = false, features = [
     "runtime-tokio",
     "mysql",
