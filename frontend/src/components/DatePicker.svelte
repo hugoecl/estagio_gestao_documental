@@ -53,7 +53,10 @@
   let calendar: any;
 
   const dates: number[] = [];
-  const currentYear = new Date().getFullYear();
+  const now: Date = new Date();
+  const nowISOString = now.toISOString().substring(0, 10);
+  const currentYear = now.getFullYear();
+  const currentYearString = currentYear.toString();
   for (let i = -10; i <= 10; i++) {
     dates.push(currentYear + i);
   }
@@ -143,11 +146,18 @@
       bind:this={yearSelectElement}
       class="select select-secondary"
       onchange={(e) => {
-        const currentYear = calendar.value.substring(0, 4);
-        calendar.focusedDate = calendar.value.replace(
-          currentYear,
-          e.currentTarget.value
-        );
+        if (calendar.focusedDate === undefined) {
+          calendar.focusedDate = nowISOString.replace(
+            currentYearString,
+            e.currentTarget.value
+          );
+        } else {
+          const focusedYear = calendar.focusedDate.substring(0, 4);
+          calendar.focusedDate = calendar.focusedDate.replace(
+            focusedYear,
+            e.currentTarget.value
+          );
+        }
       }}
     >
       {#each dates as year}
