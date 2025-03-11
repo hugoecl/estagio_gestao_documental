@@ -202,7 +202,10 @@ async fn get_contracts_cache(
 
 impl Db {
     pub async fn new() -> Result<(Db, Cache), sqlx::Error> {
-        let pool = MySqlPool::connect("mysql://root:root@localhost:3306/gestao_documental").await?;
+        let pool = MySqlPool::connect(
+            "mariadb://root:root@localhost:3306/gestao_documental?password=root",
+        )
+        .await?;
 
         sqlx::raw_sql(SCHEMA).execute(&pool).await?;
 
