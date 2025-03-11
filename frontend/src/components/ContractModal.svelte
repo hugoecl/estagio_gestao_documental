@@ -13,7 +13,6 @@
     contractId,
     contract,
     origianlContractJson,
-    isVisible,
     onContractUpdated,
     onContractDeleted,
     onFileDeleted,
@@ -22,7 +21,6 @@
     contractId: string;
     contract: Contract;
     origianlContractJson: string;
-    isVisible: boolean;
     onContractUpdated: (updatedContract: Contract) => void;
     onContractDeleted: (deletedId: string) => void;
     onFileDeleted: (contractId: string, fileId: string) => void;
@@ -254,243 +252,241 @@
 
 <dialog id="contract-modal" class="modal" bind:this={modal}>
   <div class="modal-box w-11/12 max-w-5xl">
-    {#if isVisible}
-      <div class="flex justify-between mb-4">
-        <h3 class="font-bold text-xl">
-          Contrato #{contract.contractNumber} - {contract.supplier}
-        </h3>
+    <div class="flex justify-between mb-4">
+      <h3 class="font-bold text-xl">
+        Contrato #{contract.contractNumber} - {contract.supplier}
+      </h3>
 
-        <button
-          class="btn btn-ghost btn-sm"
-          onclick={closeModal}
-          disabled={isSubmitting}
-        >
-          ✕
-        </button>
-      </div>
-      <form onsubmit={handleSubmit} class="space-y-4">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <fieldset class="fieldset">
-            <legend class="fieldset-legend"> Número do Contrato </legend>
-            <input
-              type="number"
-              class="input input-bordered w-full"
-              bind:value={contract.contractNumber}
-              required
-            />
-          </fieldset>
+      <button
+        class="btn btn-ghost btn-sm"
+        onclick={closeModal}
+        disabled={isSubmitting}
+      >
+        ✕
+      </button>
+    </div>
+    <form onsubmit={handleSubmit} class="space-y-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <fieldset class="fieldset">
+          <legend class="fieldset-legend"> Número do Contrato </legend>
+          <input
+            type="number"
+            class="input input-bordered w-full"
+            bind:value={contract.contractNumber}
+            required
+          />
+        </fieldset>
 
-          <fieldset class="fieldset">
-            <legend class="fieldset-legend">Fornecedor</legend>
-            <input
-              type="text"
-              class="input input-bordered w-full"
-              bind:value={contract.supplier}
-              required
-            />
-          </fieldset>
+        <fieldset class="fieldset">
+          <legend class="fieldset-legend">Fornecedor</legend>
+          <input
+            type="text"
+            class="input input-bordered w-full"
+            bind:value={contract.supplier}
+            required
+          />
+        </fieldset>
 
-          <fieldset class="fieldset">
-            <legend class="fieldset-legend">Local</legend>
-            <select
-              class="select select-bordered w-full"
-              required
-              bind:value={contract.locationValue}
-            >
-              {#each ContractLocations as location, i}
-                <option value={i}>
-                  {location}
-                </option>
-              {/each}
-            </select>
-          </fieldset>
+        <fieldset class="fieldset">
+          <legend class="fieldset-legend">Local</legend>
+          <select
+            class="select select-bordered w-full"
+            required
+            bind:value={contract.locationValue}
+          >
+            {#each ContractLocations as location, i}
+              <option value={i}>
+                {location}
+              </option>
+            {/each}
+          </select>
+        </fieldset>
 
-          <fieldset class="fieldset">
-            <legend class="fieldset-legend">Serviço</legend>
-            <select
-              class="select select-bordered w-full"
-              required
-              bind:value={contract.serviceValue}
-            >
-              {#each ContractServices as service, i}
-                <option value={i}>
-                  {service}
-                </option>
-              {/each}
-            </select>
-          </fieldset>
+        <fieldset class="fieldset">
+          <legend class="fieldset-legend">Serviço</legend>
+          <select
+            class="select select-bordered w-full"
+            required
+            bind:value={contract.serviceValue}
+          >
+            {#each ContractServices as service, i}
+              <option value={i}>
+                {service}
+              </option>
+            {/each}
+          </select>
+        </fieldset>
 
-          <fieldset class="fieldset">
-            <legend class="fieldset-legend">Data de Início - Fim</legend>
-            <DatePicker range={false} bind:value={contract.dateString} />
-          </fieldset>
+        <fieldset class="fieldset">
+          <legend class="fieldset-legend">Data de Início - Fim</legend>
+          <DatePicker range={false} bind:value={contract.dateString} />
+        </fieldset>
 
-          <fieldset class="fieldset">
-            <legend class="fieldset-legend">Data de Início - Fim</legend>
-            <DatePicker
-              range={true}
-              bind:value={
-                () => `${contract.dateStartString} - ${contract.dateEndString}`,
-                (value) => {
-                  const start = value.slice(0, 10);
-                  const end = value.slice(13, 23);
+        <fieldset class="fieldset">
+          <legend class="fieldset-legend">Data de Início - Fim</legend>
+          <DatePicker
+            range={true}
+            bind:value={
+              () => `${contract.dateStartString} - ${contract.dateEndString}`,
+              (value) => {
+                const start = value.slice(0, 10);
+                const end = value.slice(13, 23);
 
-                  contract.dateStartString = start;
-                  contract.dateEndString = end;
-                }
+                contract.dateStartString = start;
+                contract.dateEndString = end;
               }
-            />
-          </fieldset>
+            }
+          />
+        </fieldset>
 
-          <fieldset class="fieldset">
-            <legend class="fieldset-legend">Tipo</legend>
-            <select
-              class="select select-bordered w-full"
-              required
-              bind:value={contract.typeValue}
-            >
-              {#each ContractTypes as type, i}
-                <option value={i}>
-                  {type}
-                </option>
+        <fieldset class="fieldset">
+          <legend class="fieldset-legend">Tipo</legend>
+          <select
+            class="select select-bordered w-full"
+            required
+            bind:value={contract.typeValue}
+          >
+            {#each ContractTypes as type, i}
+              <option value={i}>
+                {type}
+              </option>
+            {/each}
+          </select>
+        </fieldset>
+
+        <fieldset class="fieldset">
+          <legend class="fieldset-legend">Estado</legend>
+          <select
+            class="select select-bordered w-full"
+            required
+            bind:value={contract.statusValue}
+          >
+            {#each ContractStatus as status, i}
+              <option value={i}>
+                {status}
+              </option>
+            {/each}
+          </select>
+        </fieldset>
+
+        <fieldset class="fieldset md:col-span-2">
+          <legend class="fieldset-legend">Descrição</legend>
+          <textarea
+            class="textarea textarea-bordered w-full"
+            bind:value={contract.description}
+          ></textarea>
+        </fieldset>
+      </div>
+
+      <div class="divider">Ficheiros</div>
+
+      {#if existingFiles !== null}
+        <div class="overflow-x-auto">
+          <table class="table table-compact w-full">
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Data de upload</th>
+                <th class="w-24">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {#each existingFiles as file}
+                <tr>
+                  <td>{file.name}</td>
+                  <td>{file.uploadedAt}</td>
+                  <td>
+                    <div class="flex justify-end space-x-2">
+                      <a
+                        href={`${API_BASE_URL}/${file.path}`}
+                        target="_blank"
+                        class="btn btn-xs btn-outline"
+                      >
+                        Ver
+                      </a>
+                      <button
+                        type="button"
+                        class="btn btn-xs btn-error"
+                        disabled={isSubmitting}
+                        onclick={() => showDeleteFileConfirmation(file.id)}
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                  </td>
+                </tr>
               {/each}
-            </select>
-          </fieldset>
+            </tbody>
+          </table>
+        </div>
+      {:else}
+        <div class="text-center py-4 text-base-content/70">
+          Nenhum ficheiro associado a este contrato.
+        </div>
+      {/if}
 
-          <fieldset class="fieldset">
-            <legend class="fieldset-legend">Estado</legend>
-            <select
-              class="select select-bordered w-full"
-              required
-              bind:value={contract.statusValue}
-            >
-              {#each ContractStatus as status, i}
-                <option value={i}>
-                  {status}
-                </option>
-              {/each}
-            </select>
-          </fieldset>
-
-          <fieldset class="fieldset md:col-span-2">
-            <legend class="fieldset-legend">Descrição</legend>
-            <textarea
-              class="textarea textarea-bordered w-full"
-              bind:value={contract.description}
-            ></textarea>
-          </fieldset>
+      <div>
+        <div class="flex items-center justify-between">
+          <h4 class="font-semibold">Novos Ficheiros</h4>
+          <button
+            type="button"
+            class="btn btn-sm btn-secondary"
+            disabled={isSubmitting}
+            onclick={openFileSelector}
+          >
+            Adicionar Ficheiros
+          </button>
+          <input
+            type="file"
+            bind:this={fileInput}
+            onchange={handleFileSelection}
+            class="hidden"
+            multiple
+          />
         </div>
 
-        <div class="divider">Ficheiros</div>
-
-        {#if existingFiles !== null}
-          <div class="overflow-x-auto">
-            <table class="table table-compact w-full">
-              <thead>
-                <tr>
-                  <th>Nome</th>
-                  <th>Data de upload</th>
-                  <th class="w-24">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {#each existingFiles as file}
-                  <tr>
-                    <td>{file.name}</td>
-                    <td>{file.uploadedAt}</td>
-                    <td>
-                      <div class="flex justify-end space-x-2">
-                        <a
-                          href={`${API_BASE_URL}/${file.path}`}
-                          target="_blank"
-                          class="btn btn-xs btn-outline"
-                        >
-                          Ver
-                        </a>
-                        <button
-                          type="button"
-                          class="btn btn-xs btn-error"
-                          disabled={isSubmitting}
-                          onclick={() => showDeleteFileConfirmation(file.id)}
-                        >
-                          Eliminar
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                {/each}
-              </tbody>
-            </table>
+        {#if newFiles.length > 0}
+          <div class="mt-2 space-y-2">
+            {#each newFiles as file, i}
+              <div
+                class="flex items-center justify-between p-2 bg-base-200 rounded"
+              >
+                <span class="text-sm truncate max-w-[80%]">{file.name}</span>
+                <button
+                  type="button"
+                  class="btn btn-xs btn-ghost"
+                  onclick={() => removeNewFile(i)}
+                >
+                  ×
+                </button>
+              </div>
+            {/each}
           </div>
         {:else}
           <div class="text-center py-4 text-base-content/70">
-            Nenhum ficheiro associado a este contrato.
+            Clique no botão acima para adicionar novos ficheiros.
           </div>
         {/if}
+      </div>
 
-        <div>
-          <div class="flex items-center justify-between">
-            <h4 class="font-semibold">Novos Ficheiros</h4>
-            <button
-              type="button"
-              class="btn btn-sm btn-secondary"
-              disabled={isSubmitting}
-              onclick={openFileSelector}
-            >
-              Adicionar Ficheiros
-            </button>
-            <input
-              type="file"
-              bind:this={fileInput}
-              onchange={handleFileSelection}
-              class="hidden"
-              multiple
-            />
-          </div>
-
-          {#if newFiles.length > 0}
-            <div class="mt-2 space-y-2">
-              {#each newFiles as file, i}
-                <div
-                  class="flex items-center justify-between p-2 bg-base-200 rounded"
-                >
-                  <span class="text-sm truncate max-w-[80%]">{file.name}</span>
-                  <button
-                    type="button"
-                    class="btn btn-xs btn-ghost"
-                    onclick={() => removeNewFile(i)}
-                  >
-                    ×
-                  </button>
-                </div>
-              {/each}
-            </div>
+      <div class="modal-action flex justify-between">
+        <button
+          type="button"
+          class="btn btn-error"
+          onclick={showDeleteContractConfirmation}
+          disabled={isSubmitting}
+        >
+          Eliminar Contrato
+        </button>
+        <button type="submit" class="btn btn-primary">
+          {#if isSubmitting}
+            <span class="loading loading-bars loading-md"></span>
           {:else}
-            <div class="text-center py-4 text-base-content/70">
-              Clique no botão acima para adicionar novos ficheiros.
-            </div>
+            Guardar alterações
           {/if}
-        </div>
-
-        <div class="modal-action flex justify-between">
-          <button
-            type="button"
-            class="btn btn-error"
-            onclick={showDeleteContractConfirmation}
-            disabled={isSubmitting}
-          >
-            Eliminar Contrato
-          </button>
-          <button type="submit" class="btn btn-primary">
-            {#if isSubmitting}
-              <span class="loading loading-bars loading-md"></span>
-            {:else}
-              Guardar alterações
-            {/if}
-          </button>
-        </div>
-      </form>
-    {/if}
+        </button>
+      </div>
+    </form>
   </div>
   <form method="dialog" class="modal-backdrop">
     <button disabled={isSubmitting} onclick={closeModal}>c</button>

@@ -178,7 +178,6 @@
   let selectedContractId: string | null = $state(null);
   let selectedContract = $state<Contract | null>(null);
   let originalContractJson = $state<string | null>(null);
-  let isModalOpen = $state(false);
   let modal: HTMLDialogElement;
 
   function openContractModal(id: string, contract: Contract) {
@@ -189,7 +188,6 @@
       files: undefined,
     });
 
-    isModalOpen = true;
     modal.showModal();
   }
 
@@ -203,7 +201,6 @@
     // @ts-ignore javascript can take string as indexes
     delete contracts[deletedId];
     contractEntries = Object.entries(contracts);
-    isModalOpen = false;
   }
 
   function handleFileDeleted(contractId: string, fileId: string) {
@@ -511,7 +508,6 @@
   contractId={selectedContractId!}
   contract={selectedContract ? selectedContract : ({} as Contract)}
   origianlContractJson={originalContractJson!}
-  isVisible={isModalOpen}
   onContractUpdated={handleContractUpdated}
   onContractDeleted={handleContractDeleted}
   onFileDeleted={handleFileDeleted}
