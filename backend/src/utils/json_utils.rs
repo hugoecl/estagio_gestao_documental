@@ -1,6 +1,10 @@
-use actix_web::{web, HttpResponse};
-use serde::de::DeserializeOwned;
+use std::hash::Hasher;
+
+use actix_web::http::header::{ETag, EntityTag, IF_NONE_MATCH};
+use actix_web::{HttpRequest, HttpResponse, web};
+use ahash::AHasher;
 use serde::Serialize;
+use serde::de::DeserializeOwned;
 
 pub struct Json<T>(pub T);
 
@@ -21,6 +25,31 @@ where
     let json = sonic_rs::to_string(obj).unwrap();
     HttpResponse::Ok()
         .content_type("application/json")
+        .body(json)
+}
+
+fn generate_entity_tag(content: &[u8]) -> EntityTag {
+    let mut hasher = AHasher::default();
+    hasher.write(content);
+    let hash = hasher.finish();
+    EntityTag::new_weak(format!("{:x}", hash))
+}
+
+pub fn json_response_with_etag(obj: &impl Serialize, req: &HttpRequest) -> HttpResponse {
+    let json = sonic_rs::to_string(obj).unwrap();
+    let etag = generate_entity_tag(json.as_bytes());
+
+    if let Some(if_none_match) = req.headers().get(IF_NONE_MATCH) {
+        if &if_none_match.as_bytes()[3..if_none_match.len() - 1] == etag.tag().as_bytes() {
+            return HttpResponse::NotModified()
+                .insert_header(ETag(etag))
+                .finish();
+        }
+    }
+
+    HttpResponse::Ok()
+        .content_type("application/json")
+        .insert_header(ETag(etag))
         .body(json)
 }
 

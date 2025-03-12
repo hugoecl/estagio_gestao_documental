@@ -1,6 +1,6 @@
 use actix_multipart::form::{MultipartForm, text::Text};
 use actix_session::Session;
-use actix_web::{HttpResponse, Responder, web};
+use actix_web::{HttpRequest, HttpResponse, Responder, web};
 use ahash::RandomState;
 use chrono::NaiveDate;
 use papaya::HashMap;
@@ -10,18 +10,22 @@ use crate::{
     State,
     models::contract,
     utils::{
-        json_utils::{Json, json_response},
+        json_utils::{Json, json_response_with_etag},
         memory_file::MemoryFile,
         session_utils::validate_session,
     },
 };
 
-pub async fn get_contracts(session: Session, state: web::Data<State>) -> impl Responder {
+pub async fn get_contracts(
+    session: Session,
+    state: web::Data<State>,
+    req: HttpRequest,
+) -> impl Responder {
     if let Err(response) = validate_session(&session) {
         return response;
     }
 
-    json_response(&state.cache.contracts)
+    json_response_with_etag(&state.cache.contracts, &req)
 }
 
 #[derive(MultipartForm)]
