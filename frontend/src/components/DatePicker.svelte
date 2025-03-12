@@ -2,55 +2,69 @@
   import calendarIcon from "@assets/calendar_icon.svg?raw";
   import previousIcon from "@assets/next_icon.svg?raw";
   import nextIcon from "@assets/previous_icon.svg?raw";
+  import {
+    getFirstDateFromCallyRange,
+    getFirstDateFromRangeToYMD,
+    getSecondDateFromCallyRange,
+    getSecondDateFromRangeToYMD,
+  } from "src/utils/date-utils";
   import { onMount } from "svelte";
 
   let {
     range,
     formName,
     value = $bindable(),
+    positionEnd,
   }: {
     range: boolean;
     formName?: string;
     value?: string;
+    positionEnd?: boolean;
   } = $props();
 
   let dropdownPosition = $state("dropdown-center");
+  let yearSelectElement: HTMLSelectElement;
+
+  // svelte throws this warning because we are binding an element that is inside a if statement but in this case since the if statement is controlled by a prop it is safe to ignore this warning
+  // svelte-ignore non_reactive_update
+  let calendar: any;
 
   // for checking if the value has really changed or if the user just chenged week/month/date on the calendar
   let oldValue: string;
   const callyValue = $derived.by(() => {
     if (value) {
       // callyValue comes in the format dd/mm/yyyy - dd/mm/yyyy
-      const firstYear = value.substring(6, 10);
-      const firstMonth = value.substring(3, 5);
-      const firstDay = value.substring(0, 2);
-      if (range) {
-        const secondYear = value.substring(19, 23);
-        const secondMonth = value.substring(16, 18);
-        const secondDay = value.substring(13, 15);
+      const [first, year] = getFirstDateFromRangeToYMD(value, "-");
+      if (yearSelectElement) {
+        yearSelectElement.value = year;
+      }
 
-        const result = `${firstYear}-${firstMonth}-${firstDay}/${secondYear}-${secondMonth}-${secondDay}`;
+      if (range) {
+        const second = getSecondDateFromRangeToYMD(value, "-");
+
+        const result = `${first}/${second}`;
+
         oldValue = result;
+        if (calendar) {
+          calendar.focusedDate = result;
+        }
         return result;
       }
       // callyValue comes in the format dd/mm/yyyy
       else {
-        const result = `${firstYear}-${firstMonth}-${firstDay}`;
-        oldValue = result;
-        return result;
+        oldValue = first;
+        if (calendar) {
+          calendar.focusedDate = first;
+        }
+        return oldValue;
       }
     }
   });
 
   let cally: HTMLDivElement;
-  let yearSelectElement: HTMLSelectElement;
   let dateValue: HTMLInputElement;
   let detailsDropdown: HTMLDetailsElement;
   let dropdownContent: HTMLDivElement;
-
-  // svelte throws this warning because we are binding an element that is inside a if statement but in this case since the if statement is controlled by a prop it is safe to ignore this warning
-  // svelte-ignore non_reactive_update
-  let calendar: any;
 
   const dates: number[] = [];
   const now: Date = new Date();
@@ -110,18 +124,20 @@
         oldValue = e.currentTarget.value;
 
         // e.currentTarget.value is something like 2012/12/24-2012/12/25
-        const firstYear = e.currentTarget.value.substring(0, 4);
-        const firstMonth = e.currentTarget.value.substring(5, 7);
-        const firstDay = e.currentTarget.value.substring(8, 10);
+        const firstDate = getFirstDateFromCallyRange(
+          e.currentTarget.value,
+          "/"
+        );
         if (range) {
-          const secondYear = e.currentTarget.value.substring(11, 15);
-          const secondMonth = e.currentTarget.value.substring(16, 18);
-          const secondDay = e.currentTarget.value.substring(19, 21);
+          const secondDate = getSecondDateFromCallyRange(
+            e.currentTarget.value,
+            "/"
+          );
 
-          dateValue.value = `${firstDay}/${firstMonth}/${firstYear} - ${secondDay}/${secondMonth}/${secondYear}`;
+          dateValue.value = `${firstDate} - ${secondDate}`;
           value = dateValue.value;
         } else {
-          dateValue.value = `${firstDay}/${firstMonth}/${firstYear}`;
+          dateValue.value = firstDate;
           value = dateValue.value;
         }
 
@@ -153,10 +169,9 @@
           );
         } else {
           const focusedYear = calendar.focusedDate.substring(0, 4);
-          calendar.focusedDate = calendar.focusedDate.replace(
-            focusedYear,
-            e.currentTarget.value
-          );
+          calendar.focusedDate = calendar.focusedDate
+            .substring(0, 10)
+            .replace(focusedYear, e.currentTarget.value);
         }
       }}
     >
@@ -174,7 +189,7 @@
 <details
   class={[
     "dropdown select-none max-sm:w-[90%]",
-    range ? dropdownPosition : "dropdown-center",
+    positionEnd ? "dropdown-end" : range ? dropdownPosition : "dropdown-center",
   ]}
   bind:this={detailsDropdown}
 >
@@ -216,6 +231,7 @@
         months={2}
         bind:this={calendar}
         value={callyValue}
+        locale="pt-PT"
       >
         {@render yearSelect()}
         {@html previousIcon}
@@ -226,7 +242,12 @@
         </div>
       </calendar-range>
     {:else}
-      <calendar-date class="cally" bind:this={calendar} value={callyValue}>
+      <calendar-date
+        class="cally"
+        bind:this={calendar}
+        value={callyValue}
+        locale="pt-PT"
+      >
         {@render yearSelect()}
         {@html previousIcon}
         {@html nextIcon}

@@ -2,6 +2,7 @@
   import type { Contract, Contracts } from "@lib/types/contracts";
   import { onMount } from "svelte";
   import ContractModal from "@components/ContractModal.svelte";
+  import { newContract } from "@stores/contracts-stores";
 
   let contracts: Contracts = $state({});
   let currentPage = $state(1);
@@ -209,27 +210,42 @@
     contractEntries = Object.entries(contracts);
   }
 
-  onMount(async () => {
-    const [{ getContracts }, { AlertPosition, AlertType, showAlert }] =
-      await Promise.all([
-        import("@api/utils"),
-        import("@components/Alert/Alert"),
-      ]);
-    const contractsOrNull = await getContracts();
-    if (!contractsOrNull) {
-      showAlert(
-        "Erro ao carregar contratos",
-        AlertType.ERROR,
-        AlertPosition.TOP
-      );
-      loading = false;
-      return;
-    }
-    contracts = contractsOrNull;
-    contractEntries = Object.entries(contracts);
-    modal = document.getElementById("contract-modal") as HTMLDialogElement;
+  onMount(() => {
+    (async () => {
+      const [{ getContracts }, { AlertPosition, AlertType, showAlert }] =
+        await Promise.all([
+          import("@api/utils"),
+          import("@components/Alert/Alert"),
+        ]);
+      const contractsOrNull = await getContracts();
+      if (!contractsOrNull) {
+        showAlert(
+          "Erro ao carregar contratos",
+          AlertType.ERROR,
+          AlertPosition.TOP
+        );
+        loading = false;
+        return;
+      }
+      contracts = contractsOrNull;
+      contractEntries = Object.entries(contracts);
+      modal = document.getElementById("contract-modal") as HTMLDialogElement;
 
-    loading = false;
+      loading = false;
+    })();
+
+    const unsubscribe = newContract.subscribe((contract) => {
+      if (contract) {
+        // @ts-ignore javascript can take string as indexes
+        contracts[contract.id] = contract.contract;
+        contractEntries = Object.entries(contracts);
+        newContract.set(null);
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
   });
 </script>
 

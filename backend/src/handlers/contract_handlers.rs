@@ -168,7 +168,7 @@ pub async fn upload_contract(
         query_builder.build().execute(&state.db.pool).await.unwrap();
     });
 
-    HttpResponse::Ok().finish()
+    HttpResponse::Ok().body(format!("{},{}", new_contract_id, new_contract_file_id))
 }
 
 #[derive(Deserialize, Debug)]

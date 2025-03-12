@@ -10,6 +10,7 @@
       "@assets/*": ["src/assets/*"],
       "@api/*": ["src/api/*"],
       "@stores/*": ["src/stores/*"],
+      "@utils/*": ["src/utils/*"],
       "@lib/types/*": ["src/types/*"],
     },
     "types": ["./src/globals.d.ts"]

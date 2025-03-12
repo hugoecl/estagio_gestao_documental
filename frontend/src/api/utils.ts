@@ -10,6 +10,7 @@ import {
   type Contracts,
 } from "@lib/types/contracts";
 import { toggleElements } from "src/stores/loading-stores";
+import { DMYToDate } from "@utils/date-utils";
 
 async function handleFetch(
   url: string | URL,
@@ -76,13 +77,20 @@ export async function logoutUser(): Promise<boolean> {
   return response.ok;
 }
 
-export async function uploadContract(formData: FormData): Promise<boolean> {
+/**
+ * @returns boolean indicating if the request was successful the id of the contract created and the id of the first file uploaded
+ */
+export async function uploadContract(
+  formData: FormData
+): Promise<[boolean, number, number]> {
   const response = await handleFetch(`${API_BASE_URL}/contracts`, {
     method: "POST",
     credentials: "include",
     body: formData,
   });
-  return response.ok;
+  const [contractId, fileId] = (await response.text()).split(",");
+
+  return [response.ok, Number(contractId), Number(fileId)];
 }
 
 interface ContractResponse
@@ -132,9 +140,10 @@ export async function getContracts(): Promise<Contracts | null> {
       ] as keyof typeof ContractStatus;
       entry.typeValue = entry.type as number;
       entry.type = ContractTypes[entry.type] as keyof typeof ContractTypes;
-      entry.date = new Date(entry.dateString);
-      entry.dateStart = new Date(entry.dateStartString);
-      entry.dateEnd = new Date(entry.dateEndString);
+
+      entry.date = DMYToDate(entry.dateString);
+      entry.dateStart = DMYToDate(entry.dateStartString);
+      entry.dateEnd = DMYToDate(entry.dateEndString);
 
       entry.__searchSupplier = entry.supplier.toLowerCase();
       entry.__searchLocation = (entry.location as string).toLowerCase();
@@ -154,7 +163,7 @@ export async function getContracts(): Promise<Contracts | null> {
 }
 
 /**
- * @returns baseId (the id of the first file uploaded) and a boolean indicating if the request was successful
+ * @returns boolean indicating if the request was successful and the id of the file uploaded
  */
 export async function uploadContractFiles(
   contractId: string,
@@ -177,9 +186,7 @@ export async function uploadContractFiles(
     return [false, -1];
   }
 
-  const text = await response.text();
-  const baseId = Number(text);
-  return [response.ok, baseId];
+  return [response.ok, Number(await response.text())];
 }
 
 export async function deleteContractFile(

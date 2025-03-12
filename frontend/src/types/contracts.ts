@@ -23,26 +23,28 @@ export interface ContractFiles {
 export interface Contract {
   contractNumber: number;
   date: Date;
-  dateString: string;
   dateStart: Date;
-  dateStartString: string;
   dateEnd: Date;
-  dateEndString: string;
   description: string;
   location: (typeof ContractLocations)[number];
-  locationValue: number;
   service: (typeof ContractServices)[number];
-  serviceValue: number;
   status: (typeof ContractStatus)[number];
-  statusValue: number;
   supplier: string;
   type: (typeof ContractTypes)[number];
-  typeValue: number;
   createdAt: string;
   updatedAt: string;
   files: Record<number, ContractFiles>;
 
-  // lowercase versions for performance reasons
+  // Things made for the sake of performance that are added when the data is fetched
+  dateString: string;
+  dateStartString: string;
+  dateEndString: string;
+
+  locationValue: number;
+  serviceValue: number;
+  statusValue: number;
+  typeValue: number;
+
   __searchSupplier: string;
   __searchLocation: string;
   __searchService: string;

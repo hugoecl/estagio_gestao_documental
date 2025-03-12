@@ -326,6 +326,7 @@
           <legend class="fieldset-legend">Data de Início - Fim</legend>
           <DatePicker
             range={true}
+            positionEnd={true}
             bind:value={
               () => `${contract.dateStartString} - ${contract.dateEndString}`,
               (value) => {
