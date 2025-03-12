@@ -56,8 +56,11 @@ pub async fn upload_contract(
         .fetch_add(1, std::sync::atomic::Ordering::SeqCst)
         + 1;
 
+    let base_path = format!("media/contracts/{}", new_contract_id);
+
+    let base_path_clone = base_path.clone();
     let _ = tokio::task::spawn_blocking(move || {
-        std::fs::create_dir(format!("media/contracts/{}", new_contract_id))
+        std::fs::create_dir(base_path_clone).unwrap();
     })
     .await
     .unwrap();
@@ -80,25 +83,22 @@ pub async fn upload_contract(
         .fetch_add(files_length as u32, std::sync::atomic::Ordering::SeqCst)
         + 1;
 
-    let mut file_names = Vec::with_capacity(files_length);
+    let mut file_paths = Vec::with_capacity(files_length);
 
     for (i, file) in form.files.into_iter().enumerate() {
         let file_id = new_contract_file_id + i as u32;
+        let file_path = format!("{}/{}", base_path, file.file_name);
+        file_paths.push(file_path.clone());
+
         pinned_contract_files_cache.insert(
             file_id,
             crate::db::ContractFilesCache {
-                path: format!("media/contracts/{}/{}", new_contract_id, file.file_name),
+                path: file_path.clone(),
                 uploaded_at: now,
             },
         );
-        file_names.push(file.file_name.clone());
 
-        tokio::task::spawn_blocking(move || {
-            std::fs::write(
-                format!("media/contracts/{}/{}", new_contract_id, file.file_name),
-                &file.data,
-            )
-        });
+        tokio::task::spawn_blocking(move || std::fs::write(&file_path, &file.data));
     }
     drop(pinned_contract_files_cache);
     let contract_number = form.contract_number.into_inner();
@@ -159,9 +159,9 @@ pub async fn upload_contract(
             "INSERT INTO contract_files (contract_id, file_path, uploaded_at)",
         );
 
-        query_builder.push_values(file_names, |mut b, file_name| {
+        query_builder.push_values(file_paths, |mut b, file_path| {
             b.push_bind(new_contract_id)
-                .push_bind(format!("media/contracts/{}/{}", new_contract_id, file_name))
+                .push_bind(file_path)
                 .push_bind(now);
         });
 
