@@ -268,21 +268,23 @@
     <form onsubmit={handleSubmit} class="space-y-4">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <fieldset class="fieldset">
-          <legend class="fieldset-legend"> Número do Contrato </legend>
+          <legend class="fieldset-legend">Fornecedor</legend>
           <input
-            type="number"
+            type="text"
             class="input input-bordered w-full"
-            bind:value={contract.contractNumber}
+            placeholder="Nome do Fornecedor"
+            bind:value={contract.supplier}
             required
           />
         </fieldset>
 
         <fieldset class="fieldset">
-          <legend class="fieldset-legend">Fornecedor</legend>
+          <legend class="fieldset-legend">Número do Contrato</legend>
           <input
-            type="text"
+            type="number"
             class="input input-bordered w-full"
-            bind:value={contract.supplier}
+            placeholder="Número do contrato"
+            bind:value={contract.contractNumber}
             required
           />
         </fieldset>
@@ -373,7 +375,8 @@
         <fieldset class="fieldset md:col-span-2">
           <legend class="fieldset-legend">Descrição</legend>
           <textarea
-            class="textarea textarea-bordered w-full"
+            class="textarea w-full"
+            placeholder="Descrição"
             bind:value={contract.description}
           ></textarea>
         </fieldset>
@@ -548,3 +551,48 @@
     >
   </form>
 </dialog>
+
+<style>
+  .input:hover::placeholder,
+  .textarea:hover::placeholder {
+    color: var(--color-base);
+  }
+
+  input,
+  .textarea,
+  .select {
+    width: 100%;
+  }
+
+  .select:hover,
+  .textarea:hover,
+  .select:focus,
+  input:focus,
+  input:hover {
+    border-color: var(--color-secondary);
+    box-shadow:
+      0 4px 6px -1px rgb(0 0 0 / 0.1),
+      0 2px 4px -2px rgb(0 0 0 / 0.1);
+    opacity: 1;
+  }
+
+  @media (max-width: 40rem) {
+    .fieldset {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .fieldset-legend {
+      align-self: flex-start;
+      margin-left: 5%;
+      width: auto;
+    }
+
+    input,
+    .textarea,
+    .select {
+      width: 90%;
+    }
+  }
+</style>

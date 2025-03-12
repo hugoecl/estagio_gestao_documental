@@ -48,7 +48,7 @@ import {
           required
           type="text"
           class="input"
-          placeholder="Fornecedor"
+          placeholder="Nome do Fornecedor"
           name="supplier"
         />
       </fieldset>
@@ -84,7 +84,7 @@ import {
       </fieldset>
 
       <fieldset class="fieldset">
-        <legend class="fieldset-legend">Status:</legend>
+        <legend class="fieldset-legend">Estado:</legend>
         <select class="select" name="status" required>
           <option disabled selected hidden value="">Selecione o Estado</option>
           {ContractStatus.map((s, i) => <option value={i}>{s}</option>)}
