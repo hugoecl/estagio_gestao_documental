@@ -10,8 +10,9 @@ actix-multipart = { version = "0.7", default-features = false, features = [
     "derive",
 ] }
 actix-session = { version = "0.10", features = ["cookie-session"] }
-actix-web = "4"
+actix-web = { version = "4", features = ["rustls-0_23"] }
 ahash = "0.8"
+argh = { version = "0.1.13", default-features = false, features = ["help"] }
 argon2-kdf = { git = "https://github.com/lucascompython/argon2-kdf", branch = "main" }
 chrono = { version = "0.4", default-features = false, features = [
     "std",
@@ -19,11 +20,13 @@ chrono = { version = "0.4", default-features = false, features = [
     "now",
     "serde",
 ] }
-env_logger = { version = "0.11", optional = true }
+env_logger = { version = "0.11" }
 futures-core = "0.3"
 futures-util = "0.3"
 mimalloc = "0.1.43"
 papaya = { version = "0.2", features = ["serde"] }
+rustls = "0.23.23"
+rustls-pemfile = "2.2.0"
 serde = { version = "1", features = ["derive"] }
 sonic-rs = "0.4"
 sqlx = { version = "0.8.3", default-features = false, features = [
@@ -33,10 +36,6 @@ sqlx = { version = "0.8.3", default-features = false, features = [
     "chrono",
 ] }
 tokio = { version = "1", features = ["macros"] }
-
-[features]
-default = []
-log = ["env_logger"]
 
 
 [profile.release]
