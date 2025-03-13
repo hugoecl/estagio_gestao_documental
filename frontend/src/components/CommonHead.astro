@@ -16,6 +16,10 @@ const { title, serverRouter } = Astro.props;
   <link rel="icon" type="image/png" href={jccLogoSmall.src} />
   <meta name="generator" content={Astro.generator} />
   <title>{title}</title>
+  <link
+    href="/node_modules/@fortawesome/fontawesome-free/css/all.min.css"
+    rel="stylesheet"
+  />
 
   <script is:inline data-astro-rerun define:vars={{ API_BASE_URL }}>
     (async function () {

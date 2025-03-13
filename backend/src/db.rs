@@ -69,7 +69,7 @@ pub struct ContractCache {
     pub files: HashMap<u32, ContractFilesCache, RandomState>,
 }
 
-pub struct PageAnalyticsData {
+pub struct PageVisit {
     pub visit_count: u32,
     pub last_visited_at: chrono::DateTime<chrono::Utc>,
 }
@@ -87,7 +87,7 @@ pub struct Db {
 pub struct Cache {
     pub users: HashMap<u32, UserCache, RandomState>,
     pub contracts: HashMap<u32, ContractCache, RandomState>,
-    pub analytics: HashMap<AnalyticsKey, PageAnalyticsData, RandomState>,
+    pub analytics: HashMap<AnalyticsKey, PageVisit, RandomState>,
 }
 
 #[inline(always)]
@@ -97,7 +97,7 @@ fn i8_to_bool(i: i8) -> bool {
 
 async fn get_analytics_cache(
     pool: &sqlx::Pool<sqlx::MySql>,
-) -> Result<HashMap<AnalyticsKey, PageAnalyticsData, RandomState>, sqlx::Error> {
+) -> Result<HashMap<AnalyticsKey, PageVisit, RandomState>, sqlx::Error> {
     let analytics = sqlx::query!("SELECT * FROM user_page_analytics")
         .fetch_all(pool)
         .await?;
@@ -117,7 +117,7 @@ async fn get_analytics_cache(
 
         pinned_analytics_cache.insert(
             key,
-            PageAnalyticsData {
+            PageVisit {
                 visit_count: entry.visit_count,
                 last_visited_at: entry.last_visited_at.unwrap(),
             },

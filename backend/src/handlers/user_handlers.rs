@@ -4,7 +4,7 @@ use serde::Deserialize;
 
 use crate::{
     State,
-    db::{AnalyticsKey, PageAnalyticsData, UserCache},
+    db::{AnalyticsKey, PageVisit, UserCache},
     utils::{
         hashing_utils::{hash, verify},
         json_utils::{Json, json_response},
@@ -113,18 +113,18 @@ pub async fn check(session: Session, state: web::Data<State>, data: web::Bytes) 
         |data| {
             const ONE_MINUTE: chrono::TimeDelta = chrono::Duration::minutes(1);
             if now.signed_duration_since(data.last_visited_at) > ONE_MINUTE {
-                PageAnalyticsData {
+                PageVisit {
                     visit_count: data.visit_count + 1,
                     last_visited_at: now,
                 }
             } else {
-                PageAnalyticsData {
+                PageVisit {
                     visit_count: data.visit_count,
                     last_visited_at: now,
                 }
             }
         },
-        PageAnalyticsData {
+        PageVisit {
             visit_count: 1,
             last_visited_at: now,
         },

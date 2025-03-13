@@ -21,9 +21,9 @@ async function handleFetch(
     if (
       response.status === 401 &&
       window.location.pathname !== "/iniciar-sessao/" &&
-      window.location.pathname !== "registo/"
+      window.location.pathname !== "/registo/"
     ) {
-      window.location.href = "/iniciar-sessao/";
+      window.location.pathname = "/iniciar-sessao/";
     }
     return response;
   } catch (error) {
@@ -244,4 +244,16 @@ export async function updateContract(
   );
 
   return response.ok;
+}
+
+export async function getAnalytics(): Promise<PageAnalytics> {
+  const response = await handleFetch(`${API_BASE_URL}/users/analytics`, {
+    method: "GET",
+    credentials: "include",
+  });
+
+  if (response.ok) {
+    return (await response.json()) as PageAnalytics;
+  }
+  return [];
 }
