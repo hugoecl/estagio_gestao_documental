@@ -7,6 +7,18 @@ CREATE TABLE IF NOT EXISTS users (
     PRIMARY KEY (id)
 );
 
+CREATE TABLE IF NOT EXISTS user_page_analytics (
+  id INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL,
+  user_id INT UNSIGNED NOT NULL,
+  page_path VARCHAR(255) NOT NULL,
+  visit_count INT UNSIGNED DEFAULT 1 NOT NULL,
+  last_visited_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY unique_user_page (user_id, page_path),
+  INDEX idx_user_visit_count (user_id, visit_count),
+  FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
 
 CREATE TABLE IF NOT EXISTS contracts (
   id INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL,

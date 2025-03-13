@@ -92,10 +92,15 @@ pub async fn login(
     HttpResponse::Unauthorized().finish()
 }
 
-pub async fn check(session: Session) -> impl Responder {
+pub async fn check(session: Session, data: web::Bytes) -> impl Responder {
     if let Err(response) = validate_session(&session) {
         return response;
     }
+
+    let path = match std::str::from_utf8(&data) {
+        Ok(p) => p,
+        Err(_) => return HttpResponse::BadRequest().finish(),
+    };
 
     HttpResponse::Ok().finish()
 }
