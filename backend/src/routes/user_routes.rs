@@ -22,6 +22,10 @@ pub fn init(cfg: &mut web::ServiceConfig) {
             .route(
                 "/logout",
                 web::post().to(crate::handlers::user_handlers::logout),
+            )
+            .route(
+                "/analytics",
+                web::get().to(crate::handlers::user_handlers::get_user_analytics),
             ),
     );
 }

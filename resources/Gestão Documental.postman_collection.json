@@ -102,8 +102,17 @@
 				{
 					"name": "check",
 					"request": {
-						"method": "GET",
+						"method": "POST",
 						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "/contracts/",
+							"options": {
+								"raw": {
+									"language": "text"
+								}
+							}
+						},
 						"url": {
 							"raw": "{{host}}/users/check",
 							"host": [
@@ -112,6 +121,24 @@
 							"path": [
 								"users",
 								"check"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "analytics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{host}}/users/analytics",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"users",
+								"analytics"
 							]
 						}
 					},

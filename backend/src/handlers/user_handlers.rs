@@ -7,7 +7,7 @@ use crate::{
     db::{AnalyticsKey, PageAnalyticsData, UserCache},
     utils::{
         hashing_utils::{hash, verify},
-        json_utils::Json,
+        json_utils::{Json, json_response},
         session_utils::{admin_only, validate_session},
     },
 };
@@ -185,4 +185,20 @@ pub async fn protected(session: Session) -> impl Responder {
     }
 
     HttpResponse::Ok().body("Protected Route")
+}
+
+pub async fn get_user_analytics(state: web::Data<State>, session: Session) -> impl Responder {
+    let user_id = match validate_session(&session) {
+        Ok(id) => id as u32,
+        Err(response) => return response,
+    };
+
+    let pinned_analytics_cache = state.cache.analytics.pin();
+    let user_analytics = pinned_analytics_cache
+        .iter()
+        .filter(|(k, _)| k.user_id == user_id)
+        .map(|(k, v)| (k.page_path.clone(), v.visit_count))
+        .collect::<Vec<_>>();
+
+    json_response(&user_analytics)
 }
