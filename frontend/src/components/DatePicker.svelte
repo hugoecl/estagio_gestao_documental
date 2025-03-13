@@ -90,27 +90,26 @@
 
     document.addEventListener("mousedown", handleToggle);
 
-    if (range) {
-      const rem = parseFloat(
-        getComputedStyle(document.documentElement).fontSize
-      );
-      let windowSize = window.innerWidth / rem;
+    const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
 
-      function setDropdownPosition() {
-        windowSize = window.innerWidth / rem;
+    let windowSize = window.innerWidth / rem;
 
-        if (windowSize < 40) {
-          dropdownPosition = "dropdown-center";
-        } else if (windowSize < 48) {
-          dropdownPosition = "dropdown-end";
-        } else if (windowSize < 80) {
-          dropdownPosition = "dropdown-end";
-        } else {
-          dropdownPosition = "dropdown-center";
-        }
+    function setDropdownPosition() {
+      windowSize = window.innerWidth / rem;
+
+      if (windowSize < 40) {
+        dropdownPosition = "dropdown-center";
+      } else if (windowSize < 48) {
+        dropdownPosition = "dropdown-end";
+      } else if (windowSize < 80) {
+        dropdownPosition = "dropdown-end";
+      } else {
+        dropdownPosition = "dropdown-center";
       }
-      setDropdownPosition();
+    }
 
+    if (range) {
+      setDropdownPosition();
       window.addEventListener("resize", setDropdownPosition);
     }
 
@@ -148,7 +147,7 @@
     });
     return () => {
       document.removeEventListener("mousedown", handleToggle);
-      if (range && window.location.pathname === "/contratos") {
+      if (range) {
         // @ts-ignore typescript thinks the setDropdownPosition function is not defined but int his condition it is
         window.removeEventListener("resize", setDropdownPosition);
       }

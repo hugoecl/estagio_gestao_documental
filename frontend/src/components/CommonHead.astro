@@ -31,17 +31,17 @@ const { title, serverRouter } = Astro.props;
 
       if (ok) {
         if (
-          window.location.pathname === "/iniciar-sessao" ||
-          window.location.pathname === "/registo"
+          window.location.pathname === "/iniciar-sessao/" ||
+          window.location.pathname === "/registo/"
         ) {
           window.location.pathname = "/";
         }
       } else {
         if (
-          window.location.pathname !== "/iniciar-sessao" &&
-          window.location.pathname !== "/registo"
+          window.location.pathname !== "/iniciar-sessao/" &&
+          window.location.pathname !== "/registo/"
         ) {
-          window.location.pathname = "/iniciar-sessao";
+          window.location.pathname = "/iniciar-sessao/";
         }
       }
     })();
