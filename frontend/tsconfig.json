@@ -12,6 +12,7 @@
       "@stores/*": ["src/stores/*"],
       "@utils/*": ["src/utils/*"],
       "@lib/types/*": ["src/types/*"],
+      "@styles/*": ["src/styles/*"],
     },
     "types": ["./src/globals.d.ts"]
   }
