@@ -20,10 +20,10 @@ async function handleFetch(
     const response = await fetch(url, options);
     if (
       response.status === 401 &&
-      window.location.pathname !== "/iniciar-sessao" &&
-      window.location.pathname !== "registo"
+      window.location.pathname !== "/iniciar-sessao/" &&
+      window.location.pathname !== "registo/"
     ) {
-      window.location.href = "/iniciar-sessao";
+      window.location.href = "/iniciar-sessao/";
     }
     return response;
   } catch (error) {
