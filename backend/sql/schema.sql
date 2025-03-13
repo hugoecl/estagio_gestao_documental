@@ -19,7 +19,6 @@ CREATE TABLE IF NOT EXISTS user_page_analytics (
   FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
-
 CREATE TABLE IF NOT EXISTS contracts (
   id INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL,
   contract_number INT UNSIGNED NOT NULL,
@@ -50,3 +49,4 @@ CREATE TABLE IF NOT EXISTS contract_files (
   INDEX idx_contract_id (contract_id),
   FOREIGN KEY (contract_id) REFERENCES contracts (id) ON DELETE CASCADE
 );
+
