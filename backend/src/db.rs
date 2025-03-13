@@ -240,7 +240,7 @@ impl Db {
         sqlx::query!(
             "INSERT IGNORE INTO users (username, email, password, is_admin) VALUES (?, ?, ?, ?)",
             "admin",
-            "admin@jcc.com",
+            "admin@jcc.pt",
             &admin_password[..],
             true
         )
