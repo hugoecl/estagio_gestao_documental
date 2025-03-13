@@ -1,5 +1,3 @@
-use std::sync::atomic;
-
 use actix_session::Session;
 use actix_web::{HttpResponse, Responder, web};
 use serde::Deserialize;
@@ -34,37 +32,36 @@ pub async fn register(state: web::Data<State>, request_data: web::Bytes) -> impl
 
     let password_bytes = hash(&user.password);
 
+    let result = sqlx::query!(
+        "INSERT INTO users (username, email, password, is_admin) VALUES (?, ?, ?, ?)",
+        user.username,
+        user.email,
+        &password_bytes[..],
+        false
+    )
+    .execute(&state.db.pool)
+    .await;
+
+    let result = match result {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Database error during user registration: {}", e);
+            return HttpResponse::InternalServerError().finish();
+        }
+    };
+
+    let new_user_id = result.last_insert_id() as u32;
+
     let user_cache = UserCache {
-        username: user.username.clone(),
-        email: user.email.clone(),
+        username: user.username,
+        email: user.email,
         password: password_bytes,
         is_admin: false,
     };
 
-    let new_user_id = state
-        .cache
-        .last_user_id
-        .fetch_add(1, atomic::Ordering::SeqCst)
-        + 1;
-
     pinned_users_cache.insert(new_user_id, user_cache);
 
-    drop(pinned_users_cache);
-
-    actix_web::rt::spawn(async move {
-        sqlx::query!(
-            "INSERT INTO users (username, email, password, is_admin) VALUES (?, ?, ?, ?)",
-            user.username,
-            user.email,
-            &password_bytes[..],
-            false
-        )
-        .execute(&state.db.pool)
-        .await
-        .unwrap();
-    });
-
-    HttpResponse::Ok().body("Registering user")
+    HttpResponse::Ok().body("User registered successfully")
 }
 
 #[derive(Deserialize)]
