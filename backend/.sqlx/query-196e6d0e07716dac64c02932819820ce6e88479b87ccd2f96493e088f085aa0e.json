@@ -17,7 +17,7 @@
         "name": "contract_number",
         "type_info": {
           "type": "Long",
-          "flags": "NOT_NULL | UNIQUE_KEY | UNSIGNED | NO_DEFAULT_VALUE",
+          "flags": "NOT_NULL | MULTIPLE_KEY | UNSIGNED | NO_DEFAULT_VALUE",
           "max_size": 10
         }
       },
@@ -107,7 +107,7 @@
         "name": "created_at",
         "type_info": {
           "type": "Timestamp",
-          "flags": "BINARY | TIMESTAMP",
+          "flags": "UNSIGNED | BINARY | TIMESTAMP",
           "max_size": 19
         }
       },
@@ -116,7 +116,7 @@
         "name": "updated_at",
         "type_info": {
           "type": "Timestamp",
-          "flags": "BINARY | TIMESTAMP | ON_UPDATE_NOW",
+          "flags": "UNSIGNED | BINARY | TIMESTAMP | ON_UPDATE_NOW",
           "max_size": 19
         }
       }

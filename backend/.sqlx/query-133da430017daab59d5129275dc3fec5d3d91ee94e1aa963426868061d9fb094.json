@@ -1,6 +1,6 @@
 {
   "db_name": "MySQL",
-  "query": "SELECT * FROM contract_files WHERE contract_id = ?",
+  "query": "SELECT * FROM user_page_analytics",
   "describe": {
     "columns": [
       {
@@ -8,13 +8,13 @@
         "name": "id",
         "type_info": {
           "type": "Long",
-          "flags": "NOT_NULL | PRIMARY_KEY | UNSIGNED | AUTO_INCREMENT",
+          "flags": "NOT_NULL | PRIMARY_KEY | UNIQUE_KEY | UNSIGNED | AUTO_INCREMENT",
           "max_size": 10
         }
       },
       {
         "ordinal": 1,
-        "name": "contract_id",
+        "name": "user_id",
         "type_info": {
           "type": "Long",
           "flags": "NOT_NULL | MULTIPLE_KEY | UNSIGNED | NO_DEFAULT_VALUE",
@@ -23,7 +23,7 @@
       },
       {
         "ordinal": 2,
-        "name": "file_path",
+        "name": "page_path",
         "type_info": {
           "type": "VarString",
           "flags": "NOT_NULL | NO_DEFAULT_VALUE",
@@ -32,7 +32,16 @@
       },
       {
         "ordinal": 3,
-        "name": "uploaded_at",
+        "name": "visit_count",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED",
+          "max_size": 10
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "last_visited_at",
         "type_info": {
           "type": "Timestamp",
           "flags": "UNSIGNED | BINARY | TIMESTAMP",
@@ -41,14 +50,15 @@
       }
     ],
     "parameters": {
-      "Right": 1
+      "Right": 0
     },
     "nullable": [
+      false,
       false,
       false,
       false,
       true
     ]
   },
-  "hash": "f4e3796faee07fe6001904f0149e83dc49ecdf5ed47d962fb0d06162ff403ca9"
+  "hash": "133da430017daab59d5129275dc3fec5d3d91ee94e1aa963426868061d9fb094"
 }

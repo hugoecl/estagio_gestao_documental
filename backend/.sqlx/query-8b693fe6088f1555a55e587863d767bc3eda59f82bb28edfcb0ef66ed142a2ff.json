@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "DELETE FROM contract_files WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "8b693fe6088f1555a55e587863d767bc3eda59f82bb28edfcb0ef66ed142a2ff"
+}

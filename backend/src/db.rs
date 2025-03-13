@@ -69,6 +69,17 @@ pub struct ContractCache {
     pub files: HashMap<u32, ContractFilesCache, RandomState>,
 }
 
+pub struct PageAnalyticsData {
+    pub visit_count: u32,
+    pub last_visited_at: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(Hash, Eq, PartialEq)]
+pub struct AnalyticsKey {
+    pub user_id: u32,
+    pub page_path: String,
+}
+
 pub struct Db {
     pub pool: MySqlPool,
 }
@@ -76,11 +87,45 @@ pub struct Db {
 pub struct Cache {
     pub users: HashMap<u32, UserCache, RandomState>,
     pub contracts: HashMap<u32, ContractCache, RandomState>,
+    pub analytics: HashMap<AnalyticsKey, PageAnalyticsData, RandomState>,
 }
 
 #[inline(always)]
 fn i8_to_bool(i: i8) -> bool {
     i != 0
+}
+
+async fn get_analytics_cache(
+    pool: &sqlx::Pool<sqlx::MySql>,
+) -> Result<HashMap<AnalyticsKey, PageAnalyticsData, RandomState>, sqlx::Error> {
+    let analytics = sqlx::query!("SELECT * FROM user_page_analytics")
+        .fetch_all(pool)
+        .await?;
+
+    let analytics_cache = HashMap::builder()
+        .hasher(RandomState::new())
+        .capacity(analytics.len())
+        .build();
+
+    let pinned_analytics_cache = analytics_cache.pin();
+
+    for entry in analytics.into_iter() {
+        let key = AnalyticsKey {
+            user_id: entry.user_id,
+            page_path: entry.page_path,
+        };
+
+        pinned_analytics_cache.insert(
+            key,
+            PageAnalyticsData {
+                visit_count: entry.visit_count,
+                last_visited_at: entry.last_visited_at.unwrap(),
+            },
+        );
+    }
+
+    drop(pinned_analytics_cache);
+    Ok(analytics_cache)
 }
 
 async fn get_users_cache(
@@ -202,8 +247,11 @@ impl Db {
         .execute(&pool)
         .await?;
 
-        let (users_cache, contracts_cache) =
-            tokio::try_join!(get_users_cache(&pool), get_contracts_cache(&pool))?;
+        let (users_cache, contracts_cache, analytics_cache) = tokio::try_join!(
+            get_users_cache(&pool),
+            get_contracts_cache(&pool),
+            get_analytics_cache(&pool)
+        )?;
 
         println!("Connected to Database");
 
@@ -212,6 +260,7 @@ impl Db {
             Cache {
                 users: users_cache,
                 contracts: contracts_cache,
+                analytics: analytics_cache,
             },
         ))
     }

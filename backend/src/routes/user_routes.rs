@@ -17,7 +17,7 @@ pub fn init(cfg: &mut web::ServiceConfig) {
             )
             .route(
                 "/check",
-                web::get().to(crate::handlers::user_handlers::check),
+                web::post().to(crate::handlers::user_handlers::check),
             )
             .route(
                 "/logout",

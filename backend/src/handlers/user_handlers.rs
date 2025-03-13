@@ -4,7 +4,7 @@ use serde::Deserialize;
 
 use crate::{
     State,
-    db::UserCache,
+    db::{AnalyticsKey, PageAnalyticsData, UserCache},
     utils::{
         hashing_utils::{hash, verify},
         json_utils::Json,
@@ -89,15 +89,87 @@ pub async fn login(
     HttpResponse::Unauthorized().finish()
 }
 
-pub async fn check(session: Session, data: web::Bytes) -> impl Responder {
-    if let Err(response) = validate_session(&session) {
-        return response;
-    }
+pub async fn check(session: Session, state: web::Data<State>, data: web::Bytes) -> impl Responder {
+    let user_id = match validate_session(&session) {
+        Ok(id) => id as u32,
+        Err(response) => return response,
+    };
 
-    let path = match std::str::from_utf8(&data) {
+    let page_path = match String::from_utf8(data.to_vec()) {
         Ok(p) => p,
         Err(_) => return HttpResponse::BadRequest().finish(),
     };
+
+    let key = AnalyticsKey {
+        user_id,
+        page_path: page_path.clone(),
+    };
+
+    let now = chrono::Utc::now();
+    let pinned_analytics_cache = state.cache.analytics.pin();
+
+    let updated_value = pinned_analytics_cache.update_or_insert(
+        key,
+        |data| {
+            const ONE_MINUTE: chrono::TimeDelta = chrono::Duration::minutes(1);
+            if now.signed_duration_since(data.last_visited_at) > ONE_MINUTE {
+                PageAnalyticsData {
+                    visit_count: data.visit_count + 1,
+                    last_visited_at: now,
+                }
+            } else {
+                PageAnalyticsData {
+                    visit_count: data.visit_count,
+                    last_visited_at: now,
+                }
+            }
+        },
+        PageAnalyticsData {
+            visit_count: 1,
+            last_visited_at: now,
+        },
+    );
+
+    let visit_count = updated_value.visit_count;
+    let incremented = updated_value.last_visited_at == now; // Only true if this is a counted visit
+    drop(pinned_analytics_cache);
+
+    actix_web::rt::spawn(async move {
+        if incremented {
+            sqlx::query!(
+                r#"
+                INSERT INTO user_page_analytics (user_id, page_path, visit_count, last_visited_at) 
+                VALUES (?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE 
+                    visit_count = ?,
+                    last_visited_at = ?
+                "#,
+                user_id,
+                page_path,
+                visit_count,
+                now,
+                visit_count,
+                now
+            )
+            .execute(&state.db.pool)
+            .await
+            .ok();
+        } else {
+            sqlx::query!(
+                r#"
+                UPDATE user_page_analytics 
+                SET last_visited_at = ? 
+                WHERE user_id = ? AND page_path = ?
+                "#,
+                now,
+                user_id,
+                page_path
+            )
+            .execute(&state.db.pool)
+            .await
+            .ok();
+        }
+    });
 
     HttpResponse::Ok().finish()
 }

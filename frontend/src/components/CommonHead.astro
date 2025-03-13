@@ -22,7 +22,9 @@ const { title, serverRouter } = Astro.props;
       let ok;
       try {
         const resp = await fetch(`${API_BASE_URL}/users/check`, {
+          method: "POST",
           credentials: "include",
+          body: window.location.pathname,
         });
         ok = resp.ok;
       } catch {
