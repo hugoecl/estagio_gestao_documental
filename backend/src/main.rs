@@ -33,25 +33,34 @@ struct State {
 #[derive(argh::FromArgs)]
 /// Start the server
 struct CliArgs {
-    /// the port to run the server on
+    /// the address to run the server on (default: localhost on debug, 0.0.0.0 on release)
+    #[argh(
+        option,
+        short = 'a',
+        default = "if cfg!(debug_assertions) { String::from(\"localhost\") } else { String::from(\"0.0.0.0\") }"
+    )]
+    address: String,
+
+    /// the port to run the server on (default: 1234)
     #[argh(option, short = 'p', default = "1234")]
     port: u16,
+
+    /// whether to use https
+    #[argh(switch)]
+    https: bool,
+
+    /// the path to the key file (default: certs/key.pem)
+    #[argh(option, short = 'k', default = "String::from(\"certs/key.pem\")")]
+    key_path: String,
+
+    /// the path to the cert file (default: certs/cert.pem)
+    #[argh(option, short = 'c', default = "String::from(\"certs/cert.pem\")")]
+    cert_path: String,
 }
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     let args: CliArgs = argh::from_env();
-    let port = args.port;
-    let addrs: &str;
-    if cfg!(debug_assertions) {
-        addrs = "localhost";
-        println!("Development Server running at http://{}:{}", addrs, port);
-    } else {
-        addrs = "0.0.0.0";
-        println!("Production Server running at https://{}:{}", addrs, port);
-    }
-
-    let key = Key::generate();
 
     let (db, cache) = match Db::new().await {
         Ok((db, cache)) => (db, cache),
@@ -63,46 +72,65 @@ async fn main() -> std::io::Result<()> {
 
     let state = web::Data::new(State { db, cache });
 
-    const LOG_LEVEL: &str = if cfg!(debug_assertions) {
-        "debug"
+    let protocol = if args.https { "https" } else { "http" };
+    let log_level: &str;
+    if cfg!(debug_assertions) {
+        log_level = "debug";
+        println!(
+            "Development Server running at {}://{}:{}",
+            protocol, args.address, args.port
+        );
     } else {
-        "info"
-    };
-    env_logger::init_from_env(env_logger::Env::new().default_filter_or(LOG_LEVEL));
+        log_level = "info";
+        println!(
+            "Production Server running at {}://{}:{}",
+            protocol, args.address, args.port
+        );
+    }
+
+    env_logger::init_from_env(env_logger::Env::new().default_filter_or(log_level));
 
     // TODO: See the cookie warning
-    if cfg!(debug_assertions) {
-        HttpServer::new(move || {
-            App::new()
-                .configure(routes::init)
-                .wrap(Cors::permissive())
-                .wrap(
-                    SessionMiddleware::builder(CookieSessionStore::default(), key.clone())
-                        .cookie_secure(false)
-                        .cookie_http_only(false)
-                        .cookie_same_site(actix_web::cookie::SameSite::Strict)
-                        .session_lifecycle(
-                            PersistentSession::default()
-                                .session_ttl(Duration::seconds(SECS_IN_WEEK)),
-                        )
-                        .build(),
+
+    let key = Key::generate();
+    let server = HttpServer::new(move || {
+        let session_middleware: SessionMiddleware<CookieSessionStore> = if cfg!(debug_assertions) {
+            SessionMiddleware::builder(CookieSessionStore::default(), key.clone())
+                .cookie_secure(false)
+                .cookie_http_only(false)
+                .cookie_same_site(actix_web::cookie::SameSite::Strict)
+                .session_lifecycle(
+                    PersistentSession::default().session_ttl(Duration::seconds(SECS_IN_WEEK)),
                 )
-                .wrap(actix_web::middleware::Compress::default())
-                .wrap(actix_web::middleware::Logger::default())
-                .app_data(state.clone())
-        })
-        .bind((addrs, port))?
-        .run()
-        .await
-    } else {
+                .build()
+        } else {
+            SessionMiddleware::builder(CookieSessionStore::default(), key.clone())
+                .cookie_secure(true)
+                .cookie_http_only(true)
+                .cookie_same_site(actix_web::cookie::SameSite::None)
+                .session_lifecycle(
+                    PersistentSession::default().session_ttl(Duration::seconds(SECS_IN_WEEK)),
+                )
+                .build()
+        };
+
+        App::new()
+            .configure(routes::init)
+            .wrap(Cors::permissive())
+            .wrap(session_middleware)
+            .wrap(actix_web::middleware::Compress::default())
+            .wrap(actix_web::middleware::Logger::default())
+            .app_data(state.clone())
+    });
+    if args.https {
         rustls::crypto::aws_lc_rs::default_provider()
             .install_default()
             .unwrap();
 
         let config = ServerConfig::builder().with_no_client_auth();
 
-        let cert_file = &mut BufReader::new(File::open("certs/cert.pem").unwrap());
-        let key_file = &mut BufReader::new(File::open("certs/key.pem").unwrap());
+        let cert_file = &mut BufReader::new(File::open(args.cert_path).unwrap());
+        let key_file = &mut BufReader::new(File::open(args.key_path).unwrap());
 
         let cert_chain = certs(cert_file).collect::<Result<Vec<_>, _>>().unwrap();
         let mut keys = pkcs8_private_keys(key_file)
@@ -116,28 +144,11 @@ async fn main() -> std::io::Result<()> {
         }
 
         let config = config.with_single_cert(cert_chain, keys.remove(0)).unwrap();
-
-        HttpServer::new(move || {
-            App::new()
-                .configure(routes::init)
-                .wrap(Cors::permissive())
-                .wrap(
-                    SessionMiddleware::builder(CookieSessionStore::default(), key.clone())
-                        .cookie_secure(true)
-                        .cookie_http_only(true)
-                        .cookie_same_site(actix_web::cookie::SameSite::None)
-                        .session_lifecycle(
-                            PersistentSession::default()
-                                .session_ttl(Duration::seconds(SECS_IN_WEEK)),
-                        )
-                        .build(),
-                )
-                .wrap(actix_web::middleware::Compress::default())
-                .wrap(actix_web::middleware::Logger::default())
-                .app_data(state.clone())
-        })
-        .bind_rustls_0_23(&format!("0.0.0.0:{}", port), config)?
-        .run()
-        .await
+        server
+            .bind_rustls_0_23(&format!("0.0.0.0:{}", args.port), config)?
+            .run()
+            .await
+    } else {
+        server.bind((args.address, args.port))?.run().await
     }
 }
