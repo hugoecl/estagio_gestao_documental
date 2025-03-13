@@ -23,12 +23,22 @@ Projeto de estágio realizado na empresa [**JCC**](https://www.jcc.pt/), com o o
 ```bash
 cd frontend
 bun install
+
+# dev
 bun run dev
+
+# release
+bun run build
+./publish.sh # Script to update nginx root dir
 ```
 
 ### Backend
 
 ```bash
 cd backend
-cargo run --features log
+# dev
+cargo run -- --help
+
+# release
+cargo run --release --help
 ```

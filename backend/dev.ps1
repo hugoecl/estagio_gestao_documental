@@ -1,1 +1,1 @@
-cargo watch -x run --features log
+cargo watch -x run
