@@ -20,7 +20,7 @@
     tabindex="0"
     class="dropdown-content menu bg-base-200 rounded-box z-1 w-52 p-2 shadow-sm"
   >
-    <li><a href="/settings">Definições</a></li>
+    <li><a href="/settings/">Definições</a></li>
     <li>
       <button id="logout-btn">Terminar Sessão</button>
     </li>
@@ -45,7 +45,7 @@
     });
     document.getElementById("logout-btn")!.addEventListener("click", () => {
       logoutUser().then(() => {
-        window.location.href = "/iniciar-sessao";
+        window.location.href = "/iniciar-sessao/";
       });
     });
   });
