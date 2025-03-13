@@ -15,7 +15,6 @@ CREATE TABLE IF NOT EXISTS user_page_analytics (
   last_visited_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY unique_user_page (user_id, page_path),
-  INDEX idx_user_visit_count (user_id, visit_count),
   FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
@@ -33,11 +32,7 @@ CREATE TABLE IF NOT EXISTS contracts (
   type TINYINT NOT NULL COMMENT '0: Addendum, 1: New, 2: Renew',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (id),
-  INDEX idx_contract_number (contract_number),
-  INDEX idx_supplier (supplier),
-  INDEX idx_status (status),
-  INDEX idx_type (type)
+  PRIMARY KEY (id)
 );
 
 CREATE TABLE IF NOT EXISTS contract_files (
@@ -46,7 +41,37 @@ CREATE TABLE IF NOT EXISTS contract_files (
   file_path VARCHAR(255) NOT NULL COMMENT 'Is relative to the backend folder includes the file name',
   uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
-  INDEX idx_contract_id (contract_id),
   FOREIGN KEY (contract_id) REFERENCES contracts (id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS work_contract_categories (
+  id INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL,
+  name VARCHAR(100) NOT NULL,
+  PRIMARY KEY (id),
+  UNIQUE KEY unique_category_name (name)
+);
+
+CREATE TABLE IF NOT EXISTS work_contracts (
+  id INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL,
+  employee_name VARCHAR(255) NOT NULL,
+  nif VARCHAR(20) NOT NULL,
+  start_date DATE NOT NULL,
+  end_date DATE,
+  type TINYINT NOT NULL COMMENT '0: Adenda, 1: Contrato de Funcionario',
+  location TINYINT NOT NULL COMMENT '0: Viana do Castelo, 1: Braga, 2: Porto, 3: Vila Real',
+  category_id INT UNSIGNED NOT NULL,
+  description TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  FOREIGN KEY (category_id) REFERENCES work_contract_categories (id)
+);
+
+CREATE TABLE IF NOT EXISTS work_contract_files (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  contract_id INT UNSIGNED NOT NULL,
+  file_path VARCHAR(255) NOT NULL COMMENT 'Is relative to the backend folder includes the file name',
+  uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  FOREIGN KEY (contract_id) REFERENCES work_contracts (id) ON DELETE CASCADE
+);
