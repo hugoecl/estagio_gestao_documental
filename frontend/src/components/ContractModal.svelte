@@ -446,6 +446,7 @@
             onchange={handleFileSelection}
             class="hidden"
             multiple
+            accept="image/*,.doc,.docx,.xls,.xlsx,.pdf"
           />
         </div>
 

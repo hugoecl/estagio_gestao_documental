@@ -102,7 +102,14 @@ import {
 
       <fieldset class="fieldset">
         <legend class="fieldset-legend">Ficheiros</legend>
-        <input type="file" class="file-input" name="files" required multiple />
+        <input
+          type="file"
+          class="file-input"
+          name="files"
+          accept="image/*,.doc,.docx,.xls,.xlsx,.pdf"
+          required
+          multiple
+        />
       </fieldset>
 
       <div class="flex justify-between sm:col-span-2">
