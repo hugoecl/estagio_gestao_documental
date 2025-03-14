@@ -341,6 +341,28 @@
 					"response": []
 				}
 			]
+		},
+		{
+			"name": "work_contracts",
+			"item": [
+				{
+					"name": "get_work_contracts",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{host}}/work_contracts",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"work_contracts"
+							]
+						}
+					},
+					"response": []
+				}
+			]
 		}
 	],
 	"variable": [

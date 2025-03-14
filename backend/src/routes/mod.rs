@@ -5,6 +5,7 @@ use crate::utils::session_utils::validate_session;
 
 pub mod contract_routes;
 pub mod user_routes;
+pub mod work_contract_routes;
 
 #[get("/{filename:.*}")]
 async fn serve_files(req: HttpRequest, session: Session) -> Result<actix_files::NamedFile, Error> {
@@ -25,5 +26,6 @@ async fn serve_files(req: HttpRequest, session: Session) -> Result<actix_files::
 pub fn init(cfg: &mut web::ServiceConfig) {
     user_routes::init(cfg);
     contract_routes::init(cfg);
+    work_contract_routes::init(cfg);
     cfg.service(serve_files);
 }
