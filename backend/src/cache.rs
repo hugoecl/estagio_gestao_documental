@@ -1,14 +1,27 @@
 use ahash::RandomState;
 use papaya::HashMap;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-use crate::models::{contract, location};
+use crate::models::{contract, location, work_contract};
 
 fn serialize_date_dmy<S>(date: &chrono::NaiveDate, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: serde::Serializer,
 {
     serializer.serialize_str(&date.format("%d/%m/%Y").to_string())
+}
+
+fn serialize_optional_date_dmy<S>(
+    date: &Option<chrono::NaiveDate>,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    match date {
+        Some(date) => serialize_date_dmy(date, serializer),
+        None => serializer.serialize_none(),
+    }
 }
 
 fn serialize_datetime_dmy<S>(
@@ -76,9 +89,140 @@ pub struct AnalyticsKey {
     pub page_path: String,
 }
 
+#[derive(Serialize)]
+pub struct WorkContractFileCache {
+    pub path: String,
+    #[serde(rename = "uploadedAt")]
+    #[serde(serialize_with = "serialize_datetime_dmy")]
+    pub uploaded_at: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct WorkContractCategoryCache {
+    pub name: String,
+    pub description: Option<String>,
+}
+
+#[derive(Serialize)]
+pub struct WorkContractCache {
+    #[serde(rename = "employeeName")]
+    pub employee_name: String,
+    pub nif: String,
+    #[serde(rename = "startDateString")]
+    #[serde(serialize_with = "serialize_date_dmy")]
+    pub start_date: chrono::NaiveDate,
+    #[serde(rename = "endDateString")]
+    #[serde(serialize_with = "serialize_optional_date_dmy")]
+    pub end_date: Option<chrono::NaiveDate>,
+    #[serde(rename = "type")]
+    pub type_of_contract: work_contract::Type,
+    pub location: location::Location,
+    #[serde(rename = "categoryId")]
+    pub category_id: u32,
+    pub description: Option<String>,
+    #[serde(rename = "createdAt")]
+    #[serde(serialize_with = "serialize_datetime_dmy")]
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    #[serde(rename = "updatedAt")]
+    #[serde(serialize_with = "serialize_datetime_dmy")]
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+    pub files: HashMap<u32, WorkContractFileCache, RandomState>,
+}
+
 #[inline(always)]
 fn i8_to_bool(i: i8) -> bool {
     i != 0
+}
+
+async fn get_work_contract_categories_cache(
+    pool: &sqlx::Pool<sqlx::MySql>,
+) -> Result<HashMap<u32, WorkContractCategoryCache, RandomState>, sqlx::Error> {
+    let categories = sqlx::query!("SELECT * FROM work_contract_categories")
+        .fetch_all(pool)
+        .await?;
+
+    let categories_cache = HashMap::builder()
+        .hasher(RandomState::new())
+        .capacity(categories.len())
+        .build();
+
+    let pinned_categories_cache = categories_cache.pin();
+
+    for category in categories {
+        pinned_categories_cache.insert(
+            category.id,
+            WorkContractCategoryCache {
+                name: category.name,
+                description: category.description,
+            },
+        );
+    }
+
+    drop(pinned_categories_cache);
+    Ok(categories_cache)
+}
+
+async fn get_work_contracts_cache(
+    pool: &sqlx::Pool<sqlx::MySql>,
+) -> Result<HashMap<u32, WorkContractCache, RandomState>, sqlx::Error> {
+    let contracts = sqlx::query!("SELECT * FROM work_contracts")
+        .fetch_all(pool)
+        .await?;
+
+    let contracts_cache = HashMap::builder()
+        .hasher(RandomState::new())
+        .capacity(contracts.len())
+        .build();
+
+    let pinned_contracts_cache = contracts_cache.pin();
+
+    for contract in contracts {
+        let files = sqlx::query!(
+            "SELECT * FROM work_contract_files WHERE contract_id = ?",
+            contract.id
+        )
+        .fetch_all(pool)
+        .await?;
+
+        let files_cache = HashMap::builder()
+            .hasher(RandomState::new())
+            .capacity(files.len())
+            .build();
+
+        let pinned_files_cache = files_cache.pin();
+
+        for file in files {
+            pinned_files_cache.insert(
+                file.id,
+                WorkContractFileCache {
+                    path: file.file_path,
+                    uploaded_at: file.uploaded_at.unwrap(),
+                },
+            );
+        }
+
+        drop(pinned_files_cache);
+
+        pinned_contracts_cache.insert(
+            contract.id,
+            WorkContractCache {
+                employee_name: contract.employee_name,
+                nif: contract.nif,
+                start_date: contract.start_date,
+                end_date: contract.end_date,
+                type_of_contract: work_contract::Type::from(contract.r#type),
+                location: location::Location::from(contract.location),
+                category_id: contract.category_id,
+                description: contract.description,
+                created_at: contract.created_at.unwrap(),
+                updated_at: contract.updated_at.unwrap(),
+                files: files_cache,
+            },
+        );
+    }
+
+    drop(pinned_contracts_cache);
+    Ok(contracts_cache)
 }
 
 async fn get_analytics_cache(
@@ -216,20 +360,32 @@ pub struct Cache {
     pub users: HashMap<u32, UserCache, RandomState>,
     pub contracts: HashMap<u32, ContractCache, RandomState>,
     pub analytics: HashMap<AnalyticsKey, PageVisit, RandomState>,
+    pub work_contracts: HashMap<u32, WorkContractCache, RandomState>,
+    pub work_contract_categories: HashMap<u32, WorkContractCategoryCache, RandomState>,
 }
 
 impl Cache {
     pub async fn new(pool: &sqlx::Pool<sqlx::MySql>) -> Result<Cache, sqlx::Error> {
-        let (users_cache, contracts_cache, analytics_cache) = tokio::try_join!(
+        let (
+            users_cache,
+            contracts_cache,
+            analytics_cache,
+            work_contract_cache,
+            work_contract_categories_cache,
+        ) = tokio::try_join!(
             get_users_cache(pool),
             get_contracts_cache(pool),
-            get_analytics_cache(pool)
+            get_analytics_cache(pool),
+            get_work_contracts_cache(pool),
+            get_work_contract_categories_cache(pool)
         )?;
 
         Ok(Cache {
             users: users_cache,
             contracts: contracts_cache,
             analytics: analytics_cache,
+            work_contracts: work_contract_cache,
+            work_contract_categories: work_contract_categories_cache,
         })
     }
 }

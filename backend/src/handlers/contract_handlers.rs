@@ -8,6 +8,7 @@ use serde::Deserialize;
 
 use crate::{
     State,
+    cache::ContractCache,
     models::{contract, location},
     utils::{
         json_utils::{Json, json_response_with_etag},
@@ -165,7 +166,7 @@ pub async fn upload_contract(
         },
     );
 
-    HttpResponse::Ok().body(format!("{},{}", new_contract_id, first_file_id))
+    HttpResponse::Created().body(format!("{},{}", new_contract_id, first_file_id))
 }
 
 #[derive(Deserialize, Debug)]
@@ -203,26 +204,27 @@ pub async fn update_contract(
     let date_start = NaiveDate::parse_from_str(&req.date_start, "%d/%m/%Y").unwrap();
     let date_end = NaiveDate::parse_from_str(&req.date_end, "%d/%m/%Y").unwrap();
 
-    let contract = pinned_contracts_cache.update(contract_id, |contract| {
-        let mut new_contract = (*contract).clone();
+    let contract = ContractCache {
+        contract_number: req.contract_number,
+        date,
+        date_start,
+        date_end,
+        description: req.description.clone(),
+        location: location::Location::from(req.location),
+        service: contract::Service::from(req.service),
+        status: contract::Status::from(req.status),
+        supplier: req.supplier.clone(),
+        type_of_contract: contract::Type::from(req.type_of_contract),
+        created_at: now,
+        updated_at: now,
+        files: HashMap::default(),
+    };
 
-        new_contract.contract_number = req.contract_number;
-        new_contract.date = date;
-        new_contract.date_start = date_start;
-        new_contract.date_end = date_end;
-        new_contract.description = req.description.clone();
-        new_contract.location = location::Location::from(req.location);
-        new_contract.service = contract::Service::from(req.service);
-        new_contract.status = contract::Status::from(req.status);
-        new_contract.supplier = req.supplier.clone();
-        new_contract.type_of_contract = contract::Type::from(req.type_of_contract);
-        new_contract.updated_at = now;
-
-        new_contract
-    });
-    if let None = contract {
+    // updated the new value
+    if let None = pinned_contracts_cache.get(&contract_id) {
         return HttpResponse::NotFound().finish();
     }
+    pinned_contracts_cache.insert(contract_id, contract);
 
     drop(pinned_contracts_cache);
 
@@ -346,7 +348,7 @@ pub async fn upload_contract_files(
     drop(pinned_contract_files_cache);
     drop(pinned_contracts_cache);
 
-    HttpResponse::Ok().body(first_file_id.to_string())
+    HttpResponse::Created().body(first_file_id.to_string())
 }
 
 pub async fn delete_contract_file(

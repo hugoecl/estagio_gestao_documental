@@ -1,8 +1,30 @@
 use actix_web::web;
 
 pub fn init(cfg: &mut web::ServiceConfig) {
-    cfg.service(web::scope("/work_contracts").route(
-        "",
-        web::get().to(crate::handlers::work_contract_handlers::get),
-    ));
+    cfg.service(
+        web::scope("/work_contracts")
+            .route(
+                "",
+                web::get().to(crate::handlers::work_contract_handlers::get_work_contracts),
+            )
+            .route(
+                "/categories",
+                web::get()
+                    .to(crate::handlers::work_contract_handlers::get_work_contract_categories),
+            )
+            .route(
+                "/categories",
+                web::post().to(crate::handlers::work_contract_handlers::add_work_contract_category),
+            )
+            .route(
+                "/categories/{id}",
+                web::put()
+                    .to(crate::handlers::work_contract_handlers::update_work_contract_category),
+            )
+            .route(
+                "/categories/{id}",
+                web::delete()
+                    .to(crate::handlers::work_contract_handlers::delete_work_contract_category),
+            ),
+    );
 }
