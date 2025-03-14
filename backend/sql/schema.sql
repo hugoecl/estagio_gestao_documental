@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS work_contract_categories (
 CREATE TABLE IF NOT EXISTS work_contracts (
   id INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL,
   employee_name VARCHAR(255) NOT NULL,
-  nif VARCHAR(20) NOT NULL,
+  nif VARCHAR(9) NOT NULL,
   start_date DATE NOT NULL,
   end_date DATE,
   type TINYINT NOT NULL COMMENT '0: Adenda, 1: Contrato de Funcionario',
