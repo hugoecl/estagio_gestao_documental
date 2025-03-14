@@ -1,3 +1,4 @@
+// TODO: See about running the schema on build.rs
 use std::{fs::File, io::BufReader};
 
 use actix_cors::Cors;
@@ -7,6 +8,7 @@ use actix_web::{
     cookie::{Key, time::Duration},
     web,
 };
+use cache::Cache;
 use mimalloc::MiMalloc;
 
 #[global_allocator]
@@ -14,6 +16,7 @@ static GLOBAL: MiMalloc = MiMalloc;
 
 const SECS_IN_WEEK: i64 = 60 * 60 * 24 * 7;
 
+mod cache;
 mod db;
 mod handlers;
 mod macros;
@@ -21,7 +24,7 @@ mod models;
 mod routes;
 mod utils;
 
-use db::{Cache, Db};
+use db::Db;
 use rustls::{ServerConfig, pki_types::PrivateKeyDer};
 use rustls_pemfile::{certs, pkcs8_private_keys};
 
@@ -63,7 +66,13 @@ async fn main() -> std::io::Result<()> {
     let args: CliArgs = argh::from_env();
 
     let (db, cache) = match Db::new().await {
-        Ok((db, cache)) => (db, cache),
+        Ok(db) => match Cache::new(&db.pool).await {
+            Ok(cache) => (db, cache),
+            Err(e) => {
+                eprintln!("Failed to create cache: {:?}", e);
+                return Ok(());
+            }
+        },
         Err(e) => {
             eprintln!("Failed to connect to the database: {:?}", e);
             return Ok(());

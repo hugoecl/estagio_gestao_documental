@@ -8,7 +8,7 @@ use serde::Deserialize;
 
 use crate::{
     State,
-    models::contract,
+    models::{contract, location},
     utils::{
         json_utils::{Json, json_response_with_etag},
         memory_file::MemoryFile,
@@ -62,7 +62,7 @@ pub async fn upload_contract(
     let date_end = NaiveDate::parse_from_str(date_end, "%d/%m/%Y").unwrap();
     let description = form.description.into_inner();
     let location_value = form.location.into_inner();
-    let location = contract::Location::from(location_value);
+    let location = location::Location::from(location_value);
     let service_value = form.service.into_inner();
     let service = contract::Service::from(service_value);
     let status_value = form.status.into_inner();
@@ -137,7 +137,7 @@ pub async fn upload_contract(
 
         pinned_contract_files_cache.insert(
             file_id,
-            crate::db::ContractFilesCache {
+            crate::cache::ContractFilesCache {
                 path: file_path,
                 uploaded_at: now,
             },
@@ -148,7 +148,7 @@ pub async fn upload_contract(
 
     pinned_contracts_cache.insert(
         new_contract_id,
-        crate::db::ContractCache {
+        crate::cache::ContractCache {
             contract_number,
             date,
             date_start,
@@ -211,7 +211,7 @@ pub async fn update_contract(
         new_contract.date_start = date_start;
         new_contract.date_end = date_end;
         new_contract.description = req.description.clone();
-        new_contract.location = contract::Location::from(req.location);
+        new_contract.location = location::Location::from(req.location);
         new_contract.service = contract::Service::from(req.service);
         new_contract.status = contract::Status::from(req.status);
         new_contract.supplier = req.supplier.clone();
@@ -336,7 +336,7 @@ pub async fn upload_contract_files(
 
         pinned_contract_files_cache.insert(
             file_id,
-            crate::db::ContractFilesCache {
+            crate::cache::ContractFilesCache {
                 path: file_path,
                 uploaded_at: now,
             },

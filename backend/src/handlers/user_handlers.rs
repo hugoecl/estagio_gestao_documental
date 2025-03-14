@@ -4,7 +4,7 @@ use serde::Deserialize;
 
 use crate::{
     State,
-    db::{AnalyticsKey, PageVisit, UserCache},
+    cache::{AnalyticsKey, PageVisit, UserCache},
     utils::{
         hashing_utils::{hash, verify},
         json_utils::{Json, json_response},
