@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS contract_files (
 CREATE TABLE IF NOT EXISTS work_contract_categories (
   id INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL,
   name VARCHAR(100) NOT NULL,
+  description TEXT,
   PRIMARY KEY (id),
   UNIQUE KEY unique_category_name (name)
 );

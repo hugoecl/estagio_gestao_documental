@@ -81,6 +81,7 @@ export const menuItems: MenuItem[] = [
     title: "Recursos Humanos",
     parentPath: "/recursos-humanos",
     children: [
+      { title: "Categorias Profissionais", path: "categorias-profissionais/" },
       { title: "Contratos de Funcionários", path: "contratos-funcionarios/" },
     ],
   },
