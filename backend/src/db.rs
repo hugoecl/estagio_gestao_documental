@@ -29,21 +29,8 @@ impl Db {
         .execute(&pool)
         .await?;
 
-        // let (users_cache, contracts_cache, analytics_cache) = tokio::try_join!(
-        //     get_users_cache(&pool),
-        //     get_contracts_cache(&pool),
-        //     get_analytics_cache(&pool)
-        // )?;
-
         println!("Connected to Database");
 
-        Ok(
-            Db { pool },
-            // Cache {
-            //     users: users_cache,
-            //     contracts: contracts_cache,
-            //     analytics: analytics_cache,
-            // },
-        )
+        Ok(Db { pool })
     }
 }
