@@ -194,15 +194,22 @@ pub async fn update_contract(
     }
 
     let contract_id = contract_id.into_inner();
+
+    let pinned_contracts_cache = state.cache.contracts.pin();
+    let old_contect = pinned_contracts_cache.get(&contract_id).unwrap();
+    if let None = pinned_contracts_cache.get(&contract_id) {
+        return HttpResponse::NotFound().finish();
+    }
+
     let Json(req): Json<UpdateContractRequest> = Json::from_bytes(data).unwrap();
 
     let now = chrono::Utc::now();
 
-    let pinned_contracts_cache = state.cache.contracts.pin();
-
     let date = NaiveDate::parse_from_str(&req.date, "%d/%m/%Y").unwrap();
     let date_start = NaiveDate::parse_from_str(&req.date_start, "%d/%m/%Y").unwrap();
     let date_end = NaiveDate::parse_from_str(&req.date_end, "%d/%m/%Y").unwrap();
+
+    let old_files = old_contect.files.clone();
 
     let contract = ContractCache {
         contract_number: req.contract_number,
@@ -215,15 +222,11 @@ pub async fn update_contract(
         status: contract::Status::from(req.status),
         supplier: req.supplier.clone(),
         type_of_contract: contract::Type::from(req.type_of_contract),
-        created_at: now,
+        created_at: old_contect.created_at,
         updated_at: now,
-        files: HashMap::default(),
+        files: old_files,
     };
 
-    // updated the new value
-    if let None = pinned_contracts_cache.get(&contract_id) {
-        return HttpResponse::NotFound().finish();
-    }
     pinned_contracts_cache.insert(contract_id, contract);
 
     drop(pinned_contracts_cache);

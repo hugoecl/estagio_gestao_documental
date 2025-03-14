@@ -12,6 +12,10 @@ pub fn init(cfg: &mut web::ServiceConfig) {
                 web::post().to(crate::handlers::work_contract_handlers::upload_work_contract),
             )
             .route(
+                "/{id}",
+                web::put().to(crate::handlers::work_contract_handlers::update_work_contract),
+            )
+            .route(
                 "/categories",
                 web::get()
                     .to(crate::handlers::work_contract_handlers::get_work_contract_categories),

@@ -49,7 +49,7 @@ pub struct ContractFilesCache {
     pub uploaded_at: chrono::DateTime<chrono::Utc>,
 }
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize)]
 pub struct ContractCache {
     #[serde(rename = "contractNumber")]
     pub contract_number: u32,
@@ -89,7 +89,7 @@ pub struct AnalyticsKey {
     pub page_path: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct WorkContractFileCache {
     pub path: String,
     #[serde(rename = "uploadedAt")]

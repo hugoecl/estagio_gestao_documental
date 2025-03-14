@@ -4,6 +4,7 @@ use actix_web::{HttpRequest, HttpResponse, Responder, web};
 use ahash::RandomState;
 use chrono::NaiveDate;
 use papaya::HashMap;
+use serde::Deserialize;
 
 use crate::{
     State,
@@ -289,4 +290,102 @@ pub async fn upload_work_contract(
             HttpResponse::InternalServerError().finish()
         }
     }
+}
+
+#[derive(Deserialize)]
+pub struct UpdateWorkContractRequest {
+    employee_name: String,
+    nif: String,
+    start_date: String,
+    end_date: Option<String>,
+    type_of_contract: i8,
+    location: i8,
+    category_id: u32,
+    description: Option<String>,
+}
+
+pub async fn update_work_contract(
+    session: Session,
+    state: web::Data<State>,
+    data: web::Bytes,
+    contract_id: web::Path<u32>,
+) -> impl Responder {
+    if let Err(response) = validate_session(&session) {
+        return response;
+    }
+
+    let contract_id = contract_id.into_inner();
+
+    let pinned_work_contracts_cache = state.cache.work_contracts.pin();
+
+    let old_contract = match pinned_work_contracts_cache.get(&contract_id) {
+        Some(contract) => contract,
+        None => return HttpResponse::NotFound().finish(),
+    };
+
+    let Json(req): Json<UpdateWorkContractRequest> = match Json::from_bytes(data) {
+        Ok(json) => json,
+        Err(_) => return HttpResponse::BadRequest().finish(),
+    };
+
+    let now = chrono::Utc::now();
+
+    let start_date = match NaiveDate::parse_from_str(&req.start_date, "%d/%m/%Y") {
+        Ok(date) => date,
+        Err(_) => return HttpResponse::BadRequest().body("Invalid start_date format"),
+    };
+
+    let end_date = match req.end_date {
+        Some(date_str) if !date_str.is_empty() => {
+            match NaiveDate::parse_from_str(&date_str, "%d/%m/%Y") {
+                Ok(date) => Some(date),
+                Err(_) => return HttpResponse::BadRequest().body("Invalid end_date format"),
+            }
+        }
+        _ => None,
+    };
+
+    let old_files = old_contract.files.clone();
+
+    let updated_contract = crate::cache::WorkContractCache {
+        employee_name: req.employee_name.clone(),
+        nif: req.nif.clone(),
+        start_date,
+        end_date,
+        type_of_contract: work_contract::Type::from(req.type_of_contract),
+        location: Location::from(req.location),
+        category_id: req.category_id,
+        description: req.description.clone(),
+        created_at: old_contract.created_at,
+        updated_at: now,
+        files: old_files,
+    };
+
+    pinned_work_contracts_cache.insert(contract_id, updated_contract);
+    drop(pinned_work_contracts_cache);
+
+    tokio::spawn(async move {
+        let result = sqlx::query!(
+            "UPDATE work_contracts SET employee_name = ?, nif = ?, start_date = ?, end_date = ?, 
+             type = ?, location = ?, category_id = ?, description = ?, updated_at = ? WHERE id = ?",
+            req.employee_name,
+            req.nif,
+            start_date,
+            end_date,
+            req.type_of_contract,
+            req.location,
+            req.category_id,
+            req.description,
+            now,
+            contract_id
+        )
+        .execute(&state.db.pool)
+        .await;
+
+        if let Err(e) = result {
+            eprintln!("Error updating work contract in database: {}", e);
+        }
+    });
+
+    HttpResponse::Ok().finish()
 }
