@@ -19,7 +19,7 @@
     "typescript": "^5.8.2"
   },
   "devDependencies": {
-    "daisyui": "^5.0.3",
+    "daisyui": "^5.0.4",
     "astro-compressor": "^1.0.0",
     "@playform/compress": "^0.1.7"
   }
