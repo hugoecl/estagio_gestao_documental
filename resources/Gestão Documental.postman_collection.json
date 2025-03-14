@@ -458,6 +458,76 @@
 						}
 					},
 					"response": []
+				},
+				{
+					"name": "add_work_contract",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "employee_name",
+									"value": "Lucas de Linhares",
+									"type": "text"
+								},
+								{
+									"key": "nif",
+									"value": "999999990",
+									"type": "text"
+								},
+								{
+									"key": "start_date",
+									"value": "29/09/2005",
+									"type": "text"
+								},
+								{
+									"key": "end_date",
+									"value": "12/12/2012",
+									"type": "text"
+								},
+								{
+									"key": "type_of_contract",
+									"value": "1",
+									"type": "text"
+								},
+								{
+									"key": "location",
+									"value": "3",
+									"type": "text"
+								},
+								{
+									"key": "category_id",
+									"value": "2",
+									"type": "text"
+								},
+								{
+									"key": "description",
+									"value": "ola",
+									"type": "text"
+								},
+								{
+									"key": "files",
+									"type": "file",
+									"src": [
+										"postman-cloud:///1eff9aa2-04e8-4cb0-9766-dfb9e9363370",
+										"postman-cloud:///1eff9aa2-049a-4ab0-92d1-253c5de0f316"
+									]
+								}
+							]
+						},
+						"url": {
+							"raw": "{{host}}/work_contracts",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"work_contracts"
+							]
+						}
+					},
+					"response": []
 				}
 			]
 		}

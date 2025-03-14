@@ -1,11 +1,17 @@
+use actix_multipart::form::{MultipartForm, text::Text};
 use actix_session::Session;
 use actix_web::{HttpRequest, HttpResponse, Responder, web};
+use ahash::RandomState;
+use chrono::NaiveDate;
+use papaya::HashMap;
 
 use crate::{
     State,
     cache::WorkContractCategoryCache,
+    models::{location::Location, work_contract},
     utils::{
         json_utils::{Json, json_response_with_etag},
+        memory_file::MemoryFile,
         session_utils::validate_session,
     },
 };
@@ -136,4 +142,151 @@ pub async fn get_work_contracts(
     }
 
     json_response_with_etag(&state.cache.work_contracts, &req)
+}
+
+#[derive(MultipartForm)]
+pub struct WorkContractForm {
+    employee_name: Text<String>,
+    nif: Text<String>,
+    start_date: Text<String>,
+    end_date: Option<Text<String>>,
+    type_of_contract: Text<i8>,
+    location: Text<i8>,
+    category_id: Text<u32>,
+    description: Option<Text<String>>,
+    files: Vec<MemoryFile>,
+}
+
+pub async fn upload_work_contract(
+    session: Session,
+    state: web::Data<State>,
+    MultipartForm(form): MultipartForm<WorkContractForm>,
+) -> impl Responder {
+    if let Err(response) = validate_session(&session) {
+        return response;
+    }
+
+    let employee_name = form.employee_name.into_inner();
+    let nif = form.nif.into_inner();
+    let start_date = NaiveDate::parse_from_str(&form.start_date.into_inner(), "%d/%m/%Y").unwrap();
+    let end_date = match form.end_date {
+        Some(end_date) => Some(NaiveDate::parse_from_str(&end_date, "%d/%m/%Y").unwrap()),
+        None => None,
+    };
+
+    let type_value = form.type_of_contract.into_inner();
+    let location_value = form.location.into_inner();
+    let category_id = form.category_id.into_inner();
+    let description = form.description.map(|d| d.into_inner());
+    let now = chrono::Utc::now();
+
+    let result = sqlx::query!(
+        "INSERT INTO work_contracts (employee_name, nif, start_date, end_date, type, location, category_id, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        employee_name,
+        nif,
+        start_date,
+        end_date,
+        type_value,
+        location_value,
+        category_id,
+        description,
+        now,
+        now
+    )
+    .execute(&state.db.pool)
+    .await;
+
+    match result {
+        Ok(result) => {
+            let new_contract_id = result.last_insert_id() as u32;
+
+            let base_path = format!("media/work_contracts/{}", new_contract_id);
+            let base_path_clone = base_path.clone();
+            let _ = tokio::task::spawn_blocking(move || {
+                std::fs::create_dir_all(base_path_clone).unwrap();
+            })
+            .await
+            .unwrap();
+
+            let files_length = form.files.len();
+            let work_contract_files_cache = HashMap::builder()
+                .capacity(files_length)
+                .hasher(RandomState::new())
+                .build();
+            let pinned_files_cache = work_contract_files_cache.pin();
+
+            let mut file_paths = Vec::with_capacity(files_length);
+            for file in form.files.into_iter() {
+                let file_path = format!("{}/{}", base_path, file.file_name);
+                file_paths.push(file_path.clone());
+
+                tokio::task::spawn_blocking(move || {
+                    std::fs::write(file_path, file.data).unwrap();
+                });
+            }
+
+            let mut query_builder = sqlx::QueryBuilder::new(
+                "INSERT INTO work_contract_files (contract_id, file_path, uploaded_at)",
+            );
+
+            query_builder.push_values(file_paths.iter(), |mut b, file_path| {
+                b.push_bind(new_contract_id)
+                    .push_bind(file_path)
+                    .push_bind(now);
+            });
+
+            let first_file_id = if !file_paths.is_empty() {
+                let file_result = query_builder.build().execute(&state.db.pool).await.unwrap();
+                let id = file_result.last_insert_id() as u32;
+
+                for (i, file_path) in file_paths.into_iter().enumerate() {
+                    let file_id = id + i as u32;
+                    pinned_files_cache.insert(
+                        file_id,
+                        crate::cache::WorkContractFileCache {
+                            path: file_path,
+                            uploaded_at: now,
+                        },
+                    );
+                }
+
+                Some(id)
+            } else {
+                None
+            };
+
+            drop(pinned_files_cache);
+
+            let contract_cache = crate::cache::WorkContractCache {
+                employee_name,
+                nif,
+                start_date,
+                end_date,
+                type_of_contract: work_contract::Type::from(type_value),
+                location: Location::from(location_value),
+                category_id,
+                description,
+                created_at: now,
+                updated_at: now,
+                files: work_contract_files_cache,
+            };
+
+            state
+                .cache
+                .work_contracts
+                .pin()
+                .insert(new_contract_id, contract_cache);
+
+            match first_file_id {
+                Some(file_id) => {
+                    HttpResponse::Created().body(format!("{},{}", new_contract_id, file_id))
+                }
+                None => HttpResponse::Created().body(format!("{}", new_contract_id)),
+            }
+        }
+        Err(e) => {
+            eprintln!("Database error during work contract creation: {}", e);
+            HttpResponse::InternalServerError().finish()
+        }
+    }
 }

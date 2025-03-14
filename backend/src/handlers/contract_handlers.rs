@@ -169,7 +169,7 @@ pub async fn upload_contract(
     HttpResponse::Created().body(format!("{},{}", new_contract_id, first_file_id))
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 pub struct UpdateContractRequest {
     contract_number: u32,
     date: String,
