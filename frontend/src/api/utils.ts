@@ -90,7 +90,7 @@ export async function uploadContract(
   });
   const [contractId, fileId] = (await response.text()).split(",");
 
-  return [response.ok, Number(contractId), Number(fileId)];
+  return [response.ok, parseInt(contractId, 10), parseInt(fileId, 10)];
 }
 
 interface ContractResponse
@@ -145,12 +145,30 @@ export async function getContracts(): Promise<Contracts | null> {
       entry.dateStart = DMYToDate(entry.dateStartString);
       entry.dateEnd = DMYToDate(entry.dateEndString);
 
-      entry.__searchSupplier = entry.supplier.toLowerCase();
-      entry.__searchLocation = (entry.location as string).toLowerCase();
-      entry.__searchService = (entry.service as string).toLowerCase();
-      entry.__searchType = (entry.type as string).toLowerCase();
-      entry.__searchStatus = (entry.status as string).toLowerCase();
-      entry.__searchContractNumber = entry.contractNumber.toString();
+      entry.__searchSupplier = entry.supplier
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+      entry.__searchLocation = (entry.location as string)
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+      entry.__searchService = (entry.service as string)
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+      entry.__searchType = (entry.type as string)
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+      entry.__searchStatus = (entry.status as string)
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+      entry.__searchContractNumber = entry.contractNumber
+        .toString()
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "");
 
       const files = entry.files;
       for (const key in files) {
@@ -186,7 +204,7 @@ export async function uploadContractFiles(
     return [false, -1];
   }
 
-  return [response.ok, Number(await response.text())];
+  return [response.ok, parseInt(await response.text(), 10)];
 }
 
 export async function deleteContractFile(
