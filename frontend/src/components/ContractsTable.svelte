@@ -63,7 +63,10 @@
   const filteredContractEntries = $derived.by(() => {
     if (!searchQuery.trim()) return contractEntries;
 
-    const query = searchQuery.toLowerCase();
+    const query = searchQuery
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
     const result = [];
 
     for (let i = 0, len = contractEntries.length; i < len; i++) {
@@ -136,11 +139,9 @@
 
       // Handle strings
       // the values are guaranteed to be strings here
-      const strA = (valueA as string).toLowerCase();
-      const strB = (valueB as string).toLowerCase();
       return sortDirection === SortDirection.ASC
-        ? strA.localeCompare(strB, "pt-PT")
-        : strB.localeCompare(strA, "pt-PT");
+        ? (valueA as string).localeCompare(valueB as string, "pt-PT")
+        : (valueB as string).localeCompare(valueA as string, "pt-PT");
     });
   });
 
