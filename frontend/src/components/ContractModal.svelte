@@ -229,10 +229,6 @@
     fileToDeleteId = null;
   }
 
-  function openFileSelector() {
-    fileInput?.click();
-  }
-
   function handleFileSelection(e: Event) {
     const input = e.target as HTMLInputElement;
     if (input.files) {
@@ -436,7 +432,7 @@
             type="button"
             class="btn btn-sm btn-secondary"
             disabled={isSubmitting}
-            onclick={openFileSelector}
+            onclick={() => fileInput?.click()}
           >
             Adicionar Ficheiros
           </button>
