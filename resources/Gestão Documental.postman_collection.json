@@ -230,22 +230,22 @@
 							"formdata": [
 								{
 									"key": "contract-number",
-									"value": "8888",
+									"value": "123123",
 									"type": "text"
 								},
 								{
 									"key": "date",
-									"value": "12/12/2024",
+									"value": "12/12/2012",
 									"type": "text"
 								},
 								{
 									"key": "date-range",
-									"value": "02/02/2025 - 06/06/2025",
+									"value": "02/02/2017 - 06/06/2018",
 									"type": "text"
 								},
 								{
 									"key": "description",
-									"value": "teste descrição",
+									"value": "teste descrição2",
 									"type": "text"
 								},
 								{
@@ -258,17 +258,17 @@
 								},
 								{
 									"key": "location",
-									"value": "1",
+									"value": "2",
 									"type": "text"
 								},
 								{
 									"key": "service",
-									"value": "0",
+									"value": "1",
 									"type": "text"
 								},
 								{
 									"key": "status",
-									"value": "1",
+									"value": "0",
 									"type": "text"
 								},
 								{
@@ -278,7 +278,7 @@
 								},
 								{
 									"key": "type",
-									"value": "3",
+									"value": "2",
 									"type": "text"
 								}
 							]
@@ -524,6 +524,51 @@
 							],
 							"path": [
 								"work_contracts"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "update_work_contract",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"employee_name\": \"João\",\n    \"nif\": \"123456789\",\n    \"start_date\": \"25/04/2023\",\n    \"end_date\": \"15/09/2024\",\n    \"type_of_contract\": 0,\n    \"location\": 0,\n    \"category_id\": 2,\n    \"description\": \"estagiario\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{host}}/work_contracts/4",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"work_contracts",
+								"4"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "delete_work_contract",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{host}}/work_contracts/3",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"work_contracts",
+								"3"
 							]
 						}
 					},

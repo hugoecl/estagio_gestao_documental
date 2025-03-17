@@ -111,25 +111,23 @@ pub async fn delete_work_contract_category(
         return response;
     }
     let id = id.into_inner();
-
-    let result = sqlx::query!("DELETE FROM work_contract_categories WHERE id = ?", id)
-        .execute(&state.db.pool)
-        .await;
-
+    let pinned_cache = state.cache.work_contract_categories.pin();
+    let result = pinned_cache.remove(&id);
     match result {
-        Ok(_) => {
-            if let None = state.cache.work_contract_categories.pin().remove(&id) {
-                return HttpResponse::NotFound().finish();
-            }
+        Some(_) => {
+            drop(pinned_cache);
+            actix_web::rt::spawn(async move {
+                let result = sqlx::query!("DELETE FROM work_contract_categories WHERE id = ?", id)
+                    .execute(&state.db.pool)
+                    .await;
+                if let Err(e) = result {
+                    eprintln!("Error deleting work contract category from database: {}", e);
+                }
+            });
+
             HttpResponse::Ok().finish()
         }
-        Err(e) => {
-            eprintln!(
-                "Database error during work contract category deletion: {}",
-                e
-            );
-            HttpResponse::InternalServerError().finish()
-        }
+        None => HttpResponse::NotFound().finish(),
     }
 }
 
@@ -388,4 +386,31 @@ pub async fn update_work_contract(
     });
 
     HttpResponse::Ok().finish()
+}
+pub async fn delete_work_contract(
+    session: Session,
+    state: web::Data<State>,
+    contract_id: web::Path<u32>,
+) -> impl Responder {
+    if let Err(response) = validate_session(&session) {
+        return response;
+    }
+    let contract_id = contract_id.into_inner();
+    let pinned_cache = state.cache.work_contracts.pin();
+    let result = pinned_cache.remove(&contract_id);
+    match result {
+        Some(_) => {
+            drop(pinned_cache);
+            actix_web::rt::spawn(async move {
+                let result = sqlx::query!("DELETE FROM work_contracts WHERE id = ?", contract_id)
+                    .execute(&state.db.pool)
+                    .await;
+                if let Err(e) = result {
+                    eprintln!("Error deleting work contract from database: {}", e);
+                }
+            });
+            HttpResponse::Ok().finish()
+        }
+        None => HttpResponse::NotFound().finish(),
+    }
 }
