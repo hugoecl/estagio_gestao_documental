@@ -11,6 +11,7 @@ use crate::{
     cache::ContractCache,
     models::{contract, location},
     utils::{
+        forms::FilesFormRequest,
         json_utils::{Json, json_response_with_etag},
         memory_file::MemoryFile,
         session_utils::validate_session,
@@ -286,16 +287,11 @@ pub async fn delete_contract(
     HttpResponse::Ok().finish()
 }
 
-#[derive(MultipartForm)]
-pub struct ContractFilesFormRequest {
-    files: Vec<MemoryFile>,
-}
-
 pub async fn upload_contract_files(
     session: Session,
     state: web::Data<State>,
     contract_id: web::Path<u32>,
-    MultipartForm(form): MultipartForm<ContractFilesFormRequest>,
+    MultipartForm(form): MultipartForm<FilesFormRequest>,
 ) -> impl Responder {
     if let Err(response) = validate_session(&session) {
         return response;
