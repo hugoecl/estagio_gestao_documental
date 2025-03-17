@@ -106,7 +106,7 @@ import "@styles/contract-form.css";
         <input
           type="file"
           class="file-input"
-          name="files"
+          id="files-input"
           accept="image/*,.doc,.docx,.xls,.xlsx,.pdf"
           required
           multiple
@@ -160,6 +160,10 @@ import "@styles/contract-form.css";
 
     const title = document.getElementById("collapse-title")!;
 
+    const filesInput = document.getElementById(
+      "files-input"
+    )! as HTMLInputElement;
+
     locationSelect.addEventListener("change", (event) => {
       if (!serviceSelect.value) return;
       // @ts-ignore
@@ -198,7 +202,13 @@ import "@styles/contract-form.css";
       loadingBars.classList.toggle("hidden");
       submitText.classList.toggle("hidden");
 
-      const formData = new FormData(form);
+      const formData = new FormData(form); // This is the form without the files
+
+      for (let i = 0, len = filesInput.files!.length; i < len; i++) {
+        const file = filesInput.files![i];
+        formData.append("files", file, `${file.name}_${file.size}`);
+      }
+
       const [ok, contractId, fileId] = await uploadContract(formData);
 
       if (ok) {

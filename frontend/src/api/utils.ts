@@ -189,7 +189,8 @@ export async function uploadContractFiles(
 ): Promise<[boolean, number]> {
   const formData = new FormData();
   for (let i = 0, len = files.length; i < len; i++) {
-    formData.append("files", files[i]);
+    const file = files[i];
+    formData.append("files", file, `${file.name}_${file.size}`);
   }
 
   const response = await handleFetch(
