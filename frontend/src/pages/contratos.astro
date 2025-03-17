@@ -241,19 +241,19 @@ import "@styles/contract-form.css";
       const supplier = formData.get("supplier") as string;
       const __searchSupplier = supplier.toLowerCase();
 
-      const locationValue = Number(locationSelect.value);
+      const locationValue = parseInt(locationSelect.value, 10);
       const location = ContractLocations[locationValue];
       const __searchLocation = location.toLowerCase();
 
-      const serviceValue = Number(serviceSelect.value);
+      const serviceValue = parseInt(serviceSelect.value, 10);
       const service = ContractServices[serviceValue];
       const __searchService = service.toLowerCase();
 
-      const statusValue = Number(formData.get("status"));
+      const statusValue = parseInt(formData.get("status")! as string, 10);
       const status = ContractStatus[statusValue];
       const __searchStatus = status.toLowerCase();
 
-      const typeValue = Number(formData.get("type"));
+      const typeValue = parseInt(formData.get("type")! as string, 10);
       const type = ContractTypes[typeValue];
       const __searchType = type.toLowerCase();
 

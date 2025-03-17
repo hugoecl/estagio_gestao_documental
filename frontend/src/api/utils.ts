@@ -90,7 +90,7 @@ export async function uploadContract(
   });
   const [contractId, fileId] = (await response.text()).split(",");
 
-  return [response.ok, Number(contractId), Number(fileId)];
+  return [response.ok, parseInt(contractId, 10), parseInt(fileId, 10)];
 }
 
 interface ContractResponse
@@ -204,7 +204,7 @@ export async function uploadContractFiles(
     return [false, -1];
   }
 
-  return [response.ok, Number(await response.text())];
+  return [response.ok, parseInt(await response.text(), 10)];
 }
 
 export async function deleteContractFile(

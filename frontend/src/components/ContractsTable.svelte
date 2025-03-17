@@ -448,7 +448,8 @@
             max="100"
             class="input input-bordered join-item w-20"
             value={perPage}
-            onchange={(e) => (perPage = parseInt(e.currentTarget.value) || 10)}
+            onchange={(e) =>
+              (perPage = parseInt(e.currentTarget.value, 10) || 10)}
           />
           <span class="join-item flex items-center px-2">por página</span>
         </label>
