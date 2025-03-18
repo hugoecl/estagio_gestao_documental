@@ -1,6 +1,6 @@
 use ahash::RandomState;
 use papaya::HashMap;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 use crate::models::{contract, location, work_contract};
 
@@ -97,10 +97,16 @@ pub struct WorkContractFileCache {
     pub uploaded_at: chrono::DateTime<chrono::Utc>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize)]
 pub struct WorkContractCategoryCache {
     pub name: String,
     pub description: Option<String>,
+    #[serde(rename = "createdAt")]
+    #[serde(serialize_with = "serialize_datetime_dmy")]
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    #[serde(rename = "updatedAt")]
+    #[serde(serialize_with = "serialize_datetime_dmy")]
+    pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
 #[derive(Serialize)]
@@ -154,6 +160,8 @@ async fn get_work_contract_categories_cache(
             WorkContractCategoryCache {
                 name: category.name,
                 description: category.description,
+                created_at: category.created_at.unwrap(),
+                updated_at: category.updated_at.unwrap(),
             },
         );
     }

@@ -29,6 +29,12 @@ pub async fn get_work_contract_categories(
     json_response_with_etag(&state.cache.work_contract_categories, &req)
 }
 
+#[derive(Deserialize)]
+pub struct WorkContractCategoryRequest {
+    name: String,
+    description: Option<String>,
+}
+
 pub async fn add_work_contract_category(
     session: Session,
     state: web::Data<State>,
@@ -37,7 +43,7 @@ pub async fn add_work_contract_category(
     if let Err(response) = validate_session(&session) {
         return response;
     }
-    let Json(category): Json<WorkContractCategoryCache> = Json::from_bytes(data).unwrap();
+    let Json(category): Json<WorkContractCategoryRequest> = Json::from_bytes(data).unwrap();
 
     let result = sqlx::query!(
         "INSERT INTO work_contract_categories (name, description) VALUES (?, ?)",
@@ -49,11 +55,16 @@ pub async fn add_work_contract_category(
 
     match result {
         Ok(result) => {
-            state
-                .cache
-                .work_contract_categories
-                .pin()
-                .insert(result.last_insert_id() as u32, category);
+            let now = chrono::Utc::now();
+            state.cache.work_contract_categories.pin().insert(
+                result.last_insert_id() as u32,
+                WorkContractCategoryCache {
+                    name: category.name,
+                    description: category.description,
+                    created_at: now,
+                    updated_at: now,
+                },
+            );
             HttpResponse::Created().finish()
         }
         Err(e) => {
@@ -75,7 +86,7 @@ pub async fn update_work_contract_category(
     if let Err(response) = validate_session(&session) {
         return response;
     }
-    let Json(category): Json<WorkContractCategoryCache> = Json::from_bytes(data).unwrap();
+    let Json(category): Json<WorkContractCategoryRequest> = Json::from_bytes(data).unwrap();
     let id = id.into_inner();
 
     let result = sqlx::query!(
@@ -90,10 +101,19 @@ pub async fn update_work_contract_category(
     match result {
         Ok(_) => {
             let pinned_cache = state.cache.work_contract_categories.pin();
-            if let None = pinned_cache.get(&id) {
-                return HttpResponse::NotFound().finish();
-            }
-            pinned_cache.insert(id, category);
+            let old_contract = match pinned_cache.get(&id) {
+                Some(contract) => contract,
+                None => return HttpResponse::NotFound().finish(),
+            };
+            pinned_cache.insert(
+                id,
+                WorkContractCategoryCache {
+                    name: category.name,
+                    description: category.description,
+                    created_at: old_contract.created_at,
+                    updated_at: chrono::Utc::now(),
+                },
+            );
             HttpResponse::NoContent().finish()
         }
         Err(e) => {
