@@ -7,6 +7,7 @@ import { Locations } from "@lib/types/locations";
 import { WorkContractTypes } from "@lib/types/work-contracts";
 import SearchBar from "@components/contracts/SearchBar.astro";
 import DatePicker from "@components/common/DatePicker.svelte";
+import WorkContractsTableLoader from "@components/work-contracts/WorkContractsTableLoader.svelte";
 ---
 
 <Layout title="Contratos de Funcionários">
@@ -101,5 +102,11 @@ import DatePicker from "@components/common/DatePicker.svelte";
         </button>
       </div>
     </form>
+  </Collapse>
+  <Collapse client:load>
+    <span slot="title">Lista de Contratos</span>
+    <div slot="content">
+      <WorkContractsTableLoader client:load />
+    </div>
   </Collapse>
 </Layout>

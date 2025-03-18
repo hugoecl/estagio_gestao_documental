@@ -11,9 +11,12 @@ import {
 import { Locations } from "@lib/types/locations";
 import { toggleElements } from "src/stores/loading-stores";
 import { DMYHMSToDate, DMYToDate } from "@utils/date-utils";
-import type {
-  WorkContractCategories,
-  WorkContractCategory,
+import {
+  WorkContractTypes,
+  type WorkContract,
+  type WorkContractCategories,
+  type WorkContractCategory,
+  type WorkContracts,
 } from "@lib/types/work-contracts";
 
 async function handleFetch(
@@ -364,4 +367,47 @@ export async function uploadWorkContractCategory(
   );
   const categoryId = parseInt(await response.text(), 10);
   return [response.ok, categoryId];
+}
+
+export async function getWorkContracts(): Promise<WorkContracts | null> {
+  const response = await handleFetch(`${API_BASE_URL}/work-contracts`, {
+    method: "GET",
+    credentials: "include",
+  });
+
+  if (response.ok) {
+    const json = await response.json();
+    const entries = Object.values(json) as WorkContract[];
+    for (let i = 0, len = entries.length; i < len; i++) {
+      const entry = entries[i];
+      entry.dateStart = DMYToDate(entry.dateStartString);
+      if (entry.dateEndString) {
+        entry.dateEnd = DMYToDate(entry.dateEndString);
+      }
+
+      entry.typeValue = entry.type as unknown as number;
+
+      entry.type = WorkContractTypes[entry.type as unknown as number] as
+        | "Adenda"
+        | "Contrato de Funcionário";
+
+      entry.__searchName = entry.name
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+
+      entry.__searchType = (entry.type as string)
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+      if (entry.description) {
+        entry.__searchDescription = entry.description
+          .normalize("NFKD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .toLowerCase();
+      }
+    }
+    return json;
+  }
+  return null;
 }
