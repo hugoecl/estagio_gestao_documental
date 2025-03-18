@@ -21,7 +21,10 @@
 
 <script>
   document.addEventListener("astro:page-load", () => {
-    if (window.location.pathname !== "/contratos/") {
+    if (
+      window.location.pathname !== "/contratos/" &&
+      window.location.pathname !== "/recursos-humanos/contratos-funcionarios/"
+    ) {
       return;
     }
     const searchInput = document.getElementById("search-input")!;

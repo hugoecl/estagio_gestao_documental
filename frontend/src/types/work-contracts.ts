@@ -12,3 +12,5 @@ export interface WorkContractCategory {
 }
 
 export type WorkContractCategories = Record<number, WorkContractCategory>;
+
+export const WorkContractTypes = ["Adenda", "Contrato de Funcionário"] as const;

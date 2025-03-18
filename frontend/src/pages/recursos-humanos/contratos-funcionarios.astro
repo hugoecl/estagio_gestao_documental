@@ -1,7 +1,105 @@
 ---
 import Layout from "@layouts/Layout.astro";
+import Collapse from "@components/common/Collapse.svelte";
+
+import "@styles/form.css";
+import { Locations } from "@lib/types/locations";
+import { WorkContractTypes } from "@lib/types/work-contracts";
+import SearchBar from "@components/contracts/SearchBar.astro";
+import DatePicker from "@components/common/DatePicker.svelte";
 ---
 
 <Layout title="Contratos de Funcionários">
-  <h1>Contratos de Funcionários</h1>
+  <div class="flex items-center justify-between mb-7 gap-4">
+    <div
+      class="flex max-md:flex-col bg-base-100 gap-4 p-2 rounded-md shadow-sm border border-zinc-300"
+    >
+      <label class="select min-w-[230px] max-sm:min-w-auto clear">
+        <span class="label">Local</span>
+        <select required form="contract-form" name="location">
+          <option disabled selected hidden value="">Local</option>
+          {Locations.map((l, i) => <option value={i}>{l}</option>)}
+        </select>
+      </label>
+      <label class="select min-w-[230px] max-sm:min-w-auto clear">
+        <span class="label">Contrato</span>
+        <select required form="contract-form" name="service">
+          <option disabled selected hidden value="">Contrato</option>
+          {WorkContractTypes.map((c, i) => <option value={i}>{c}</option>)}
+        </select>
+      </label>
+    </div>
+    <SearchBar />
+  </div>
+
+  <Collapse client:load>
+    <span id="upload-title" slot="title">Upload</span>
+    <form
+      slot="content"
+      id="work-contract-form"
+      class="grid grid-cols-1 sm:grid-cols-2 gap-4 p-2 rounded-sm shadow-sm"
+    >
+      <fieldset class="fieldset">
+        <legend class="fieldset-legend">Nome do Funcionário:</legend>
+        <input
+          required
+          type="text"
+          class="input"
+          placeholder="Nome do Funcionário"
+          name="name"
+        />
+      </fieldset>
+
+      <fieldset class="fieldset">
+        <legend class="fieldset-legend">NIF:</legend>
+        <input
+          required
+          type="number"
+          min="0"
+          class="input"
+          placeholder="Numero de Identificação Fiscal"
+          name="nif"
+        />
+      </fieldset>
+
+      <fieldset class="fieldset">
+        <legend class="fieldset-legend">Data Início:</legend>
+        <DatePicker client:load range={false} formName="dateStart" />
+      </fieldset>
+
+      <fieldset class="fieldset">
+        <legend class="fieldset-legend">Data Fim (opcional):</legend>
+        <!-- TODO: Make sure this is actually optional -->
+        <DatePicker client:load range={false} formName="dateEnd" />
+      </fieldset>
+
+      <fieldset class="fieldset">
+        <legend class="fieldset-legend">Estado:</legend>
+        <select class="select" name="status" required>
+          <option disabled selected hidden value="">Selecione o Estado</option>
+          <option value="ola">teste</option>
+        </select>
+      </fieldset>
+
+      <fieldset class="fieldset">
+        <legend class="fieldset-legend">Ficheiros:</legend>
+        <input
+          type="file"
+          class="file-input"
+          id="files-input"
+          accept="image/*,.doc,.docx,.xls,.xlsx,.pdf"
+          required
+          multiple
+        />
+      </fieldset>
+
+      <div class="flex justify-between sm:col-span-2">
+        <button type="reset" class="btn btn-error">Limpar</button>
+        <button type="submit" class="btn btn-primary">
+          <span class="hidden loading loading-bars loading-md"></span>
+          <span id="submit-text">Enviar</span>
+        </button>
+      </div>
+    </form>
+  </Collapse>
 </Layout>
