@@ -80,3 +80,16 @@ export function getSecondDateFromRange(dateRange: string): [string, Date] {
   const year = dateRange.substring(19, 23);
   return [`${day}/${month}/${year}`, new Date(+year, +month - 1, +day)];
 }
+
+/**
+ * Convert "DD/MM/YYYY, HH:MM:SS" to Date Object
+ */
+export function DMYHMSToDate(date: string): Date {
+  const day = date.substring(0, 2);
+  const month = date.substring(3, 5);
+  const year = date.substring(6, 10);
+  const hour = date.substring(12, 14);
+  const minute = date.substring(15, 17);
+  const second = date.substring(18, 20);
+  return new Date(+year, +month - 1, +day, +hour, +minute, +second);
+}
