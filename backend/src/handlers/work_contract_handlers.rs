@@ -55,9 +55,10 @@ pub async fn add_work_contract_category(
 
     match result {
         Ok(result) => {
+            let id = result.last_insert_id() as u32;
             let now = chrono::Utc::now();
             state.cache.work_contract_categories.pin().insert(
-                result.last_insert_id() as u32,
+                id,
                 WorkContractCategoryCache {
                     name: category.name,
                     description: category.description,
@@ -65,7 +66,7 @@ pub async fn add_work_contract_category(
                     updated_at: now,
                 },
             );
-            HttpResponse::Created().finish()
+            HttpResponse::Created().body(id.to_string())
         }
         Err(e) => {
             eprintln!(

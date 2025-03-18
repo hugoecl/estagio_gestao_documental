@@ -211,11 +211,12 @@ import "@styles/contract-form.css";
 
       const [ok, contractId, fileId] = await uploadContract(formData);
 
+      loadingBars.classList.toggle("hidden");
+      submitText.classList.toggle("hidden");
+
       if (ok) {
         setNewContract(formData, contractId, fileId);
 
-        loadingBars.classList.toggle("hidden");
-        submitText.classList.toggle("hidden");
         form.reset();
         showAlert(
           "Contrato enviado com sucesso!",
@@ -223,8 +224,6 @@ import "@styles/contract-form.css";
           AlertPosition.TOP
         );
       } else {
-        loadingBars.classList.toggle("hidden");
-        submitText.classList.toggle("hidden");
         showAlert(
           "Erro ao enviar o contrato. Por favor, tente novamente.",
           AlertType.ERROR,
@@ -249,23 +248,37 @@ import "@styles/contract-form.css";
       const createdAt = `${nowISO.substring(0, 10)}, ${nowISO.substring(11, 19)}`;
 
       const supplier = formData.get("supplier") as string;
-      const __searchSupplier = supplier.toLowerCase();
+      const __searchSupplier = supplier
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
 
       const locationValue = parseInt(locationSelect.value, 10);
       const location = ContractLocations[locationValue];
-      const __searchLocation = location.toLowerCase();
+      const __searchLocation = location
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
 
       const serviceValue = parseInt(serviceSelect.value, 10);
       const service = ContractServices[serviceValue];
-      const __searchService = service.toLowerCase();
+      const __searchService = service
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "");
 
       const statusValue = parseInt(formData.get("status")! as string, 10);
       const status = ContractStatus[statusValue];
-      const __searchStatus = status.toLowerCase();
+      const __searchStatus = status
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
 
       const typeValue = parseInt(formData.get("type")! as string, 10);
       const type = ContractTypes[typeValue];
-      const __searchType = type.toLowerCase();
+      const __searchType = type
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
 
       const contractNumber = formData.get("contract-number") as string;
 

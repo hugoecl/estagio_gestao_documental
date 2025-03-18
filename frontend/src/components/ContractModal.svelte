@@ -135,6 +135,12 @@
         AlertPosition.TOP
       );
       onContractUpdated({ ...editedContract, files });
+    } else {
+      showAlert(
+        "Erro ao atualizar contrato",
+        AlertType.ERROR,
+        AlertPosition.TOP
+      );
     }
     isSubmitting = false;
   }

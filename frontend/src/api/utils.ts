@@ -10,7 +10,11 @@ import {
   type Contracts,
 } from "@lib/types/contracts";
 import { toggleElements } from "src/stores/loading-stores";
-import { DMYToDate } from "@utils/date-utils";
+import { DMYHMSToDate, DMYToDate } from "@utils/date-utils";
+import type {
+  WorkContractCategories,
+  WorkContractCategory,
+} from "@lib/types/work-contracts";
 
 async function handleFetch(
   url: string | URL,
@@ -275,4 +279,91 @@ export async function getAnalytics(): Promise<PageAnalytics> {
     return (await response.json()) as PageAnalytics;
   }
   return [];
+}
+
+export async function getWorkContractCategories(): Promise<WorkContractCategories | null> {
+  const response = await handleFetch(
+    `${API_BASE_URL}/work-contracts/categories`,
+    {
+      method: "GET",
+      credentials: "include",
+    }
+  );
+
+  if (response.ok) {
+    const json = await response.json();
+    const entries = Object.values(json) as WorkContractCategory[];
+    for (let i = 0, len = entries.length; i < len; i++) {
+      const entry = entries[i];
+      entry.__searchName = entry.name
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+      entry.__searchDescription = entry.description
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+
+      entry.__createdAtDate = DMYHMSToDate(entry.createdAt);
+      entry.__updatedAtDate = DMYHMSToDate(entry.updatedAt);
+    }
+    return json;
+  }
+  return null;
+}
+
+export async function updateWorkContractCategory(
+  categoryId: string,
+  category: WorkContractCategory
+): Promise<boolean> {
+  const response = await handleFetch(
+    `${API_BASE_URL}/work-contracts/categories/${categoryId}`,
+    {
+      method: "PUT",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: category.name,
+        description: category.description,
+      }),
+    }
+  );
+  return response.ok;
+}
+
+export async function deleteWorkContractCategory(
+  categoryId: string
+): Promise<boolean> {
+  const response = await handleFetch(
+    `${API_BASE_URL}/work-contracts/categories/${categoryId}`,
+    {
+      method: "DELETE",
+      credentials: "include",
+    }
+  );
+  return response.ok;
+}
+
+export async function uploadWorkContractCategory(
+  name: string,
+  description: string
+): Promise<[boolean, number]> {
+  const response = await handleFetch(
+    `${API_BASE_URL}/work-contracts/categories`,
+    {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name,
+        description,
+      }),
+    }
+  );
+  const categoryId = parseInt(await response.text(), 10);
+  return [response.ok, categoryId];
 }
