@@ -14,9 +14,13 @@
     { header: "Fornecedor", field: "supplier" },
     { header: "Serviço", field: "service" },
     { header: "Número de Contrato", field: "contractNumber", responsive: "" },
-    { header: "Data", field: "dateString" },
-    { header: "Data Início", field: "dateStartString" },
-    { header: "Data Fim", field: "dateEndString" },
+    { header: "Data", field: "dateString", dateValueField: "date" },
+    {
+      header: "Data Início",
+      field: "dateStartString",
+      dateValueField: "dateStart",
+    },
+    { header: "Data Fim", field: "dateEndString", dateValueField: "dateEnd" },
     { header: "Tipo", field: "type" },
     { header: "Estado", field: "status" },
   ];

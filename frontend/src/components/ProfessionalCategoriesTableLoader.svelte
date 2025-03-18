@@ -4,16 +4,25 @@
   import Table from "@components/Table.svelte";
   import ProfessionalCategoriesModal from "./ProfessionalCategoriesModal.svelte";
   import { newCategory } from "@stores/work-contract-stores";
+  import type { TableColumn } from "@lib/types/table";
 
   let loading = $state(true);
   let categories = $state({});
   let modal: HTMLDialogElement;
-  const columns = [
+  const columns: TableColumn[] = [
     { header: "ID", field: "ID" },
     { header: "Nome", field: "name" },
     { header: "Descrição", field: "description" },
-    { header: "Criado em", field: "createdAt" },
-    { header: "Atualizado em", field: "updatedAt" },
+    {
+      header: "Criado em",
+      field: "createdAt",
+      dateValueField: "__createdAtDate",
+    },
+    {
+      header: "Atualizado em",
+      field: "updatedAt",
+      dateValueField: "__updatedAtDate",
+    },
   ];
 
   let selectedCategoryId: string | null = $state(null);

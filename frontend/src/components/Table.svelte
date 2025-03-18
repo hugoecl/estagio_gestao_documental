@@ -141,10 +141,12 @@
           : valueB - valueA;
       }
 
-      if (valueA instanceof Date && valueB instanceof Date) {
+      if (column.dateValueField) {
+        const dateA = rowA[column.dateValueField];
+        const dateB = rowB[column.dateValueField];
         return sortDirection === SortDirection.ASC
-          ? valueA.getTime() - valueB.getTime()
-          : valueB.getTime() - valueA.getTime();
+          ? dateA.getTime() - dateB.getTime()
+          : dateB.getTime() - dateA.getTime();
       }
 
       return sortDirection === SortDirection.ASC
