@@ -163,7 +163,7 @@
 										{
 											"key": "files",
 											"type": "file",
-											"src": "postman-cloud:///1effb4e0-3f65-41b0-ab44-ea9a748ee974"
+											"src": "postman-cloud:///1f003d8e-e645-4f20-8676-e22ec1612536"
 										}
 									]
 								},
@@ -252,8 +252,9 @@
 									"key": "files",
 									"type": "file",
 									"src": [
-										"postman-cloud:///1eff9aa2-049a-4ab0-92d1-253c5de0f316",
-										"postman-cloud:///1eff9aa2-04e8-4cb0-9766-dfb9e9363370"
+										"postman-cloud:///1f003d8e-e645-4f20-8676-e22ec1612536",
+										"postman-cloud:///1f003d8e-e652-4270-acad-bacd15b23998",
+										"postman-cloud:///1f003d8e-e659-47a0-ac99-5a6c2e08e434"
 									]
 								},
 								{
@@ -457,22 +458,42 @@
 											"key": "files",
 											"type": "file",
 											"src": [
-												"postman-cloud:///1effb4e0-3f65-41b0-ab44-ea9a748ee974",
-												"postman-cloud:///1eff9aa2-04e8-4cb0-9766-dfb9e9363370",
-												"postman-cloud:///1eff9aa2-049a-4ab0-92d1-253c5de0f316"
+												"postman-cloud:///1f003d8e-e645-4f20-8676-e22ec1612536",
+												"postman-cloud:///1f003d8e-e652-4270-acad-bacd15b23998",
+												"postman-cloud:///1f003d8e-e659-47a0-ac99-5a6c2e08e434"
 											]
 										}
 									]
 								},
 								"url": {
-									"raw": "{{host}}/work_contracts/9/files",
+									"raw": "{{host}}/work_contracts/6/files",
 									"host": [
 										"{{host}}"
 									],
 									"path": [
 										"work_contracts",
-										"9",
+										"6",
 										"files"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "delete_work_contract_files",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{host}}/work_contracts/6/files/5",
+									"host": [
+										"{{host}}"
+									],
+									"path": [
+										"work_contracts",
+										"6",
+										"files",
+										"5"
 									]
 								}
 							},
@@ -537,7 +558,7 @@
 								},
 								{
 									"key": "category_id",
-									"value": "2",
+									"value": "1",
 									"type": "text"
 								},
 								{
@@ -549,8 +570,9 @@
 									"key": "files",
 									"type": "file",
 									"src": [
-										"postman-cloud:///1eff9aa2-04e8-4cb0-9766-dfb9e9363370",
-										"postman-cloud:///1eff9aa2-049a-4ab0-92d1-253c5de0f316"
+										"postman-cloud:///1f003d8e-e652-4270-acad-bacd15b23998",
+										"postman-cloud:///1f003d8e-e659-47a0-ac99-5a6c2e08e434",
+										"postman-cloud:///1f003d8e-e645-4f20-8676-e22ec1612536"
 									]
 								}
 							]
@@ -600,13 +622,13 @@
 						"method": "DELETE",
 						"header": [],
 						"url": {
-							"raw": "{{host}}/work_contracts/3",
+							"raw": "{{host}}/work_contracts/1",
 							"host": [
 								"{{host}}"
 							],
 							"path": [
 								"work_contracts",
-								"3"
+								"1"
 							]
 						}
 					},

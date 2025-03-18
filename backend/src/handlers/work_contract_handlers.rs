@@ -479,3 +479,48 @@ pub async fn upload_work_contract_files(
 
     HttpResponse::Created().body(first_file_id.to_string())
 }
+
+pub async fn delete_work_contract_file(
+    session: Session,
+    state: web::Data<State>,
+    path: web::Path<(u32, u32)>,
+) -> impl Responder {
+    if let Err(response) = validate_session(&session) {
+        return response;
+    }
+
+    let (contract_id, file_id) = path.into_inner();
+
+    let pinned_work_contracts_cache = state.cache.work_contracts.pin();
+
+    let contract = match pinned_work_contracts_cache.get(&contract_id) {
+        Some(contract) => contract,
+        None => return HttpResponse::NotFound().finish(),
+    };
+
+    let pinned_contract_files_cache = contract.files.pin();
+
+    let contract_file = pinned_contract_files_cache.remove(&file_id);
+    if contract_file.is_none() {
+        return HttpResponse::NotFound().finish();
+    }
+
+    let file_path = contract_file.unwrap().path.clone();
+
+    tokio::task::spawn_blocking(move || std::fs::remove_file(file_path));
+
+    drop(pinned_contract_files_cache);
+    drop(pinned_work_contracts_cache);
+
+    tokio::spawn(async move {
+        let result = sqlx::query!("DELETE FROM work_contract_files WHERE id = ?", file_id)
+            .execute(&state.db.pool)
+            .await;
+
+        if let Err(e) = result {
+            eprintln!("Error deleting work contract file from database: {}", e);
+        }
+    });
+
+    HttpResponse::Ok().finish()
+}
