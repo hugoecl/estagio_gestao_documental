@@ -443,6 +443,44 @@
 					]
 				},
 				{
+					"name": "work_contract_files",
+					"item": [
+						{
+							"name": "upload_work_contract_files",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "formdata",
+									"formdata": [
+										{
+											"key": "files",
+											"type": "file",
+											"src": [
+												"postman-cloud:///1effb4e0-3f65-41b0-ab44-ea9a748ee974",
+												"postman-cloud:///1eff9aa2-04e8-4cb0-9766-dfb9e9363370",
+												"postman-cloud:///1eff9aa2-049a-4ab0-92d1-253c5de0f316"
+											]
+										}
+									]
+								},
+								"url": {
+									"raw": "{{host}}/work_contracts/9/files",
+									"host": [
+										"{{host}}"
+									],
+									"path": [
+										"work_contracts",
+										"9",
+										"files"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
 					"name": "get_work_contracts",
 					"request": {
 						"method": "GET",
@@ -504,7 +542,7 @@
 								},
 								{
 									"key": "description",
-									"value": "ola",
+									"value": "ol",
 									"type": "text"
 								},
 								{

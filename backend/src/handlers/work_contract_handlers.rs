@@ -11,6 +11,7 @@ use crate::{
     cache::WorkContractCategoryCache,
     models::{location::Location, work_contract},
     utils::{
+        forms::FilesFormRequest,
         json_utils::{Json, json_response_with_etag},
         memory_file::MemoryFile,
         session_utils::validate_session,
@@ -413,4 +414,68 @@ pub async fn delete_work_contract(
         }
         None => HttpResponse::NotFound().finish(),
     }
+}
+
+pub async fn upload_work_contract_files(
+    session: Session,
+    state: web::Data<State>,
+    contract_id: web::Path<u32>,
+    MultipartForm(form): MultipartForm<FilesFormRequest>,
+) -> impl Responder {
+    if let Err(response) = validate_session(&session) {
+        return response;
+    }
+
+    let contract_id = contract_id.into_inner();
+    let files_length = form.files.len();
+
+    let pinned_work_contracts_cache = state.cache.work_contracts.pin();
+    let contract = match pinned_work_contracts_cache.get(&contract_id) {
+        Some(contract) => contract,
+        None => return HttpResponse::NotFound().finish(),
+    };
+
+    let base_path = format!("media/work_contracts/{}", contract_id);
+    let now = chrono::Utc::now();
+
+    let mut file_paths = Vec::with_capacity(files_length);
+
+    for file in form.files.into_iter() {
+        let file_path = format!("{}/{}", base_path, file.file_name);
+        file_paths.push(file_path.clone());
+
+        tokio::task::spawn_blocking(move || {
+            std::fs::write(file_path, file.data).unwrap();
+        });
+    }
+
+    let mut query_builder = sqlx::QueryBuilder::new(
+        "INSERT INTO work_contract_files (contract_id, file_path, uploaded_at)",
+    );
+
+    query_builder.push_values(file_paths.iter(), |mut b, file_path| {
+        b.push_bind(contract_id).push_bind(file_path).push_bind(now);
+    });
+
+    let result = query_builder.build().execute(&state.db.pool).await.unwrap();
+    let first_file_id = result.last_insert_id() as u32;
+
+    let pinned_contract_files_cache = contract.files.pin();
+
+    for (i, file_path) in file_paths.into_iter().enumerate() {
+        let file_id = first_file_id + i as u32;
+
+        pinned_contract_files_cache.insert(
+            file_id,
+            crate::cache::WorkContractFileCache {
+                path: file_path,
+                uploaded_at: now,
+            },
+        );
+    }
+
+    drop(pinned_contract_files_cache);
+    drop(pinned_work_contracts_cache);
+
+    HttpResponse::Created().body(first_file_id.to_string())
 }
