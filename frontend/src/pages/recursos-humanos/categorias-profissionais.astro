@@ -55,6 +55,11 @@ import "@styles/contract-form.css";
   import { newCategory } from "@stores/work-contract-stores";
 
   document.addEventListener("astro:page-load", () => {
+    if (
+      window.location.pathname !== "/recursos-humanos/categorias-profissionais/"
+    ) {
+      return;
+    }
     const form: HTMLFormElement = document.getElementById(
       "category-form"
     )! as HTMLFormElement;
