@@ -21,6 +21,9 @@
 
 <script>
   document.addEventListener("astro:page-load", () => {
+    if (window.location.pathname !== "/contratos/") {
+      return;
+    }
     const searchInput = document.getElementById("search-input")!;
     window.addEventListener("keydown", (event) => {
       if (event.ctrlKey && event.key === "l") {
