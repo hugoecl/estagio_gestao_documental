@@ -78,6 +78,7 @@
     if (ok) {
       onCategoryDeleted(categoryId);
       confirmModal.close();
+      modal.close();
       showAlert(
         "Categoria eliminada com sucesso",
         AlertType.SUCCESS,
@@ -197,12 +198,6 @@
     </div>
   </div>
   <form method="dialog" class="modal-backdrop">
-    <button
-      onclick={() => {
-        confirmModal.close();
-        modal.close();
-      }}
-      disabled={isSubmitting}>c</button
-    >
+    <button onclick={() => modal.close()} disabled={isSubmitting}>c</button>
   </form>
 </dialog>
