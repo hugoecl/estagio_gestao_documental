@@ -2,13 +2,13 @@ import API_BASE_URL from "@api/base-url";
 
 import { showAlert, AlertPosition, AlertType } from "@components/alert/alert";
 import {
-  ContractLocations,
   ContractServices,
   ContractStatus,
   ContractTypes,
   type Contract,
   type Contracts,
 } from "@lib/types/contracts";
+import { Locations } from "@lib/types/locations";
 import { toggleElements } from "src/stores/loading-stores";
 import { DMYHMSToDate, DMYToDate } from "@utils/date-utils";
 import type {
@@ -99,7 +99,7 @@ export async function uploadContract(
 
 interface ContractResponse
   extends Omit<Contract, "location" | "service" | "status" | "type"> {
-  location: keyof typeof ContractLocations;
+  location: keyof typeof Locations;
   locationValue: number;
   service: keyof typeof ContractServices;
   serviceValue: number;
@@ -131,9 +131,7 @@ export async function getContracts(): Promise<Contracts | null> {
     for (let i = 0, len = entries.length; i < len; i++) {
       const entry = entries[i];
       entry.locationValue = entry.location as number;
-      entry.location = ContractLocations[
-        entry.location
-      ] as keyof typeof ContractLocations;
+      entry.location = Locations[entry.location] as keyof typeof Locations;
       entry.serviceValue = entry.service as number;
       entry.service = ContractServices[
         entry.service

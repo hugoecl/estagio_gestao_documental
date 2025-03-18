@@ -2,10 +2,11 @@
   import {
     type Contract,
     ContractServices,
-    ContractLocations,
     ContractStatus,
     ContractTypes,
   } from "@lib/types/contracts";
+  import { Locations } from "@lib/types/locations";
+
   import DatePicker from "@components/common/DatePicker.svelte";
   import API_BASE_URL from "@api/base-url";
 
@@ -298,7 +299,7 @@
             required
             bind:value={contract.locationValue}
           >
-            {#each ContractLocations as location, i}
+            {#each Locations as location, i}
               <option value={i}>
                 {location}
               </option>

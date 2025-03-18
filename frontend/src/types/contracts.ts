@@ -1,15 +1,11 @@
+import type { Locations } from "@lib/types/locations";
+
 export const ContractServices = [
   "Eletricidade",
   "Água",
   "Limpeza",
   "Impressoras",
   "Comunicações",
-] as const;
-export const ContractLocations = [
-  "Viana do Castelo",
-  "Braga",
-  "Porto",
-  "Vila Real",
 ] as const;
 export const ContractStatus = ["Ativo", "Inativo"] as const;
 export const ContractTypes = ["Adenda", "Novo", "Renovação"] as const;
@@ -26,7 +22,7 @@ export interface Contract {
   dateStart: Date;
   dateEnd: Date;
   description: string;
-  location: (typeof ContractLocations)[number];
+  location: (typeof Locations)[number];
   service: (typeof ContractServices)[number];
   status: (typeof ContractStatus)[number];
   supplier: string;

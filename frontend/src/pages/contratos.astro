@@ -6,10 +6,10 @@ import DatePicker from "@components/common/DatePicker.svelte";
 import ContractsTableLoader from "@components/contracts/ContractsTableLoader.svelte";
 import {
   ContractServices,
-  ContractLocations,
   ContractStatus,
   ContractTypes,
 } from "@lib/types/contracts";
+import { Locations } from "@lib/types/locations";
 import "@styles/form.css";
 ---
 
@@ -22,7 +22,7 @@ import "@styles/form.css";
         <span class="label">Local</span>
         <select required form="contract-form" name="location">
           <option disabled selected hidden value="">Local</option>
-          {ContractLocations.map((l, i) => <option value={i}>{l}</option>)}
+          {Locations.map((l, i) => <option value={i}>{l}</option>)}
         </select>
       </label>
       <label class="select min-w-[230px] max-sm:min-w-auto clear">
@@ -134,11 +134,11 @@ import "@styles/form.css";
   import { uploadContract } from "@api/utils";
   import { showAlert, AlertPosition, AlertType } from "@components/alert/alert";
   import {
-    ContractLocations,
     ContractServices,
     ContractStatus,
     ContractTypes,
   } from "@lib/types/contracts";
+  import { Locations } from "@lib/types/locations";
   import { elementsToToggle } from "@stores/loading-stores";
   import { newContract } from "@stores/contracts-stores";
   import type { Contract } from "@lib/types/contracts";
@@ -167,13 +167,13 @@ import "@styles/form.css";
     locationSelect.addEventListener("change", (event) => {
       if (!serviceSelect.value) return;
       // @ts-ignore
-      title.innerHTML = `Upload - ${ContractLocations[locationSelect.value]} - ${ContractServices[event.currentTarget.value]}`;
+      title.innerHTML = `Upload - ${Locations[locationSelect.value]} - ${ContractServices[event.currentTarget.value]}`;
     });
 
     serviceSelect.addEventListener("change", (event) => {
       if (!locationSelect.value) return;
       // @ts-ignore
-      title.innerHTML = `Upload - ${ContractLocations[locationSelect.value]} - ${ContractServices[event.currentTarget.value]}`;
+      title.innerHTML = `Upload - ${Locations[locationSelect.value]} - ${ContractServices[event.currentTarget.value]}`;
     });
 
     const selects = document.querySelectorAll(".select");
@@ -254,7 +254,7 @@ import "@styles/form.css";
         .toLowerCase();
 
       const locationValue = parseInt(locationSelect.value, 10);
-      const location = ContractLocations[locationValue];
+      const location = Locations[locationValue];
       const __searchLocation = location
         .normalize("NFKD")
         .replace(/[\u0300-\u036f]/g, "")
