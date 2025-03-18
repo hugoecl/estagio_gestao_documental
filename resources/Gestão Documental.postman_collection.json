@@ -106,7 +106,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "/contracts/",
+							"raw": "/contratos/",
 							"options": {
 								"raw": {
 									"language": "text"
@@ -355,12 +355,12 @@
 								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "{{host}}/work_contracts/categories",
+									"raw": "{{host}}/work-contracts/categories",
 									"host": [
 										"{{host}}"
 									],
 									"path": [
-										"work_contracts",
+										"work-contracts",
 										"categories"
 									]
 								}
@@ -382,12 +382,12 @@
 									}
 								},
 								"url": {
-									"raw": "{{host}}/work_contracts/categories",
+									"raw": "{{host}}/work-contracts/categories",
 									"host": [
 										"{{host}}"
 									],
 									"path": [
-										"work_contracts",
+										"work-contracts",
 										"categories"
 									]
 								}
@@ -409,12 +409,12 @@
 									}
 								},
 								"url": {
-									"raw": "{{host}}/work_contracts/categories/1",
+									"raw": "{{host}}/work-contracts/categories/1",
 									"host": [
 										"{{host}}"
 									],
 									"path": [
-										"work_contracts",
+										"work-contracts",
 										"categories",
 										"1"
 									]
@@ -428,12 +428,12 @@
 								"method": "DELETE",
 								"header": [],
 								"url": {
-									"raw": "{{host}}/work_contracts/categories/1",
+									"raw": "{{host}}/work-contracts/categories/1",
 									"host": [
 										"{{host}}"
 									],
 									"path": [
-										"work_contracts",
+										"work-contracts",
 										"categories",
 										"1"
 									]
@@ -466,12 +466,12 @@
 									]
 								},
 								"url": {
-									"raw": "{{host}}/work_contracts/6/files",
+									"raw": "{{host}}/work-contracts/6/files",
 									"host": [
 										"{{host}}"
 									],
 									"path": [
-										"work_contracts",
+										"work-contracts",
 										"6",
 										"files"
 									]
@@ -485,12 +485,12 @@
 								"method": "DELETE",
 								"header": [],
 								"url": {
-									"raw": "{{host}}/work_contracts/6/files/5",
+									"raw": "{{host}}/work-contracts/6/files/5",
 									"host": [
 										"{{host}}"
 									],
 									"path": [
-										"work_contracts",
+										"work-contracts",
 										"6",
 										"files",
 										"5"
@@ -507,12 +507,12 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{host}}/work_contracts",
+							"raw": "{{host}}/work-contracts",
 							"host": [
 								"{{host}}"
 							],
 							"path": [
-								"work_contracts"
+								"work-contracts"
 							]
 						}
 					},
@@ -578,12 +578,12 @@
 							]
 						},
 						"url": {
-							"raw": "{{host}}/work_contracts",
+							"raw": "{{host}}/work-contracts",
 							"host": [
 								"{{host}}"
 							],
 							"path": [
-								"work_contracts"
+								"work-contracts"
 							]
 						}
 					},
@@ -604,12 +604,12 @@
 							}
 						},
 						"url": {
-							"raw": "{{host}}/work_contracts/4",
+							"raw": "{{host}}/work-contracts/4",
 							"host": [
 								"{{host}}"
 							],
 							"path": [
-								"work_contracts",
+								"work-contracts",
 								"4"
 							]
 						}
@@ -622,12 +622,12 @@
 						"method": "DELETE",
 						"header": [],
 						"url": {
-							"raw": "{{host}}/work_contracts/1",
+							"raw": "{{host}}/work-contracts/1",
 							"host": [
 								"{{host}}"
 							],
 							"path": [
-								"work_contracts",
+								"work-contracts",
 								"1"
 							]
 						}
