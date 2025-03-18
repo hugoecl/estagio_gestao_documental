@@ -1,9 +1,9 @@
 <script lang="ts">
   import type { Contract } from "@lib/types/contracts";
   import { onMount } from "svelte";
-  import Table from "./Table.svelte";
+  import Table from "@components/Table.svelte";
   import type { TableColumn } from "@lib/types/table";
-  import ContractModal from "./ContractModal.svelte";
+  import ContractModal from "@components/ContractModal.svelte";
   import { newContract } from "@stores/contracts-stores";
 
   let loading = $state(true);
