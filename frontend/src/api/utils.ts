@@ -1,6 +1,6 @@
 import API_BASE_URL from "@api/base-url";
 
-import { showAlert, AlertPosition, AlertType } from "@components/Alert/Alert";
+import { showAlert, AlertPosition, AlertType } from "@components/alert/alert";
 import {
   ContractLocations,
   ContractServices,

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { AlertType, AlertPosition } from "./Alert";
+  import { AlertType, AlertPosition } from "./alert";
 
   const {
     message,

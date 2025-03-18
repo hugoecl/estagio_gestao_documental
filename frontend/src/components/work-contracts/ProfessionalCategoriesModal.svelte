@@ -28,7 +28,7 @@
       { AlertPosition, AlertType, showAlert },
     ] = await Promise.all([
       import("@api/utils"),
-      import("@components/Alert/Alert"),
+      import("@components/alert/alert"),
     ]);
 
     const hasCategoryChanged =
@@ -71,7 +71,7 @@
       { AlertPosition, AlertType, showAlert },
     ] = await Promise.all([
       import("@api/utils"),
-      import("@components/Alert/Alert"),
+      import("@components/alert/alert"),
     ]);
 
     const ok = await deleteWorkContractCategory(categoryId);

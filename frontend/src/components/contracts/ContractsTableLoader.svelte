@@ -1,9 +1,9 @@
 <script lang="ts">
   import type { Contract } from "@lib/types/contracts";
   import { onMount } from "svelte";
-  import Table from "@components/Table.svelte";
+  import Table from "@components/common/Table.svelte";
   import type { TableColumn } from "@lib/types/table";
-  import ContractModal from "@components/ContractModal.svelte";
+  import ContractModal from "@components/contracts/ContractModal.svelte";
   import { newContract } from "@stores/contracts-stores";
 
   let loading = $state(true);
@@ -60,7 +60,7 @@
       const [{ getContracts }, { AlertPosition, AlertType, showAlert }] =
         await Promise.all([
           import("@api/utils"),
-          import("@components/Alert/Alert"),
+          import("@components/alert/alert"),
         ]);
       const contractsOrNull = await getContracts();
       if (!contractsOrNull) {

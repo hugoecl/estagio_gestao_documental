@@ -6,7 +6,7 @@
     ContractStatus,
     ContractTypes,
   } from "@lib/types/contracts";
-  import DatePicker from "@components/DatePicker.svelte";
+  import DatePicker from "@components/common/DatePicker.svelte";
   import API_BASE_URL from "@api/base-url";
 
   const {
@@ -63,7 +63,7 @@
       { showAlert, AlertType, AlertPosition },
     ] = await Promise.all([
       import("@api/utils"),
-      import("@components/Alert/Alert"),
+      import("@components/alert/alert"),
     ]);
 
     const files = contract.files;
@@ -180,7 +180,7 @@
     const [{ deleteContractFile }, { showAlert, AlertType, AlertPosition }] =
       await Promise.all([
         import("@api/utils"),
-        import("@components/Alert/Alert"),
+        import("@components/alert/alert"),
       ]);
     const success = await deleteContractFile(contractId, fileToDeleteId);
 
@@ -207,7 +207,7 @@
     const [{ deleteContract }, { showAlert, AlertType, AlertPosition }] =
       await Promise.all([
         import("@api/utils"),
-        import("@components/Alert/Alert"),
+        import("@components/alert/alert"),
       ]);
     const success = await deleteContract(contractId);
 

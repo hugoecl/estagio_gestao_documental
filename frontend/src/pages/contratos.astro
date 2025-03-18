@@ -1,9 +1,9 @@
 ---
 import Layout from "@layouts/Layout.astro";
-import Collapse from "@components/Collapse.svelte";
-import SearchBar from "@components/SearchBar.astro";
-import DatePicker from "@components/DatePicker.svelte";
-import ContractsTableLoader from "@components/ContractsTableLoader.svelte";
+import Collapse from "@components/common/Collapse.svelte";
+import SearchBar from "@components/contracts/SearchBar.astro";
+import DatePicker from "@components/common/DatePicker.svelte";
+import ContractsTableLoader from "@components/contracts/ContractsTableLoader.svelte";
 import {
   ContractServices,
   ContractLocations,
@@ -132,7 +132,7 @@ import "@styles/contract-form.css";
 
 <script>
   import { uploadContract } from "@api/utils";
-  import { showAlert, AlertPosition, AlertType } from "@components/Alert/Alert";
+  import { showAlert, AlertPosition, AlertType } from "@components/alert/alert";
   import {
     ContractLocations,
     ContractServices,

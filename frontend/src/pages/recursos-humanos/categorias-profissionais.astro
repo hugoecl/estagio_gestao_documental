@@ -1,7 +1,7 @@
 ---
 import Layout from "@layouts/Layout.astro";
-import Collapse from "@components/Collapse.svelte";
-import ProfessionalCategoriesTableLoader from "@components/ProfessionalCategoriesTableLoader.svelte";
+import Collapse from "@components/common/Collapse.svelte";
+import ProfessionalCategoriesTableLoader from "@components/work-contracts/ProfessionalCategoriesTableLoader.svelte";
 
 import "@styles/contract-form.css";
 ---
@@ -48,7 +48,7 @@ import "@styles/contract-form.css";
 </Layout>
 
 <script>
-  import { showAlert, AlertPosition, AlertType } from "@components/Alert/Alert";
+  import { showAlert, AlertPosition, AlertType } from "@components/alert/alert";
   import { uploadWorkContractCategory } from "@api/utils";
   import { elementsToToggle } from "@stores/loading-stores";
   import type { WorkContractCategory } from "@lib/types/work-contracts";

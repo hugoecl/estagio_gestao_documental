@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { WorkContractCategory } from "@lib/types/work-contracts";
   import { onMount } from "svelte";
-  import Table from "@components/Table.svelte";
+  import Table from "@components/common/Table.svelte";
   import ProfessionalCategoriesModal from "./ProfessionalCategoriesModal.svelte";
   import { newCategory } from "@stores/work-contract-stores";
   import type { TableColumn } from "@lib/types/table";
@@ -53,7 +53,7 @@
         { AlertPosition, AlertType, showAlert },
       ] = await Promise.all([
         import("@api/utils"),
-        import("@components/Alert/Alert"),
+        import("@components/alert/alert"),
       ]);
 
       const categoriesOrNull = await getWorkContractCategories();
