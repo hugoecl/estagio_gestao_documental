@@ -256,25 +256,19 @@ pub async fn upload_work_contract(
                     .push_bind(now);
             });
 
-            let first_file_id = if !file_paths.is_empty() {
-                let file_result = query_builder.build().execute(&state.db.pool).await.unwrap();
-                let id = file_result.last_insert_id() as u32;
+            let file_result = query_builder.build().execute(&state.db.pool).await.unwrap();
+            let first_file_id = file_result.last_insert_id() as u32;
 
-                for (i, file_path) in file_paths.into_iter().enumerate() {
-                    let file_id = id + i as u32;
-                    pinned_files_cache.insert(
-                        file_id,
-                        crate::cache::WorkContractFileCache {
-                            path: file_path,
-                            uploaded_at: now,
-                        },
-                    );
-                }
-
-                Some(id)
-            } else {
-                None
-            };
+            for (i, file_path) in file_paths.into_iter().enumerate() {
+                let file_id = first_file_id + i as u32;
+                pinned_files_cache.insert(
+                    file_id,
+                    crate::cache::WorkContractFileCache {
+                        path: file_path,
+                        uploaded_at: now,
+                    },
+                );
+            }
 
             drop(pinned_files_cache);
 
@@ -298,12 +292,7 @@ pub async fn upload_work_contract(
                 .pin()
                 .insert(new_contract_id, contract_cache);
 
-            match first_file_id {
-                Some(file_id) => {
-                    HttpResponse::Created().body(format!("{},{}", new_contract_id, file_id))
-                }
-                None => HttpResponse::Created().body(format!("{}", new_contract_id)),
-            }
+            HttpResponse::Created().body(format!("{},{}", new_contract_id, first_file_id))
         }
         Err(e) => {
             eprintln!("Database error during work contract creation: {}", e);
