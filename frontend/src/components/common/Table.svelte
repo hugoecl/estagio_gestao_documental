@@ -68,9 +68,10 @@
   }
 
   const filteredEntries = $derived.by(() => {
-    if (!searchQuery.trim()) return entries;
+    let query = searchQuery.trim();
+    if (!query) return entries;
 
-    const query = searchQuery
+    query = query
       .normalize("NFKD")
       .replace(/[\u0300-\u036f]/g, "")
       .toLowerCase();
