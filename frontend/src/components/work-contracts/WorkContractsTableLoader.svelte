@@ -3,6 +3,7 @@
   import type { TableColumn } from "@lib/types/table";
   import type { WorkContract } from "@lib/types/work-contracts";
   import { onMount } from "svelte";
+  import WorkContractModal from "./WorkContractModal.svelte";
 
   let loading = $state(true);
   let workContracts = $state({});
@@ -100,4 +101,15 @@
     "dateEndString",
   ]}
   onRowClick={openWorkContractModal}
+/>
+
+<WorkContractModal
+  workContractId={selectedWorkContractId!}
+  workContract={selectedWorkcontract
+    ? selectedWorkcontract
+    : ({} as WorkContract)}
+  originalWorkContractJson={originalWorkContractJson!}
+  onWorkContractUpdated={handleWorkContractUpdated}
+  onWorkContractDeleted={handleWorkContractDeleted}
+  onFileDeleted={handleFileDeleted}
 />

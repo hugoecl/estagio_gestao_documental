@@ -93,7 +93,7 @@
         files[filesBaseId + i] = {
           name: file.name,
           path: `media/contracts/${contractId}/${file.name}`,
-          uploadedAt: new Date().toLocaleDateString("pt-PT"),
+          uploadedAt: new Date().toLocaleString("pt-PT"),
         };
       }
     }
@@ -244,7 +244,7 @@
   }
 
   function removeNewFile(index: number) {
-    newFiles = newFiles.filter((_, i) => i !== index);
+    newFiles.splice(index, 1);
   }
 
   function closeModal() {
@@ -323,7 +323,7 @@
         </fieldset>
 
         <fieldset class="fieldset">
-          <legend class="fieldset-legend">Data de Início - Fim</legend>
+          <legend class="fieldset-legend">Data</legend>
           <DatePicker range={false} bind:value={contract.dateString} />
         </fieldset>
 

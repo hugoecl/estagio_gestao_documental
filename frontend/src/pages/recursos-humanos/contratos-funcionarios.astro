@@ -23,9 +23,9 @@ import WorkContractsTableLoader from "@components/work-contracts/WorkContractsTa
         </select>
       </label>
       <label class="select min-w-[230px] max-sm:min-w-auto clear">
-        <span class="label">Contrato</span>
+        <span class="label">Tipo</span>
         <select required form="contract-form" name="service">
-          <option disabled selected hidden value="">Contrato</option>
+          <option disabled selected hidden value="">Tipo</option>
           {WorkContractTypes.map((c, i) => <option value={i}>{c}</option>)}
         </select>
       </label>
@@ -75,9 +75,11 @@ import WorkContractsTableLoader from "@components/work-contracts/WorkContractsTa
       </fieldset>
 
       <fieldset class="fieldset">
-        <legend class="fieldset-legend">Tipo:</legend>
+        <legend class="fieldset-legend">Categoria:</legend>
         <select class="select" name="status" required>
-          <option disabled selected hidden value="">Selecione o Tipo</option>
+          <option disabled selected hidden value=""
+            >Selecione uma Categoria</option
+          >
           <option value="ola">teste</option>
         </select>
       </fieldset>
@@ -110,3 +112,20 @@ import WorkContractsTableLoader from "@components/work-contracts/WorkContractsTa
     </div>
   </Collapse>
 </Layout>
+
+<script>
+  import { getWorkContractCategories } from "@api/utils";
+  import { categories } from "@stores/work-contract-stores";
+
+  document.addEventListener("astro:page-load", async () => {
+    if (
+      window.location.pathname !== "/recursos-humanos/contratos-funcionarios/"
+    )
+      return;
+
+    const workCategories = await getWorkContractCategories();
+    if (workCategories) {
+      categories.set(workCategories);
+    }
+  });
+</script>

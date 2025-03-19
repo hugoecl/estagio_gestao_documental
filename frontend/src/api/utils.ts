@@ -429,8 +429,106 @@ export async function getWorkContracts(): Promise<
           .replace(/[\u0300-\u036f]/g, "")
           .toLowerCase();
       }
+
+      const files = entry.files;
+      for (const key in files) {
+        files[key].name = files[key].path.split("/").at(-1)!;
+      }
     }
     return [json, categories];
   }
   return null;
+}
+
+export async function updateWorkContract(
+  workContractId: string,
+  workContract: WorkContract
+): Promise<boolean> {
+  const response = await handleFetch(
+    `${API_BASE_URL}/work-contracts/${workContractId}`,
+    {
+      method: "PUT",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        employee_name: workContract.employeeName,
+        nif: workContract.nif,
+        start_date: workContract.dateStartString,
+        end_date: workContract.dateEndString,
+        type_of_contract: workContract.typeValue,
+        location: workContract.locationValue,
+        category_id: workContract.categoryId,
+        description: workContract.description,
+      }),
+    }
+  );
+  return response.ok;
+}
+
+export async function uploadWorkContractFiles(
+  contractId: string,
+  files: File[]
+): Promise<[boolean, number]> {
+  const formData = new FormData();
+  for (let i = 0, len = files.length; i < len; i++) {
+    const file = files[i];
+    formData.append("files", file, `${file.name}_${file.size}`);
+  }
+
+  const response = await handleFetch(
+    `${API_BASE_URL}/work-contracts/${contractId}/files`,
+    {
+      method: "POST",
+      credentials: "include",
+      body: formData,
+    }
+  );
+  if (!response.ok) {
+    return [false, -1];
+  }
+
+  return [response.ok, parseInt(await response.text(), 10)];
+}
+
+export async function deleteWorkContractFile(
+  workContractId: string,
+  fileId: string
+): Promise<boolean> {
+  const response = await handleFetch(
+    `${API_BASE_URL}/work-contracts/${workContractId}/files/${fileId}`,
+    {
+      method: "DELETE",
+      credentials: "include",
+    }
+  );
+
+  return response.ok;
+}
+
+export async function deleteWorkContract(
+  workContractId: string
+): Promise<boolean> {
+  const response = await handleFetch(
+    `${API_BASE_URL}/work-contracts/${workContractId}`,
+    {
+      method: "DELETE",
+      credentials: "include",
+    }
+  );
+
+  return response.ok;
+}
+
+export async function uploadWorkContract(
+  formData: FormData
+): Promise<[boolean, number, number]> {
+  const response = await handleFetch(`${API_BASE_URL}/work-contracts`, {
+    method: "POST",
+    credentials: "include",
+    body: formData,
+  });
+  const [contractId, fileId] = (await response.text()).split(",");
+  return [response.ok, parseInt(contractId, 10), parseInt(fileId, 10)];
 }
