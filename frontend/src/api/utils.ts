@@ -369,11 +369,20 @@ export async function uploadWorkContractCategory(
   return [response.ok, categoryId];
 }
 
-export async function getWorkContracts(): Promise<WorkContracts | null> {
-  const response = await handleFetch(`${API_BASE_URL}/work-contracts`, {
-    method: "GET",
-    credentials: "include",
-  });
+export async function getWorkContracts(): Promise<
+  [WorkContracts, WorkContractCategories] | null
+> {
+  const [categories, response] = await Promise.all([
+    await getWorkContractCategories(),
+    await handleFetch(`${API_BASE_URL}/work-contracts`, {
+      method: "GET",
+      credentials: "include",
+    }),
+  ]);
+
+  if (!response.ok || !categories) {
+    return null;
+  }
 
   if (response.ok) {
     const json = await response.json();
@@ -386,12 +395,15 @@ export async function getWorkContracts(): Promise<WorkContracts | null> {
       }
 
       entry.typeValue = entry.type as unknown as number;
+      entry.locationValue = entry.location as unknown as number;
 
-      entry.type = WorkContractTypes[entry.type as unknown as number] as
-        | "Adenda"
-        | "Contrato de Funcionário";
+      entry.type = WorkContractTypes[entry.type as unknown as number];
 
-      entry.__searchName = entry.name
+      entry.location = Locations[entry.location as unknown as number];
+
+      entry.category = categories[entry.categoryId].name;
+
+      entry.__searchEmployeeName = entry.employeeName
         .normalize("NFKD")
         .replace(/[\u0300-\u036f]/g, "")
         .toLowerCase();
@@ -400,6 +412,17 @@ export async function getWorkContracts(): Promise<WorkContracts | null> {
         .normalize("NFKD")
         .replace(/[\u0300-\u036f]/g, "")
         .toLowerCase();
+
+      entry.__searchLocation = (entry.location as string)
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+
+      entry.__searchCategory = entry.category
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+
       if (entry.description) {
         entry.__searchDescription = entry.description
           .normalize("NFKD")
@@ -407,7 +430,7 @@ export async function getWorkContracts(): Promise<WorkContracts | null> {
           .toLowerCase();
       }
     }
-    return json;
+    return [json, categories];
   }
   return null;
 }

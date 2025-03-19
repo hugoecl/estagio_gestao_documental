@@ -114,10 +114,10 @@ pub struct WorkContractCache {
     #[serde(rename = "employeeName")]
     pub employee_name: String,
     pub nif: String,
-    #[serde(rename = "startDateString")]
+    #[serde(rename = "dateStartString")]
     #[serde(serialize_with = "serialize_date_dmy")]
     pub start_date: chrono::NaiveDate,
-    #[serde(rename = "endDateString")]
+    #[serde(rename = "dateEndString")]
     #[serde(serialize_with = "serialize_optional_date_dmy")]
     pub end_date: Option<chrono::NaiveDate>,
     #[serde(rename = "type")]

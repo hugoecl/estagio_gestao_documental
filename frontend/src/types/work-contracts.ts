@@ -1,3 +1,5 @@
+import type { Locations } from "@lib/types/locations";
+
 export interface WorkContractCategory {
   name: string;
   description: string;
@@ -21,11 +23,13 @@ export interface WorkContractFiles {
   uploadedAt: string;
 }
 export interface WorkContract {
-  name: string;
+  employeeName: string;
   nif: string;
   dateStart: Date;
   dateEnd?: Date;
   type: (typeof WorkContractTypes)[number];
+  location: (typeof Locations)[number];
+  category: string;
   categoryId: number;
   description?: string;
   createdAt: string;
@@ -37,9 +41,12 @@ export interface WorkContract {
   dateEndString?: string;
 
   typeValue: number;
+  locationValue: number;
 
-  __searchName: string;
+  __searchEmployeeName: string;
   __searchType: string;
+  __searchLocation: string;
+  __searchCategory: string;
   __searchDescription?: string;
 }
 

@@ -9,10 +9,12 @@
   let loading = $state(true);
   let contracts = $state({});
   let modal: HTMLDialogElement;
+  // TODO: Make columns responsive
   const columns: TableColumn[] = [
     { header: "ID", field: "ID" },
     { header: "Fornecedor", field: "supplier" },
     { header: "Serviço", field: "service" },
+    { header: "Local", field: "location" },
     { header: "Número de Contrato", field: "contractNumber", responsive: "" },
     { header: "Data", field: "dateString", dateValueField: "date" },
     {
