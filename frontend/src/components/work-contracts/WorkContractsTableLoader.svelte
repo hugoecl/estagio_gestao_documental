@@ -15,8 +15,9 @@
     { header: "ID", field: "ID" },
     { header: "Funcionário", field: "employeeName" },
     { header: "NIF", field: "nif" },
-    { header: "Categoria", field: "category" },
     { header: "Local", field: "location" },
+    { header: "Categoria", field: "category" },
+    { header: "Descrição", field: "description" },
     {
       header: "Data Início",
       field: "dateStartString",
@@ -109,6 +110,7 @@
     "__searchType",
     "__searchLocation",
     "__searchCategory",
+    "__searchDescription",
     "nif",
     "dateStartString",
     "dateEndString",

@@ -338,6 +338,15 @@
         </fieldset>
       </div>
 
+      <fieldset class="fieldset col-span-1 md:col-span-2">
+        <legend class="fieldset-legend">Descrição (opcional)</legend>
+        <textarea
+          class="textarea textarea-bordered w-full min-h-[80px]"
+          placeholder="Informação adicional sobre este contrato..."
+          bind:value={workContract.description}
+        ></textarea>
+      </fieldset>
+
       <div class="divider">Ficheiros</div>
 
       {#if existingFiles !== null}
