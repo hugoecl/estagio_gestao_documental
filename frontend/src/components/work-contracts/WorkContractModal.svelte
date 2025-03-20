@@ -119,23 +119,23 @@
     }
     // Scenario 4: Nothing has changed
     else {
-      closeModal();
       showAlert(
         "Nenhuma alteração detetada",
         AlertType.INFO,
         AlertPosition.TOP
       );
+      closeModal();
       isSubmitting = false;
       return;
     }
 
     if (success) {
-      closeModal();
       showAlert(
         "Contrato de trabalho atualizado com sucesso",
         AlertType.SUCCESS,
         AlertPosition.TOP
       );
+      closeModal();
       onWorkContractUpdated({
         ...workContract,
         files,
