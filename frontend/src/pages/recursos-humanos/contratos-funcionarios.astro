@@ -141,6 +141,7 @@ import WorkContractsTableLoader from "@components/work-contracts/WorkContractsTa
   import { elementsToToggle } from "@stores/loading-stores";
   import { categories, newWorkContract } from "@stores/work-contract-stores";
   import { DMYToDate } from "@utils/date-utils";
+  import { validateNIF } from "@utils/nif";
   import { toSearchString } from "@utils/search-utils";
 
   document.addEventListener("astro:page-load", async () => {
@@ -194,10 +195,45 @@ import WorkContractsTableLoader from "@components/work-contracts/WorkContractsTa
       categoryLoading.classList.toggle("hidden");
     }
 
+    const nifInput = document.querySelector(
+      "input[name='nif']"
+    ) as HTMLInputElement;
+    const nifFieldset = nifInput.parentElement as HTMLFieldSetElement;
+
+    const errorMessage = document.createElement("span");
+    errorMessage.className = "text-error text-sm hidden";
+    errorMessage.textContent = "NIF inválido. Verifique o número inserido.";
+    nifFieldset?.appendChild(errorMessage);
+
+    nifInput?.addEventListener("input", validateNifField);
+    nifInput?.addEventListener("blur", validateNifField);
+
+    function validateNifField() {
+      const isValid = validateNIF(nifInput.value);
+
+      if (isValid || nifInput.value.length === 0) {
+        nifInput.classList.remove("input-error");
+        errorMessage.classList.add("hidden");
+        return true;
+      } else {
+        nifInput.classList.add("input-error");
+        errorMessage.classList.remove("hidden");
+        return false;
+      }
+    }
+
     document
       .getElementById("work-contract-form")!
       .addEventListener("submit", async (e) => {
         e.preventDefault();
+        if (!validateNifField()) {
+          showAlert(
+            "O NIF introduzido não é válido.",
+            AlertType.ERROR,
+            AlertPosition.TOP
+          );
+          return;
+        }
 
         if (!workCategories) {
           showAlert(

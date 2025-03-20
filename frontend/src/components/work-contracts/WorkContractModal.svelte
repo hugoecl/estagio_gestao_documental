@@ -6,6 +6,7 @@
   } from "@lib/types/work-contracts";
   import { categories } from "@stores/work-contract-stores";
   import API_BASE_URL from "@api/base-url";
+  import { validateNIF } from "@utils/nif";
 
   const {
     workContractId,
@@ -38,6 +39,18 @@
   let fileToDeleteId = $state<string | null>(null);
   let isDeleteSubmitting = $state(false);
 
+  let nifIsValid = $state(true);
+
+  function validateNifField(nif: string) {
+    if (!nif || nif.trim() === "") {
+      nifIsValid = false;
+      return;
+    }
+
+    nifIsValid = validateNIF(nif);
+    return nifIsValid;
+  }
+
   const existingFiles = $derived(
     workContract.files
       ? Object.entries(workContract.files).map(([id, file]) => ({
@@ -55,6 +68,20 @@
 
   async function handleSubmit(e: SubmitEvent) {
     e.preventDefault();
+
+    if (!validateNifField(workContract.nif.toString())) {
+      const { AlertPosition, AlertType, showAlert } = await import(
+        "@components/alert/alert"
+      );
+
+      showAlert(
+        "O NIF inserido é inválido. Verifique o número inserido.",
+        AlertType.ERROR,
+        AlertPosition.TOP
+      );
+      return;
+    }
+
     isSubmitting = true;
 
     const [
@@ -293,8 +320,14 @@
             class="input input-bordered w-full"
             placeholder="Número de Identificação Fiscal"
             bind:value={workContract.nif}
+            oninput={() => validateNifField(workContract.nif.toString())}
             required
           />
+          {#if !nifIsValid}
+            <span class="text-error text-sm"
+              >NIF inválido. Verifique o número inserido.</span
+            >
+          {/if}
         </fieldset>
 
         <fieldset class="fieldset">
