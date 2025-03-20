@@ -19,6 +19,8 @@
     "/qualidade-sgq/nao-conformidade/": "triangle-exclamation",
     "/qualidade-sgq/fornecedores/fornecedores-qualificados/": "users",
     "/qualidade-sgq/fornecedores/desempenho-do-fornecedor/": "chart-line",
+    "/recursos-humanos/categorias-profissionais/": "file-contract",
+    "/ers/protecao-radiologica/": "shield",
   };
 
   onMount(async () => {
