@@ -374,7 +374,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"name\": \"Secretário\",\n    \"description\": \"Teste descrição\"\n}",
+									"raw": "{\n    \"name\": \"Desenvolvedor de Software\",\n    \"description\": \"Junior\"\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -528,23 +528,24 @@
 							"formdata": [
 								{
 									"key": "employee_name",
-									"value": "Lucas de Linhares",
+									"value": "Joao Sousa",
 									"type": "text"
 								},
 								{
 									"key": "nif",
-									"value": "999999990",
+									"value": "255255255",
 									"type": "text"
 								},
 								{
 									"key": "start_date",
-									"value": "29/09/2005",
+									"value": "16/04/2017",
 									"type": "text"
 								},
 								{
 									"key": "end_date",
 									"value": "12/12/2012",
-									"type": "text"
+									"type": "text",
+									"disabled": true
 								},
 								{
 									"key": "type_of_contract",
@@ -553,17 +554,17 @@
 								},
 								{
 									"key": "location",
-									"value": "3",
-									"type": "text"
-								},
-								{
-									"key": "category_id",
 									"value": "1",
 									"type": "text"
 								},
 								{
+									"key": "category_id",
+									"value": "5",
+									"type": "text"
+								},
+								{
 									"key": "description",
-									"value": "ol",
+									"value": "teste",
 									"type": "text"
 								},
 								{
@@ -629,6 +630,29 @@
 							"path": [
 								"work-contracts",
 								"1"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "ers",
+			"item": [
+				{
+					"name": "ragiological_protection",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{host}}/ers/radiological-protection",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"ers",
+								"radiological-protection"
 							]
 						}
 					},
