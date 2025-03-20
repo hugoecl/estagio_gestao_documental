@@ -53,6 +53,7 @@ import "@styles/form.css";
   import { elementsToToggle } from "@stores/loading-stores";
   import type { WorkContractCategory } from "@lib/types/work-contracts";
   import { newCategory } from "@stores/work-contract-stores";
+  import { toSearchString } from "@utils/search-utils";
 
   document.addEventListener("astro:page-load", () => {
     if (
@@ -93,10 +94,8 @@ import "@styles/form.css";
           createdAt: nowString,
           updatedAt: nowString,
 
-          __searchName: name.normalize("NFKD").replace(/[\u0300-\u036f]/g, ""),
-          __searchDescription: description
-            .normalize("NFKD")
-            .replace(/[\u0300-\u036f]/g, ""),
+          __searchName: toSearchString(name),
+          __searchDescription: toSearchString(description),
           __createdAtDate: now,
           __updatedAtDate: now,
         };

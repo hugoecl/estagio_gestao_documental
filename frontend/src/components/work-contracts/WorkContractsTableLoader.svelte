@@ -4,6 +4,7 @@
   import type { WorkContract } from "@lib/types/work-contracts";
   import { onMount } from "svelte";
   import WorkContractModal from "./WorkContractModal.svelte";
+  import { newWorkContract } from "@stores/work-contract-stores";
 
   let loading = $state(true);
   let workContracts = $state({});
@@ -82,6 +83,18 @@
 
       loading = false;
     })();
+
+    const unsubscribe = newWorkContract.subscribe((workContract) => {
+      if (workContract) {
+        // @ts-ignore javascript can take string as indexes
+        workContracts[workContract.id] = workContract.workContract;
+        newWorkContract.set(null);
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
   });
 </script>
 

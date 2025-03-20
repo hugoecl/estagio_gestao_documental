@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { TableColumn } from "@lib/types/table";
+  import { toSearchString } from "@utils/search-utils";
 
   const {
     data,
@@ -71,10 +72,7 @@
     let query = searchQuery.trim();
     if (!query) return entries;
 
-    query = query
-      .normalize("NFKD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toLowerCase();
+    query = toSearchString(query);
     const result = [];
 
     for (let i = 0, len = entries.length; i < len; i++) {
@@ -87,7 +85,7 @@
       } else {
         for (const field of searchFields) {
           const value = row[field];
-          if (value.includes(query)) {
+          if (value && value.includes(query)) {
             matches = true;
             break;
           }

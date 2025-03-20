@@ -31,6 +31,7 @@ export interface WorkContract {
   location: (typeof Locations)[number];
   category: string;
   categoryId: number;
+  // TODO: Add description to the form
   description?: string;
   createdAt: string;
   updatedAt: string;

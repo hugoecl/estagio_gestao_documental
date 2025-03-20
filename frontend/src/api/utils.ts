@@ -18,6 +18,7 @@ import {
   type WorkContractCategory,
   type WorkContracts,
 } from "@lib/types/work-contracts";
+import { toSearchString } from "@utils/search-utils";
 
 async function handleFetch(
   url: string | URL,
@@ -150,30 +151,19 @@ export async function getContracts(): Promise<Contracts | null> {
       entry.dateStart = DMYToDate(entry.dateStartString);
       entry.dateEnd = DMYToDate(entry.dateEndString);
 
-      entry.__searchSupplier = entry.supplier
-        .normalize("NFKD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .toLowerCase();
-      entry.__searchLocation = (entry.location as string)
-        .normalize("NFKD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .toLowerCase();
-      entry.__searchService = (entry.service as string)
-        .normalize("NFKD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .toLowerCase();
-      entry.__searchType = (entry.type as string)
-        .normalize("NFKD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .toLowerCase();
-      entry.__searchStatus = (entry.status as string)
-        .normalize("NFKD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .toLowerCase();
-      entry.__searchContractNumber = entry.contractNumber
-        .toString()
-        .normalize("NFKD")
-        .replace(/[\u0300-\u036f]/g, "");
+      entry.__searchSupplier = toSearchString(entry.supplier);
+
+      entry.__searchLocation = toSearchString(entry.location as string);
+
+      entry.__searchService = toSearchString(entry.service as string);
+
+      entry.__searchType = toSearchString(entry.type as string);
+
+      entry.__searchStatus = toSearchString(entry.status as string);
+
+      entry.__searchContractNumber = toSearchString(
+        entry.contractNumber.toString()
+      );
 
       const files = entry.files;
       for (const key in files) {
@@ -296,14 +286,8 @@ export async function getWorkContractCategories(): Promise<WorkContractCategorie
     const entries = Object.values(json) as WorkContractCategory[];
     for (let i = 0, len = entries.length; i < len; i++) {
       const entry = entries[i];
-      entry.__searchName = entry.name
-        .normalize("NFKD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .toLowerCase();
-      entry.__searchDescription = entry.description
-        .normalize("NFKD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .toLowerCase();
+      entry.__searchName = toSearchString(entry.name);
+      entry.__searchDescription = toSearchString(entry.description);
 
       entry.__createdAtDate = DMYHMSToDate(entry.createdAt);
       entry.__updatedAtDate = DMYHMSToDate(entry.updatedAt);
@@ -403,31 +387,16 @@ export async function getWorkContracts(): Promise<
 
       entry.category = categories[entry.categoryId].name;
 
-      entry.__searchEmployeeName = entry.employeeName
-        .normalize("NFKD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .toLowerCase();
+      entry.__searchEmployeeName = toSearchString(entry.employeeName);
 
-      entry.__searchType = (entry.type as string)
-        .normalize("NFKD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .toLowerCase();
+      entry.__searchType = toSearchString(entry.type as string);
 
-      entry.__searchLocation = (entry.location as string)
-        .normalize("NFKD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .toLowerCase();
+      entry.__searchLocation = toSearchString(entry.location as string);
 
-      entry.__searchCategory = entry.category
-        .normalize("NFKD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .toLowerCase();
+      entry.__searchCategory = toSearchString(entry.category);
 
       if (entry.description) {
-        entry.__searchDescription = entry.description
-          .normalize("NFKD")
-          .replace(/[\u0300-\u036f]/g, "")
-          .toLowerCase();
+        entry.__searchDescription = toSearchString(entry.description);
       }
 
       const files = entry.files;

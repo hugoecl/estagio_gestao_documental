@@ -8,18 +8,20 @@
     getSecondDateFromCallyRange,
     getSecondDateFromRangeToYMD,
   } from "src/utils/date-utils";
-  import { onMount } from "svelte";
+  import { onMount, tick } from "svelte";
 
   let {
     range,
     formName,
     value = $bindable(),
     positionEnd,
+    required = true,
   }: {
     range: boolean;
     formName?: string;
     value?: string;
     positionEnd?: boolean;
+    required?: boolean;
   } = $props();
 
   let dropdownPosition = $state("dropdown-center");
@@ -61,10 +63,14 @@
     }
   });
 
+  interface ExtendedHTMLDivElement extends HTMLDivElement {
+    _scrollHandler?: (event: Event) => void;
+  }
+
   let cally: HTMLDivElement;
   let dateValue: HTMLInputElement;
   let detailsDropdown: HTMLDetailsElement;
-  let dropdownContent: HTMLDivElement;
+  let dropdownContent: ExtendedHTMLDivElement;
 
   const dates: number[] = [];
   const now: Date = new Date();
@@ -82,9 +88,12 @@
       if (
         detailsDropdown.open &&
         !detailsDropdown.contains(e.target as Node) &&
-        !cally.contains(e.target as Node)
+        !cally.contains(e.target as Node) &&
+        // check if click is inside dropdown portal content
+        !dropdownContent.contains(e.target as Node)
       ) {
         detailsDropdown.open = false;
+        handleDropdownToggle(false);
       }
     }
 
@@ -142,6 +151,7 @@
 
         // @ts-ignore
         detailsDropdown.open = false;
+        handleDropdownToggle(false);
         cally.style.opacity = "1";
       }
     });
@@ -153,6 +163,71 @@
       }
     };
   });
+
+  let dropdownContainer: HTMLElement;
+  let originalParent: HTMLElement | null;
+
+  async function handleDropdownToggle(open: boolean) {
+    await tick();
+
+    if (open) {
+      // Save original parent
+      originalParent = dropdownContent.parentElement;
+
+      // Create container if it doesn't exist
+      if (!dropdownContainer) {
+        dropdownContainer = document.createElement("div");
+        dropdownContainer.className = "datepicker-portal";
+        document.body.appendChild(dropdownContainer);
+      }
+
+      // Position function that can be reused
+      const positionDropdown = () => {
+        const inputRect = cally.getBoundingClientRect();
+        const dropdownRect = dropdownContent.getBoundingClientRect();
+
+        // Center the dropdown beneath the input
+        const left =
+          inputRect.left + inputRect.width / 2 - dropdownRect.width / 2;
+
+        // Apply position
+        dropdownContent.style.position = "fixed";
+        dropdownContent.style.top = `${inputRect.bottom + 5}px`; // 5px gap
+        dropdownContent.style.left = `${Math.max(5, left)}px`; // Prevent overflow left
+        dropdownContent.style.opacity = "1";
+      };
+
+      // Move to container and position
+      dropdownContainer.appendChild(dropdownContent);
+      positionDropdown();
+
+      // Add scroll listener to update position
+      const scrollHandler = () => positionDropdown();
+      window.addEventListener("scroll", scrollHandler, true);
+
+      // Store handler reference to remove later
+      dropdownContent._scrollHandler = scrollHandler;
+    } else if (
+      originalParent &&
+      dropdownContent.parentElement !== originalParent
+    ) {
+      // Remove scroll handler
+      if (dropdownContent._scrollHandler) {
+        window.removeEventListener(
+          "scroll",
+          dropdownContent._scrollHandler,
+          true
+        );
+        delete dropdownContent._scrollHandler;
+      }
+
+      // Restore to original position
+      originalParent.appendChild(dropdownContent);
+      dropdownContent.style.position = "absolute";
+      dropdownContent.style.top = "";
+      dropdownContent.style.left = "";
+    }
+  }
 </script>
 
 {#snippet yearSelect()}
@@ -197,6 +272,7 @@
     onclick={() => {
       detailsDropdown.open = !detailsDropdown.open;
       dropdownContent.style.opacity = detailsDropdown.open ? "1" : "0";
+      handleDropdownToggle(detailsDropdown.open);
     }}
   >
     <div
@@ -214,7 +290,7 @@
         name={formName}
         onkeydown={(e) => e.preventDefault()}
         oninput={(e) => e.preventDefault()}
-        required
+        {required}
       />
     </div>
   </summary>

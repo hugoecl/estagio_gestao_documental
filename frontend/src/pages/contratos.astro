@@ -147,6 +147,7 @@ import "@styles/form.css";
     getFirstDateFromRange,
     getSecondDateFromRange,
   } from "@utils/date-utils";
+  import { toSearchString } from "@utils/search-utils";
 
   document.addEventListener("astro:page-load", () => {
     if (window.location.pathname !== "/contratos/") return;
@@ -211,9 +212,6 @@ import "@styles/form.css";
 
       const [ok, contractId, fileId] = await uploadContract(formData);
 
-      loadingBars.classList.toggle("hidden");
-      submitText.classList.toggle("hidden");
-
       if (ok) {
         setNewContract(formData, contractId, fileId);
 
@@ -230,6 +228,8 @@ import "@styles/form.css";
           AlertPosition.TOP
         );
       }
+      loadingBars.classList.toggle("hidden");
+      submitText.classList.toggle("hidden");
     });
 
     function setNewContract(
@@ -244,41 +244,26 @@ import "@styles/form.css";
       const [dateStartString, dateStart] = getFirstDateFromRange(dateRange);
       const [dateEndString, dateEnd] = getSecondDateFromRange(dateRange);
 
-      const nowISO = new Date().toISOString();
-      const createdAt = `${nowISO.substring(0, 10)}, ${nowISO.substring(11, 19)}`;
+      const createdAt = new Date().toLocaleString("pt-PT");
 
       const supplier = formData.get("supplier") as string;
-      const __searchSupplier = supplier
-        .normalize("NFKD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .toLowerCase();
+      const __searchSupplier = toSearchString(supplier);
 
       const locationValue = parseInt(locationSelect.value, 10);
       const location = Locations[locationValue];
-      const __searchLocation = location
-        .normalize("NFKD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .toLowerCase();
+      const __searchLocation = toSearchString(location);
 
       const serviceValue = parseInt(serviceSelect.value, 10);
       const service = ContractServices[serviceValue];
-      const __searchService = service
-        .normalize("NFKD")
-        .replace(/[\u0300-\u036f]/g, "");
+      const __searchService = toSearchString(service);
 
       const statusValue = parseInt(formData.get("status")! as string, 10);
       const status = ContractStatus[statusValue];
-      const __searchStatus = status
-        .normalize("NFKD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .toLowerCase();
+      const __searchStatus = toSearchString(status);
 
       const typeValue = parseInt(formData.get("type")! as string, 10);
       const type = ContractTypes[typeValue];
-      const __searchType = type
-        .normalize("NFKD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .toLowerCase();
+      const __searchType = toSearchString(type);
 
       const contractNumber = formData.get("contract-number") as string;
 

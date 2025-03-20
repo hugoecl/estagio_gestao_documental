@@ -254,7 +254,7 @@
     newFiles = [...newFiles, ...Array.from(input.files)];
   }
 
-  function removeNEwFile(index: number) {
+  function removeNewFile(index: number) {
     newFiles.splice(index, 1);
   }
 </script>
@@ -304,8 +304,11 @@
 
         <fieldset class="fieldset">
           <legend class="fieldset-legend">Data de Fim</legend>
-          <!-- TODO: Check if this really is optional -->
-          <DatePicker range={false} bind:value={workContract.dateStartString} />
+          <DatePicker
+            range={false}
+            bind:value={workContract.dateEndString}
+            required={false}
+          />
         </fieldset>
 
         <fieldset class="fieldset">
@@ -413,7 +416,7 @@
                 <button
                   type="button"
                   class="btn btn-xs btn-error"
-                  onclick={() => removeNEwFile(i)}
+                  onclick={() => removeNewFile(i)}
                 >
                   ×
                 </button>
