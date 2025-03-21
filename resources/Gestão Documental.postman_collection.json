@@ -644,7 +644,7 @@
 					"name": "radiological_protection",
 					"item": [
 						{
-							"name": "ragiological_protection",
+							"name": "get_licenses",
 							"request": {
 								"method": "GET",
 								"header": [],
@@ -663,7 +663,7 @@
 							"response": []
 						},
 						{
-							"name": "upload_radiological_protection_license",
+							"name": "upload_license",
 							"request": {
 								"method": "POST",
 								"header": [],
@@ -698,7 +698,8 @@
 										{
 											"key": "description",
 											"value": "Teste descrição",
-											"type": "text"
+											"type": "text",
+											"disabled": true
 										},
 										{
 											"key": "files",
@@ -719,6 +720,35 @@
 										"ers",
 										"radiological-protection",
 										"licenses"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "update_license",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"scope\": \"ola\",\n    \"license_number\": 555555555,\n    \"start_date\": \"05/05/2005\",\n    \"end_date\": \"06/06/2006\",\n    \"location\": 1,\n    \"description\": \"toma la\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{host}}/ers/radiological-protection/licenses/2",
+									"host": [
+										"{{host}}"
+									],
+									"path": [
+										"ers",
+										"radiological-protection",
+										"licenses",
+										"2"
 									]
 								}
 							},

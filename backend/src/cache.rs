@@ -135,7 +135,7 @@ pub struct WorkContractCache {
     pub files: HashMap<u32, WorkContractFileCache, RandomState>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct RadiologicalProtectionLicenseFileCache {
     pub path: String,
     #[serde(rename = "uploadedAt")]

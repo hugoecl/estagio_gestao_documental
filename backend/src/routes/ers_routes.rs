@@ -9,6 +9,9 @@ pub fn init(cfg: &mut web::ServiceConfig) {
         .route(
             "/radiological-protection/licenses",
             web::post().to(crate::handlers::radiological_protection_handlers::upload_license),
+        ).route(
+            "/radiological-protection/licenses/{id}",
+            web::put().to(crate::handlers::radiological_protection_handlers::update_license),
         )
     );
 }

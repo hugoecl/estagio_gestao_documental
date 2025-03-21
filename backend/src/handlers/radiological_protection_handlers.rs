@@ -4,12 +4,17 @@ use actix_web::{HttpResponse, Responder, web};
 use ahash::RandomState;
 use chrono::NaiveDate;
 use papaya::HashMap;
+use serde::Deserialize;
 
 use crate::{
     State,
     cache::{RadiologicalProtectionLicenseCache, RadiologicalProtectionLicenseFileCache},
     models::location::Location,
-    utils::{json_utils::json_response, memory_file::MemoryFile, session_utils::validate_session},
+    utils::{
+        json_utils::{Json, json_response},
+        memory_file::MemoryFile,
+        session_utils::validate_session,
+    },
 };
 
 pub async fn get_radiological_protection_licenses(
@@ -146,6 +151,76 @@ pub async fn upload_license(
             files: files_cache,
         },
     );
+
+    HttpResponse::Ok().finish()
+}
+
+#[derive(Deserialize)]
+pub struct UpdateLicenseRequest {
+    scope: String,
+    license_number: u32,
+    start_date: String,
+    end_date: String,
+    location: i8,
+    description: Option<String>,
+}
+
+pub async fn update_license(
+    session: Session,
+    state: web::Data<State>,
+    data: web::Bytes,
+    license_id: web::Path<u32>,
+) -> impl Responder {
+    if let Err(response) = validate_session(&session) {
+        return response;
+    }
+
+    let license_id = license_id.into_inner();
+
+    let pinned_license_cache = state.cache.radiological_protection_licenses.pin();
+    let license = match pinned_license_cache.get(&license_id) {
+        Some(l) => l,
+        None => return HttpResponse::NotFound().finish(),
+    };
+
+    let Json(data): Json<UpdateLicenseRequest> = Json::from_bytes(data).unwrap();
+
+    let now = chrono::Utc::now();
+
+    let start_date = NaiveDate::parse_from_str(&data.start_date, "%d/%m/%Y").unwrap();
+    let end_date = NaiveDate::parse_from_str(&data.end_date, "%d/%m/%Y").unwrap();
+
+    let old_files = license.files.clone();
+
+    let license = RadiologicalProtectionLicenseCache {
+        scope: data.scope.clone(),
+        license_number: data.license_number,
+        start_date,
+        end_date,
+        location: Location::from(data.location),
+        description: data.description.clone(),
+        created_at: license.created_at,
+        updated_at: now,
+        files: old_files,
+    };
+
+    pinned_license_cache.insert(license_id, license);
+
+    drop(pinned_license_cache);
+
+    actix_web::rt::spawn(async move {
+        sqlx::query!(
+            "UPDATE radiological_protection_licenses SET scope = ?, license_number = ?, start_date = ?, end_date = ?, location = ?, description = ?, updated_at = ? WHERE id = ?",
+            data.scope,
+            data.license_number,
+            start_date,
+            end_date,
+            data.location,
+            data.description,
+            now,
+            license_id,
+        ).execute(&state.db.pool).await.unwrap();
+    });
 
     HttpResponse::Ok().finish()
 }
