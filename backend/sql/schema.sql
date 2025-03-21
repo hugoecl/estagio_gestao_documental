@@ -78,3 +78,25 @@ CREATE TABLE IF NOT EXISTS work_contract_files (
   PRIMARY KEY (id),
   FOREIGN KEY (contract_id) REFERENCES work_contracts (id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS radiological_protection_licenses (
+  id INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL,
+  license_number VARCHAR(100) NOT NULL,
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  scope VARCHAR(255) NOT NULL,
+  location TINYINT NOT NULL COMMENT '0: Viana do Castelo, 1: Braga, 2: Porto, 3: Vila Real',
+  description TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS radiological_protection_license_files (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  license_id INT UNSIGNED NOT NULL,
+  file_path VARCHAR(255) NOT NULL COMMENT 'Is relative to the backend folder includes the file name',
+  uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  FOREIGN KEY (license_id) REFERENCES radiological_protection_licenses (id) ON DELETE CASCADE
+);

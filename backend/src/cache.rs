@@ -135,9 +135,100 @@ pub struct WorkContractCache {
     pub files: HashMap<u32, WorkContractFileCache, RandomState>,
 }
 
+#[derive(Serialize)]
+pub struct RadiologicalProtectionLicenseFileCache {
+    pub path: String,
+    #[serde(rename = "uploadedAt")]
+    #[serde(serialize_with = "serialize_datetime_dmy")]
+    pub uploaded_at: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(Serialize)]
+pub struct RadiologicalProtectionLicenseCache {
+    #[serde(rename = "licenseNumber")]
+    pub license_number: String,
+    #[serde(rename = "dateStartString")]
+    #[serde(serialize_with = "serialize_date_dmy")]
+    pub start_date: chrono::NaiveDate,
+    #[serde(rename = "dateEndString")]
+    #[serde(serialize_with = "serialize_date_dmy")]
+    pub end_date: chrono::NaiveDate,
+    pub scope: String,
+    pub location: location::Location,
+    pub description: Option<String>,
+    #[serde(rename = "createdAt")]
+    #[serde(serialize_with = "serialize_datetime_dmy")]
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    #[serde(rename = "updatedAt")]
+    #[serde(serialize_with = "serialize_datetime_dmy")]
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+    pub files: HashMap<u32, RadiologicalProtectionLicenseFileCache, RandomState>,
+}
+
 #[inline(always)]
 fn i8_to_bool(i: i8) -> bool {
     i != 0
+}
+
+async fn get_radiological_protection_licenses_cache(
+    pool: &sqlx::Pool<sqlx::MySql>,
+) -> Result<HashMap<u32, RadiologicalProtectionLicenseCache, RandomState>, sqlx::Error> {
+    let licenses = sqlx::query!("SELECT * FROM radiological_protection_licenses")
+        .fetch_all(pool)
+        .await?;
+
+    let licenses_cache = HashMap::builder()
+        .hasher(RandomState::new())
+        .capacity(licenses.len())
+        .build();
+
+    let pinned_licenses_cache = licenses_cache.pin();
+
+    for license in licenses {
+        let files = sqlx::query!(
+            "SELECT * FROM radiological_protection_license_files WHERE license_id = ?",
+            license.id
+        )
+        .fetch_all(pool)
+        .await?;
+
+        let files_cache = HashMap::builder()
+            .hasher(RandomState::new())
+            .capacity(files.len())
+            .build();
+
+        let pinned_files_cache = files_cache.pin();
+
+        for file in files {
+            pinned_files_cache.insert(
+                file.id,
+                RadiologicalProtectionLicenseFileCache {
+                    path: file.file_path,
+                    uploaded_at: file.uploaded_at.unwrap(),
+                },
+            );
+        }
+
+        drop(pinned_files_cache);
+
+        pinned_licenses_cache.insert(
+            license.id,
+            RadiologicalProtectionLicenseCache {
+                license_number: license.license_number,
+                start_date: license.start_date,
+                end_date: license.end_date,
+                scope: license.scope,
+                location: location::Location::from(license.location),
+                description: license.description,
+                created_at: license.created_at.unwrap(),
+                updated_at: license.updated_at.unwrap(),
+                files: files_cache,
+            },
+        );
+    }
+
+    drop(pinned_licenses_cache);
+    Ok(licenses_cache)
 }
 
 async fn get_work_contract_categories_cache(
@@ -370,6 +461,8 @@ pub struct Cache {
     pub analytics: HashMap<AnalyticsKey, PageVisit, RandomState>,
     pub work_contracts: HashMap<u32, WorkContractCache, RandomState>,
     pub work_contract_categories: HashMap<u32, WorkContractCategoryCache, RandomState>,
+    pub radiological_protection_licenses:
+        HashMap<u32, RadiologicalProtectionLicenseCache, RandomState>,
 }
 
 impl Cache {
@@ -380,12 +473,14 @@ impl Cache {
             analytics_cache,
             work_contract_cache,
             work_contract_categories_cache,
+            radiological_protection_licenses_cache,
         ) = tokio::try_join!(
             get_users_cache(pool),
             get_contracts_cache(pool),
             get_analytics_cache(pool),
             get_work_contracts_cache(pool),
-            get_work_contract_categories_cache(pool)
+            get_work_contract_categories_cache(pool),
+            get_radiological_protection_licenses_cache(pool)
         )?;
 
         Ok(Cache {
@@ -394,6 +489,7 @@ impl Cache {
             analytics: analytics_cache,
             work_contracts: work_contract_cache,
             work_contract_categories: work_contract_categories_cache,
+            radiological_protection_licenses: radiological_protection_licenses_cache,
         })
     }
 }
