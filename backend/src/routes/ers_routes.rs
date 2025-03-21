@@ -18,6 +18,9 @@ pub fn init(cfg: &mut web::ServiceConfig) {
         ).route(
             "/radiological-protection/licenses/{id}/files",
             web::post().to(crate::handlers::radiological_protection_handlers::upload_license_files),
+        ).route(
+            "/radiological-protection/licenses/{id}/files/{file_id}",
+            web::delete().to(crate::handlers::radiological_protection_handlers::delete_license_file),
         )
     );
 }

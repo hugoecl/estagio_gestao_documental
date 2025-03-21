@@ -1,11 +1,10 @@
 use actix_multipart::form::{MultipartForm, text::Text};
 use actix_session::Session;
-use actix_web::{HttpResponse, Responder, error::HttpError, web};
+use actix_web::{HttpResponse, Responder, web};
 use ahash::RandomState;
 use chrono::NaiveDate;
 use papaya::HashMap;
 use serde::Deserialize;
-use sqlx::query_builder;
 
 use crate::{
     State,
@@ -332,6 +331,52 @@ pub async fn upload_license_files(
     }
 
     drop(pinned_license_files_cache);
+
+    HttpResponse::Ok().finish()
+}
+
+pub async fn delete_license_file(
+    session: Session,
+    state: web::Data<State>,
+    path: web::Path<(u32, u32)>,
+) -> impl Responder {
+    if let Err(response) = validate_session(&session) {
+        return response;
+    }
+
+    let (license_id, file_id) = path.into_inner();
+
+    let pinned_license_cache = state.cache.radiological_protection_licenses.pin();
+    let license = match pinned_license_cache.get(&license_id) {
+        Some(l) => l,
+        None => return HttpResponse::NotFound().finish(),
+    };
+
+    let pinned_license_files_cache = license.files.pin();
+
+    let file = match pinned_license_files_cache.remove(&file_id) {
+        Some(f) => f,
+        None => return HttpResponse::NotFound().finish(),
+    };
+
+    let file_path = file.path.clone();
+    println!("file_path: {}", file_path);
+    tokio::task::spawn_blocking(move || {
+        std::fs::remove_file(file_path).unwrap();
+    });
+
+    drop(pinned_license_files_cache);
+    drop(pinned_license_cache);
+
+    tokio::spawn(async move {
+        sqlx::query!(
+            "DELETE FROM radiological_protection_license_files WHERE id = ?",
+            file_id
+        )
+        .execute(&state.db.pool)
+        .await
+        .unwrap();
+    });
 
     HttpResponse::Ok().finish()
 }
