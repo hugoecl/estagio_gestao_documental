@@ -641,22 +641,90 @@
 			"name": "ers",
 			"item": [
 				{
-					"name": "ragiological_protection",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{host}}/ers/radiological-protection",
-							"host": [
-								"{{host}}"
-							],
-							"path": [
-								"ers",
-								"radiological-protection"
-							]
+					"name": "radiological_protection",
+					"item": [
+						{
+							"name": "ragiological_protection",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{host}}/ers/radiological-protection/licenses",
+									"host": [
+										"{{host}}"
+									],
+									"path": [
+										"ers",
+										"radiological-protection",
+										"licenses"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "upload_radiological_protection_license",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "formdata",
+									"formdata": [
+										{
+											"key": "scope",
+											"value": "Teste ambito",
+											"type": "text"
+										},
+										{
+											"key": "license_number",
+											"value": "123123123",
+											"type": "text"
+										},
+										{
+											"key": "start_date",
+											"value": "12/04/2015",
+											"type": "text"
+										},
+										{
+											"key": "end_date",
+											"value": "24/02/2018",
+											"type": "text"
+										},
+										{
+											"key": "location",
+											"value": "3",
+											"type": "text"
+										},
+										{
+											"key": "description",
+											"value": "Teste descrição",
+											"type": "text"
+										},
+										{
+											"key": "files",
+											"type": "file",
+											"src": [
+												"postman-cloud:///1f003d8e-e652-4270-acad-bacd15b23998",
+												"postman-cloud:///1f003d8e-e659-47a0-ac99-5a6c2e08e434"
+											]
+										}
+									]
+								},
+								"url": {
+									"raw": "{{host}}/ers/radiological-protection/licenses",
+									"host": [
+										"{{host}}"
+									],
+									"path": [
+										"ers",
+										"radiological-protection",
+										"licenses"
+									]
+								}
+							},
+							"response": []
 						}
-					},
-					"response": []
+					]
 				}
 			]
 		}

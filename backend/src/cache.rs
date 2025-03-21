@@ -146,7 +146,7 @@ pub struct RadiologicalProtectionLicenseFileCache {
 #[derive(Serialize)]
 pub struct RadiologicalProtectionLicenseCache {
     #[serde(rename = "licenseNumber")]
-    pub license_number: String,
+    pub license_number: u32,
     #[serde(rename = "dateStartString")]
     #[serde(serialize_with = "serialize_date_dmy")]
     pub start_date: chrono::NaiveDate,

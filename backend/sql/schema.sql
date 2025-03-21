@@ -81,7 +81,7 @@ CREATE TABLE IF NOT EXISTS work_contract_files (
 
 CREATE TABLE IF NOT EXISTS radiological_protection_licenses (
   id INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL,
-  license_number VARCHAR(100) NOT NULL,
+  license_number INT UNSIGNED NOT NULL,
   start_date DATE NOT NULL,
   end_date DATE NOT NULL,
   scope VARCHAR(255) NOT NULL,
