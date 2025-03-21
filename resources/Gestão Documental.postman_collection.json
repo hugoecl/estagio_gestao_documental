@@ -24,13 +24,13 @@
 							}
 						},
 						"url": {
-							"raw": "{{host}}/users/register",
+							"raw": "{{host}}/users/login",
 							"host": [
 								"{{host}}"
 							],
 							"path": [
 								"users",
-								"register"
+								"login"
 							]
 						}
 					},
@@ -749,6 +749,26 @@
 										"radiological-protection",
 										"licenses",
 										"2"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "delete_license",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{host}}/ers/radiological-protection/licenses/4",
+									"host": [
+										"{{host}}"
+									],
+									"path": [
+										"ers",
+										"radiological-protection",
+										"licenses",
+										"4"
 									]
 								}
 							},

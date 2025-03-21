@@ -224,3 +224,43 @@ pub async fn update_license(
 
     HttpResponse::Ok().finish()
 }
+
+pub async fn delete_license(
+    session: Session,
+    state: web::Data<State>,
+    license_id: web::Path<u32>,
+) -> impl Responder {
+    if let Err(response) = validate_session(&session) {
+        return response;
+    }
+
+    let license_id = license_id.into_inner();
+
+    let pinned_license_cache = state.cache.radiological_protection_licenses.pin();
+
+    if let None = pinned_license_cache.remove(&license_id) {
+        return HttpResponse::NotFound().finish();
+    }
+
+    tokio::task::spawn_blocking(move || {
+        std::fs::remove_dir_all(format!(
+            "media/radiological_protection/licenses/{}",
+            license_id
+        ))
+        .unwrap();
+    });
+
+    drop(pinned_license_cache);
+
+    tokio::spawn(async move {
+        sqlx::query!(
+            "DELETE FROM radiological_protection_licenses WHERE id = ?",
+            license_id
+        )
+        .execute(&state.db.pool)
+        .await
+        .unwrap();
+    });
+
+    HttpResponse::Ok().finish()
+}
