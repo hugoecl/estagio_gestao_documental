@@ -1,16 +1,18 @@
 use actix_multipart::form::{MultipartForm, text::Text};
 use actix_session::Session;
-use actix_web::{HttpResponse, Responder, web};
+use actix_web::{HttpResponse, Responder, error::HttpError, web};
 use ahash::RandomState;
 use chrono::NaiveDate;
 use papaya::HashMap;
 use serde::Deserialize;
+use sqlx::query_builder;
 
 use crate::{
     State,
     cache::{RadiologicalProtectionLicenseCache, RadiologicalProtectionLicenseFileCache},
     models::location::Location,
     utils::{
+        forms::FilesFormRequest,
         json_utils::{Json, json_response},
         memory_file::MemoryFile,
         session_utils::validate_session,
@@ -261,6 +263,75 @@ pub async fn delete_license(
         .await
         .unwrap();
     });
+
+    HttpResponse::Ok().finish()
+}
+
+pub async fn upload_license_files(
+    session: Session,
+    state: web::Data<State>,
+    license_id: web::Path<u32>,
+    MultipartForm(form): MultipartForm<FilesFormRequest>,
+) -> impl Responder {
+    if let Err(response) = validate_session(&session) {
+        return response;
+    }
+
+    let license_id = license_id.into_inner();
+    let files_length = form.files.len();
+
+    let pinned_license_cache = state.cache.radiological_protection_licenses.pin();
+    let license = match pinned_license_cache.get(&license_id) {
+        Some(l) => l,
+        None => return HttpResponse::NotFound().finish(),
+    };
+
+    let base_path = format!("media/radiological_protection/licenses/{}", license_id);
+    let now = chrono::Utc::now();
+
+    let mut file_paths = Vec::with_capacity(files_length);
+
+    for file in form.files.into_iter() {
+        let file_path = format!("{}/{}", base_path, file.file_name);
+        file_paths.push(file_path.clone());
+
+        tokio::task::spawn_blocking(move || {
+            std::fs::write(&file_path, &file.data).unwrap();
+        });
+    }
+
+    let mut query_builder = sqlx::QueryBuilder::new(
+        "INSERT INTO radiological_protection_license_files (license_id, file_path, uploaded_at)",
+    );
+
+    query_builder.push_values(file_paths.iter(), |mut b, file_path| {
+        b.push_bind(license_id).push_bind(file_path).push_bind(now);
+    });
+
+    let file_result = match query_builder.build().execute(&state.db.pool).await {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Database error during license file upload: {}", e);
+            return HttpResponse::InternalServerError().finish();
+        }
+    };
+    let first_file_id = file_result.last_insert_id() as u32;
+
+    let pinned_license_files_cache = license.files.pin();
+
+    for (i, file_path) in file_paths.into_iter().enumerate() {
+        let file_id = first_file_id + i as u32;
+
+        pinned_license_files_cache.insert(
+            file_id,
+            RadiologicalProtectionLicenseFileCache {
+                path: file_path,
+                uploaded_at: now,
+            },
+        );
+    }
+
+    drop(pinned_license_files_cache);
 
     HttpResponse::Ok().finish()
 }

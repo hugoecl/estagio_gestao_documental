@@ -644,6 +644,42 @@
 					"name": "radiological_protection",
 					"item": [
 						{
+							"name": "radiologial_protection_files",
+							"item": [
+								{
+									"name": "upload_files",
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "formdata",
+											"formdata": [
+												{
+													"key": "files",
+													"type": "file",
+													"src": "postman-cloud:///1f003d8e-e645-4f20-8676-e22ec1612536"
+												}
+											]
+										},
+										"url": {
+											"raw": "{{host}}/ers/radiological-protection/licenses/3/files",
+											"host": [
+												"{{host}}"
+											],
+											"path": [
+												"ers",
+												"radiological-protection",
+												"licenses",
+												"3",
+												"files"
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						},
+						{
 							"name": "get_licenses",
 							"request": {
 								"method": "GET",
