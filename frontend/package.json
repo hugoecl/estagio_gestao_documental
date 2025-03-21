@@ -11,15 +11,15 @@
   "dependencies": {
     "@astrojs/svelte": "^7.0.6",
     "@fortawesome/fontawesome-free": "^6.7.2",
-    "@tailwindcss/vite": "^4.0.14",
+    "@tailwindcss/vite": "^4.0.15",
     "astro": "^5.5.3",
     "cally": "^0.8.0",
     "svelte": "^5.23.2",
-    "tailwindcss": "^4.0.14",
+    "tailwindcss": "^4.0.15",
     "typescript": "^5.8.2"
   },
   "devDependencies": {
-    "daisyui": "^5.0.6",
+    "daisyui": "^5.0.9",
     "astro-compressor": "^1.0.0",
     "@playform/compress": "^0.1.7"
   }
