@@ -92,7 +92,8 @@ export const menuItems: MenuItem[] = [
       { title: "Geral", path: "geral/" },
       {
         title: "Proteção Radiológica",
-        path: "protecao-radiologica/",
+        parentPath: "protecao-radiologica",
+        children: [{ title: "Licenças", path: "licencas/" }],
       },
       {
         title: "Inspeção",
