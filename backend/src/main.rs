@@ -90,7 +90,7 @@ async fn main() -> std::io::Result<()> {
             protocol, args.address, args.port
         );
     } else {
-        log_level = "info";
+        log_level = "warn";
         println!(
             "Production Server running at {}://{}:{}",
             protocol, args.address, args.port
