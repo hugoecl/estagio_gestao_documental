@@ -4,9 +4,9 @@ import tailwindcss from "@tailwindcss/vite";
 
 import svelte from "@astrojs/svelte";
 
-import playformCompress from "@playform/compress";
-
 import compressor from "astro-compressor";
+
+import node from "@astrojs/node";
 
 // https://astro.build/config
 export default defineConfig({
@@ -14,10 +14,15 @@ export default defineConfig({
     plugins: [tailwindcss()],
   },
 
-  integrations: [svelte(), playformCompress(), compressor()],
+  integrations: [svelte(), compressor()],
 
   prefetch: {
     prefetchAll: true,
     defaultStrategy: "viewport",
   },
+  output: "server",
+  adapter: node({
+    mode: "standalone"
+  })
+
 });
