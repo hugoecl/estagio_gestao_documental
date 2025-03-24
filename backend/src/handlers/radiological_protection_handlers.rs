@@ -360,7 +360,6 @@ pub async fn delete_license_file(
     };
 
     let file_path = file.path.clone();
-    println!("file_path: {}", file_path);
     tokio::task::spawn_blocking(move || {
         std::fs::remove_file(file_path).unwrap();
     });
