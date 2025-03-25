@@ -1,4 +1,6 @@
 // TODO: See about running the schema on build.rs
+// TODO: Replace all prints with logs
+// TODO: Speed up development compilation speeds
 use std::{fs::File, io::BufReader};
 
 use actix_cors::Cors;
