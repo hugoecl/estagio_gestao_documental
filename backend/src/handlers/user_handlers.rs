@@ -1,5 +1,6 @@
 use actix_session::Session;
 use actix_web::{HttpResponse, Responder, web};
+use log::error;
 use serde::Deserialize;
 
 use crate::{
@@ -45,7 +46,7 @@ pub async fn register(state: web::Data<State>, request_data: web::Bytes) -> impl
     let result = match result {
         Ok(r) => r,
         Err(e) => {
-            eprintln!("Database error during user registration: {}", e);
+            error!("Database error during user registration: {}", e);
             return HttpResponse::InternalServerError().finish();
         }
     };

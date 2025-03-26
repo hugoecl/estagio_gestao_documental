@@ -3,6 +3,7 @@ use actix_session::Session;
 use actix_web::{HttpRequest, HttpResponse, Responder, web};
 use ahash::RandomState;
 use chrono::NaiveDate;
+use log::error;
 use papaya::HashMap;
 use serde::Deserialize;
 
@@ -69,7 +70,7 @@ pub async fn add_work_contract_category(
             HttpResponse::Created().body(id.to_string())
         }
         Err(e) => {
-            eprintln!(
+            error!(
                 "Database error during work contract category creation: {}",
                 e
             );
@@ -118,7 +119,7 @@ pub async fn update_work_contract_category(
             HttpResponse::NoContent().finish()
         }
         Err(e) => {
-            eprintln!("Database error during work contract category update: {}", e);
+            error!("Database error during work contract category update: {}", e);
             HttpResponse::InternalServerError().finish()
         }
     }
@@ -143,7 +144,7 @@ pub async fn delete_work_contract_category(
                     .execute(&state.db.pool)
                     .await;
                 if let Err(e) = result {
-                    eprintln!("Error deleting work contract category from database: {}", e);
+                    error!("Error deleting work contract category from database: {}", e);
                 }
             });
 
@@ -295,7 +296,7 @@ pub async fn upload_work_contract(
             HttpResponse::Created().body(format!("{},{}", new_contract_id, first_file_id))
         }
         Err(e) => {
-            eprintln!("Database error during work contract creation: {}", e);
+            error!("Database error during work contract creation: {}", e);
             HttpResponse::InternalServerError().finish()
         }
     }
@@ -392,7 +393,7 @@ pub async fn update_work_contract(
         .await;
 
         if let Err(e) = result {
-            eprintln!("Error updating work contract in database: {}", e);
+            error!("Error updating work contract in database: {}", e);
         }
     });
 
@@ -417,7 +418,7 @@ pub async fn delete_work_contract(
                     .execute(&state.db.pool)
                     .await;
                 if let Err(e) = result {
-                    eprintln!("Error deleting work contract from database: {}", e);
+                    error!("Error deleting work contract from database: {}", e);
                 }
             });
             HttpResponse::Ok().finish()
@@ -528,7 +529,7 @@ pub async fn delete_work_contract_file(
             .await;
 
         if let Err(e) = result {
-            eprintln!("Error deleting work contract file from database: {}", e);
+            error!("Error deleting work contract file from database: {}", e);
         }
     });
 

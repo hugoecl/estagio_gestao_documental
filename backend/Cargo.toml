@@ -23,6 +23,7 @@ chrono = { version = "0.4", default-features = false, features = [
 env_logger = { version = "0.11" }
 futures-core = "0.3"
 futures-util = "0.3"
+log = "0.4"
 mimalloc = "0.1"
 papaya = { version = "0.2", features = ["serde"] }
 rustls = { version = "0.23", optional = true }

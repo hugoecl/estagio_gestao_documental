@@ -556,6 +556,7 @@ dependencies = [
  "env_logger",
  "futures-core",
  "futures-util",
+ "log",
  "mimalloc",
  "papaya",
  "rustls",

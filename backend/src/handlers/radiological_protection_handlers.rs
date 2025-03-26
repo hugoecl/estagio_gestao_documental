@@ -3,6 +3,7 @@ use actix_session::Session;
 use actix_web::{HttpResponse, Responder, web};
 use ahash::RandomState;
 use chrono::NaiveDate;
+use log::error;
 use papaya::HashMap;
 use serde::Deserialize;
 
@@ -72,7 +73,7 @@ pub async fn upload_license(
     ).execute(&state.db.pool).await {
         Ok(r) => r,
         Err(e) => {
-            eprintln!("Database error during license upload: {}", e);
+            error!("Database error during license upload: {}", e);
             return HttpResponse::InternalServerError().finish();
         }
     };
@@ -117,7 +118,7 @@ pub async fn upload_license(
     let file_result = match query_builder.build().execute(&state.db.pool).await {
         Ok(r) => r,
         Err(e) => {
-            eprintln!("Database error during license file upload: {}", e);
+            error!("Database error during license file upload: {}", e);
             return HttpResponse::InternalServerError().finish();
         }
     };
@@ -310,7 +311,7 @@ pub async fn upload_license_files(
     let file_result = match query_builder.build().execute(&state.db.pool).await {
         Ok(r) => r,
         Err(e) => {
-            eprintln!("Database error during license file upload: {}", e);
+            error!("Database error during license file upload: {}", e);
             return HttpResponse::InternalServerError().finish();
         }
     };
