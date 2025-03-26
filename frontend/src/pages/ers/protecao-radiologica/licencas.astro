@@ -1,5 +1,95 @@
 ---
 import Layout from "@layouts/Layout.astro";
+import Collapse from "@components/common/Collapse.svelte";
+import SearchBar from "@components/contracts/SearchBar.astro";
+import DatePicker from "@components/common/DatePicker.svelte";
+import { Locations } from "@lib/types/locations";
+
+import "@styles/form.css";
 ---
 
-<Layout title="Proteção Radiológica"> ola </Layout>
+<Layout title="Proteção Radiológica - Licenças">
+  <div class="flex items-center justify-between mb-7 gap-4">
+    <div
+      class="flex max-md:flex-col bg-base-100 gap-4 p-2 rounded-md shadow-sm border border-zinc-300"
+    >
+      <label class="select min-w-[230px] max-sm:min-w-auto clear">
+        <span class="label">Local</span>
+        <select required form="contract-form" name="location">
+          <option disabled selected hidden value="">Local</option>
+          {Locations.map((l, i) => <option value={i}>{l}</option>)}
+        </select>
+      </label>
+    </div>
+    <SearchBar />
+  </div>
+
+  <Collapse client:load>
+    <span id="collapse-title" slot="title">Upload</span>
+    <form
+      slot="content"
+      id="license-form"
+      class="grid grid-cols-1 sm:grid-cols-2 gap-4 p-2 rounded-sm shadow-sm"
+    >
+      <fieldset class="fieldset">
+        <legend class="fieldset-legend">Âmbito:</legend>
+        <input
+          required
+          type="text"
+          class="input"
+          placeholder="Âmbito"
+          name="scope"
+        />
+      </fieldset>
+
+      <fieldset class="fieldset">
+        <legend class="fieldset-legend">Número da Licença:</legend>
+        <input
+          required
+          type="number"
+          min="0"
+          class="input"
+          placeholder="Número da Licença"
+          name="license_number"
+        />
+      </fieldset>
+
+      <fieldset class="fieldset">
+        <legend class="fieldset-legend">Data Início - Fim:</legend>
+        <DatePicker client:load range={true} formName="date-range" />
+      </fieldset>
+
+      <fieldset class="fieldset">
+        <legend class="fieldset-legend">Ficheiros:</legend>
+        <input
+          type="file"
+          class="file-input"
+          id="files-input"
+          accept="image/*,.doc,.docx,.xls,.xlsx,.pdf"
+          required
+          multiple
+        />
+      </fieldset>
+
+      <fieldset class="fieldset sm:col-span-2">
+        <legend class="fieldset-legend">Descrição (opcional):</legend>
+        <textarea
+          class="textarea w-full min-h-[80px]"
+          placeholder="Informação adicional sobre este contrato..."
+          name="description"></textarea>
+      </fieldset>
+
+      <div class="flex justify-between sm:col-span-2">
+        <button type="reset" class="btn btn-error">Limpar</button>
+        <button type="submit" class="btn btn-primary">
+          <span class="hidden loading loading-bars loading-md"></span>
+          <span id="submit-text">Enviar</span>
+        </button>
+      </div>
+    </form>
+  </Collapse>
+  <Collapse client:load>
+    <span slot="title">Lista de Licenças</span>
+    <div slot="content">ola</div>
+  </Collapse>
+</Layout>
