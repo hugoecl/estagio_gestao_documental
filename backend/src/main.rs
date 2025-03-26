@@ -1,5 +1,4 @@
 // TODO: See about running the schema on build.rs
-// TODO: Replace all prints with logs
 
 #[cfg(feature = "https")]
 use std::{fs::File, io::BufReader};
