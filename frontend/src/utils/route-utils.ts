@@ -141,3 +141,5 @@ export function extractPathsAndTitles(
 
   return result;
 }
+
+export const pathNames = extractPathsAndTitles(menuItems);

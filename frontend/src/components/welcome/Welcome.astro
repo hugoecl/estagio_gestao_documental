@@ -1,6 +1,6 @@
 ---
 import FrequentPages from "@components/welcome/FrequentPages.svelte";
-import { extractPathsAndTitles, menuItems } from "@utils/route-utils";
+import { pathNames } from "@utils/route-utils";
 ---
 
 <div class="container mx-auto p-4">
@@ -9,9 +9,6 @@ import { extractPathsAndTitles, menuItems } from "@utils/route-utils";
   </h1>
 
   <div class="grid md:grid-cols-2 gap-4">
-    <FrequentPages
-      client:load
-      menuPageNamesProps={extractPathsAndTitles(menuItems)}
-    />
+    <FrequentPages client:load menuPageNamesProps={pathNames} />
   </div>
 </div>

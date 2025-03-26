@@ -1,10 +1,13 @@
-import { handleFetch } from "@api/fetch-handler";
 import API_BASE_URL from "@api/base-url";
 
-export async function getAnalytics(): Promise<PageAnalytics> {
-  const response = await handleFetch(`${API_BASE_URL}/users/analytics`, {
+export async function getAnalytics(cookie?: any): Promise<PageAnalytics> {
+  const response = await fetch(`${API_BASE_URL}/users/analytics`, {
     method: "GET",
     credentials: "include",
+    // @ts-ignore
+    headers: {
+      Cookie: cookie,
+    },
   });
 
   if (response.ok) {

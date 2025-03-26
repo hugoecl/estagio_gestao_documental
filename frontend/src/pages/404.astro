@@ -1,0 +1,78 @@
+---
+import { getAnalytics } from "@api/analytics-api";
+import Layout from "@layouts/Layout.astro";
+import { getIcon, getName } from "@utils/frequent-page-utils";
+import { extractPathsAndTitles, menuItems } from "@utils/route-utils";
+
+let frequentPages: PageAnalytics = [];
+const data = await getAnalytics(Astro.request.headers.get("cookie"));
+frequentPages = data
+  .sort((a, b) => b[1] - a[1])
+  .slice(0, 5)
+  .filter(([path]) => path !== "/");
+const pathNames = extractPathsAndTitles(menuItems);
+---
+
+<Layout title="Página Não Encontrada | Gestão Documental">
+  <div class="flex">
+    <div class="m-auto p-4 w-full">
+      <div class="card w-full max-w-4xl bg-base-100 shadow-xl mx-auto">
+        <div class="card-body text-center">
+          <div class="relative mb-8">
+            <h1 class="text-9xl font-bold text-primary opacity-80">404</h1>
+          </div>
+
+          <h2 class="text-2xl font-bold mb-4">Página não Encontrada</h2>
+
+          <p class="mb-8 max-w-lg mx-auto text-base-content/70">
+            O pagina que está a procurar pode ter sido movido, eliminado, ou
+            simplesmente não existe.
+          </p>
+
+          <div class="mb-8">
+            <a href="/" class="btn btn-primary">
+              <i class="fa-solid fa-home mr-2"></i> Ir para o Início
+            </a>
+          </div>
+
+          <div class="divider mb-4">Páginas Frequentes</div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {
+              frequentPages && frequentPages.length > 0 ? (
+                frequentPages.map((page) => (
+                  <a href={page[0]} class="btn btn-outline">
+                    <i class={`fa-solid fa-${getIcon(page[0])} mr-2`} />
+                    <span class="truncate">{getName(pathNames, page[0])}</span>
+                  </a>
+                ))
+              ) : (
+                <a href="/contratos/" class="btn btn-outline col-span-full">
+                  <i class="fa-solid fa-file-contract mr-2" />
+                  <span>Ver Contratos</span>
+                </a>
+              )
+            }
+          </div>
+
+          <div class="mt-8">
+            <button id="back-button" class="btn btn-ghost">
+              <i class="fa-solid fa-arrow-left mr-2"></i> Voltar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  document.addEventListener("astro:page-load", () => {
+    const backButton = document.getElementById("back-button");
+    if (backButton) {
+      backButton.addEventListener("click", () => {
+        window.history.back();
+      });
+    }
+  });
+</script>

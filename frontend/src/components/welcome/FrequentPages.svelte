@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { getIcon, getName } from "@utils/frequent-page-utils";
   import { onMount } from "svelte";
 
   let frequentPages = $state<[string, number][]>([]);
@@ -9,20 +10,6 @@
   const { menuPageNamesProps }: { menuPageNamesProps: Record<string, string> } =
     $props();
 
-  const pageIcons: Record<string, string> = {
-    "/contratos/": "file-contract",
-    "/qualidade-sgq/certificado/": "certificate",
-    "/qualidade-sgq/manual/": "book",
-    "/qualidade-sgq/po/p1/": "file-lines",
-    "/qualidade-sgq/po/p2/": "file-lines",
-    "/qualidade-sgq/modulos/": "cubes",
-    "/qualidade-sgq/nao-conformidade/": "triangle-exclamation",
-    "/qualidade-sgq/fornecedores/fornecedores-qualificados/": "users",
-    "/qualidade-sgq/fornecedores/desempenho-do-fornecedor/": "chart-line",
-    "/recursos-humanos/categorias-profissionais/": "file-contract",
-    "/ers/protecao-radiologica/": "shield",
-  };
-
   onMount(async () => {
     try {
       menuPageNames = menuPageNamesProps;
@@ -32,7 +19,7 @@
 
       frequentPages = data
         .sort((a, b) => b[1] - a[1])
-        .slice(0, 6)
+        .slice(0, 7)
         .filter(([path]) => path !== "/");
     } catch (err) {
       console.error(err);
@@ -41,16 +28,6 @@
       isLoading = false;
     }
   });
-
-  function getIcon(path: string): string {
-    return pageIcons[path] || "link";
-  }
-
-  function getName(path: string): string {
-    return (
-      menuPageNames[path] || path.replace(/\/$/, "").split("/").pop() || path
-    );
-  }
 </script>
 
 <div class="card bg-base-100 shadow-xl">
@@ -79,7 +56,7 @@
             title="{visitCount} visitas"
           >
             <i class="fa-solid fa-{getIcon(pagePath)}"></i>
-            <span class="truncate">{getName(pagePath)}</span>
+            <span class="truncate">{getName(menuPageNames, pagePath)}</span>
           </a>
         {/each}
       </div>
