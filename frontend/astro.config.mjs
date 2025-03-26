@@ -16,6 +16,8 @@ export default defineConfig({
 
   integrations: [svelte(), compressor()],
 
+  trailingSlash: "always",
+
   prefetch: {
     prefetchAll: true,
     defaultStrategy: "viewport",

@@ -1,7 +1,6 @@
 ---
 import { ClientRouter } from "astro:transitions";
 import jccLogoSmall from "@assets/jcc_small.png";
-import API_BASE_URL from "@api/base-url";
 import "@fortawesome/fontawesome-free/css/all.min.css";
 
 interface Props {
@@ -17,38 +16,6 @@ const { title, serverRouter } = Astro.props;
   <link rel="icon" type="image/png" href={jccLogoSmall.src} />
   <meta name="generator" content={Astro.generator} />
   <title>{title}</title>
-
-  <script is:inline data-astro-rerun define:vars={{ API_BASE_URL }}>
-    (async function () {
-      let ok;
-      try {
-        const resp = await fetch(`${API_BASE_URL}/users/check`, {
-          method: "POST",
-          credentials: "include",
-          body: window.location.pathname,
-        });
-        ok = resp.ok;
-      } catch {
-        ok = false;
-      }
-
-      if (ok) {
-        if (
-          window.location.pathname === "/iniciar-sessao/" ||
-          window.location.pathname === "/registo/"
-        ) {
-          window.location.pathname = "/";
-        }
-      } else {
-        if (
-          window.location.pathname !== "/iniciar-sessao/" &&
-          window.location.pathname !== "/registo/"
-        ) {
-          window.location.pathname = "/iniciar-sessao/";
-        }
-      }
-    })();
-  </script>
 
   {!serverRouter && <ClientRouter />}
 </head>
