@@ -9,7 +9,7 @@ const data = await getAnalytics(Astro.request.headers.get("cookie"));
 frequentPages = data
   .sort((a, b) => b[1] - a[1])
   .slice(0, 5)
-  .filter(([path]) => path !== "/");
+  .filter(([path]) => path !== "/" && path !== Astro.url.pathname);
 const pathNames = extractPathsAndTitles(menuItems);
 ---
 
@@ -41,7 +41,11 @@ const pathNames = extractPathsAndTitles(menuItems);
             {
               frequentPages && frequentPages.length > 0 ? (
                 frequentPages.map((page) => (
-                  <a href={page[0]} class="btn btn-outline">
+                  <a
+                    href={page[0]}
+                    class="btn btn-outline"
+                    title={`${page[1]} visitas`}
+                  >
                     <i class={`fa-solid fa-${getIcon(page[0])} mr-2`} />
                     <span class="truncate">{getName(pathNames, page[0])}</span>
                   </a>

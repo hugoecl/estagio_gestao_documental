@@ -2,7 +2,10 @@ import { defineMiddleware } from "astro:middleware";
 import API_BASE_URL from "@api/base-url";
 
 export const onRequest = defineMiddleware(async (context, next) => {
-  if (context.originPathname === "/_image/") {
+  if (
+    context.originPathname === "/_image/" ||
+    context.originPathname === "/favicon.ico"
+  ) {
     return next();
   }
   const response = await fetch(`${API_BASE_URL}/users/check`, {
