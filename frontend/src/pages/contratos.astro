@@ -131,7 +131,6 @@ import "@styles/form.css";
 </Layout>
 
 <script>
-  import { uploadContract } from "@api/utils";
   import { showAlert, AlertPosition, AlertType } from "@components/alert/alert";
   import {
     ContractServices,
@@ -148,6 +147,7 @@ import "@styles/form.css";
     getSecondDateFromRange,
   } from "@utils/date-utils";
   import { toSearchString } from "@utils/search-utils";
+  import { uploadContract } from "@api/contracts-api";
 
   document.addEventListener("astro:page-load", () => {
     if (window.location.pathname !== "/contratos/") return;

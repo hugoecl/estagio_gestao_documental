@@ -27,7 +27,7 @@
     try {
       menuPageNames = menuPageNamesProps;
 
-      const { getAnalytics } = await import("@api/utils");
+      const { getAnalytics } = await import("@api/analytics-api");
       const data = await getAnalytics();
 
       frequentPages = data

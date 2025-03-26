@@ -131,7 +131,10 @@ import WorkContractsTableLoader from "@components/work-contracts/WorkContractsTa
 </Layout>
 
 <script>
-  import { getWorkContractCategories, uploadWorkContract } from "@api/utils";
+  import {
+    getWorkContractCategories,
+    uploadWorkContract,
+  } from "@api/work-contracts-api";
   import { AlertPosition, AlertType, showAlert } from "@components/alert/alert";
   import { Locations } from "@lib/types/locations";
   import {

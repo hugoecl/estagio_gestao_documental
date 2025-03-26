@@ -61,7 +61,7 @@
     (async () => {
       const [{ getContracts }, { AlertPosition, AlertType, showAlert }] =
         await Promise.all([
-          import("@api/utils"),
+          import("@api/contracts-api"),
           import("@components/alert/alert"),
         ]);
       const contractsOrNull = await getContracts();

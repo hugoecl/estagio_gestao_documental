@@ -52,7 +52,7 @@
         { getWorkContractCategories },
         { AlertPosition, AlertType, showAlert },
       ] = await Promise.all([
-        import("@api/utils"),
+        import("@api/work-contracts-api"),
         import("@components/alert/alert"),
       ]);
 

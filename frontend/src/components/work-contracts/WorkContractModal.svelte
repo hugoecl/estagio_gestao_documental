@@ -88,7 +88,7 @@
       { updateWorkContract, uploadWorkContractFiles },
       { AlertPosition, AlertType, showAlert },
     ] = await Promise.all([
-      import("@api/utils"),
+      import("@api/work-contracts-api"),
       import("@components/alert/alert"),
     ]);
 
@@ -220,7 +220,7 @@
       { deleteWorkContractFile },
       { showAlert, AlertType, AlertPosition },
     ] = await Promise.all([
-      import("@api/utils"),
+      import("@api/work-contracts-api"),
       import("@components/alert/alert"),
     ]);
 
@@ -251,7 +251,7 @@
   async function handleDeleteWorkContract() {
     const [{ deleteWorkContract }, { showAlert, AlertType, AlertPosition }] =
       await Promise.all([
-        import("@api/utils"),
+        import("@api/work-contracts-api"),
         import("@components/alert/alert"),
       ]);
 
