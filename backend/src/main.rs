@@ -1,6 +1,7 @@
 // TODO: See about running the schema on build.rs
 // TODO: Replace all prints with logs
-// TODO: Speed up development compilation speeds
+
+#[cfg(feature = "https")]
 use std::{fs::File, io::BufReader};
 
 use actix_cors::Cors;
@@ -27,7 +28,10 @@ mod routes;
 mod utils;
 
 use db::Db;
+
+#[cfg(feature = "https")]
 use rustls::{ServerConfig, pki_types::PrivateKeyDer};
+#[cfg(feature = "https")]
 use rustls_pemfile::{certs, pkcs8_private_keys};
 
 struct State {
@@ -50,14 +54,17 @@ struct CliArgs {
     #[argh(option, short = 'p', default = "1234")]
     port: u16,
 
+    #[cfg(feature = "https")]
     /// whether to use https
     #[argh(switch)]
     https: bool,
 
+    #[cfg(feature = "https")]
     /// the path to the key file (default: certs/key.pem)
     #[argh(option, short = 'k', default = "String::from(\"certs/key.pem\")")]
     key_path: String,
 
+    #[cfg(feature = "https")]
     /// the path to the cert file (default: certs/cert.pem)
     #[argh(option, short = 'c', default = "String::from(\"certs/cert.pem\")")]
     cert_path: String,
@@ -83,7 +90,11 @@ async fn main() -> std::io::Result<()> {
 
     let state = web::Data::new(State { db, cache });
 
+    #[cfg(feature = "https")]
     let protocol = if args.https { "https" } else { "http" };
+    #[cfg(not(feature = "https"))]
+    let protocol = "http";
+
     let log_level: &str;
     if cfg!(debug_assertions) {
         log_level = "debug";
@@ -115,8 +126,16 @@ async fn main() -> std::io::Result<()> {
                 )
                 .build()
         } else {
-            SessionMiddleware::builder(CookieSessionStore::default(), key.clone())
-                .cookie_secure(args.https)
+            let session_builder =
+                SessionMiddleware::builder(CookieSessionStore::default(), key.clone());
+
+            #[cfg(feature = "https")]
+            let session_builder = session_builder.cookie_secure(args.https);
+
+            #[cfg(not(feature = "https"))]
+            let session_builder = session_builder.cookie_secure(false);
+
+            session_builder
                 .cookie_http_only(true)
                 .cookie_same_site(actix_web::cookie::SameSite::Lax)
                 .session_lifecycle(
@@ -133,7 +152,8 @@ async fn main() -> std::io::Result<()> {
             .wrap(actix_web::middleware::Logger::default())
             .app_data(state.clone())
     });
-    if args.https {
+    #[cfg(feature = "https")]
+    let result = if args.https {
         rustls::crypto::aws_lc_rs::default_provider()
             .install_default()
             .unwrap();
@@ -161,5 +181,10 @@ async fn main() -> std::io::Result<()> {
             .await
     } else {
         server.bind((args.address, args.port))?.run().await
-    }
+    };
+
+    #[cfg(not(feature = "https"))]
+    let result = server.bind((args.address, args.port))?.run().await;
+
+    result
 }

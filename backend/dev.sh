@@ -1,3 +1,3 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
-cargo watch -x run 
+RUSTFLAGS="-Z threads=4 -C link-arg=-fuse-ld=/usr/bin/mold" CARGO_PROFILE_DEV_CODEGEN_BACKEND=cranelift cargo build -Zcodegen-backend
