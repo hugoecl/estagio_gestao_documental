@@ -87,9 +87,7 @@ export async function getContracts(): Promise<Contracts | null> {
 
       entry.__searchStatus = toSearchString(entry.status as string);
 
-      entry.__searchContractNumber = toSearchString(
-        entry.contractNumber.toString()
-      );
+      entry.__searchContractNumber = entry.contractNumber.toString();
 
       const files = entry.files;
       for (const key in files) {
