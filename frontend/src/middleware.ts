@@ -4,6 +4,7 @@ import API_BASE_URL from "@api/base-url";
 export const onRequest = defineMiddleware(async (context, next) => {
   if (
     context.originPathname === "/_image/" ||
+    context.originPathname.startsWith("/_astro/") ||
     context.originPathname === "/favicon.ico"
   ) {
     return next();
