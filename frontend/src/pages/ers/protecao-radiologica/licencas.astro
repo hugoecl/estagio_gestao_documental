@@ -3,6 +3,7 @@ import Layout from "@layouts/Layout.astro";
 import Collapse from "@components/common/Collapse.svelte";
 import SearchBar from "@components/contracts/SearchBar.astro";
 import DatePicker from "@components/common/DatePicker.svelte";
+import LicensesTableLoader from "@components/radiological-protection-licenses/LicensesTableLoader.svelte";
 import { Locations } from "@lib/types/locations";
 
 import "@styles/form.css";
@@ -90,6 +91,8 @@ import "@styles/form.css";
   </Collapse>
   <Collapse client:load>
     <span slot="title">Lista de Licenças</span>
-    <div slot="content">ola</div>
+    <div slot="content">
+      <LicensesTableLoader client:load />
+    </div>
   </Collapse>
 </Layout>

@@ -156,10 +156,10 @@ pub struct RadiologicalProtectionLicenseCache {
     pub scope: String,
     pub location: location::Location,
     pub description: Option<String>,
-    #[serde(rename = "createdAt")]
+    #[serde(rename = "createdAtString")]
     #[serde(serialize_with = "serialize_datetime_dmy")]
     pub created_at: chrono::DateTime<chrono::Utc>,
-    #[serde(rename = "updatedAt")]
+    #[serde(rename = "updatedAtString")]
     #[serde(serialize_with = "serialize_datetime_dmy")]
     pub updated_at: chrono::DateTime<chrono::Utc>,
     pub files: HashMap<u32, RadiologicalProtectionLicenseFileCache, RandomState>,

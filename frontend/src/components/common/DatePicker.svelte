@@ -2,6 +2,7 @@
   import calendarIcon from "@assets/calendar_icon.svg?raw";
   import previousIcon from "@assets/next_icon.svg?raw";
   import nextIcon from "@assets/previous_icon.svg?raw";
+  import { currentModal } from "@stores/modal-store";
   import {
     getFirstDateFromCallyRange,
     getFirstDateFromRangeToYMD,
@@ -9,6 +10,7 @@
     getSecondDateFromRangeToYMD,
   } from "src/utils/date-utils";
   import { onMount, tick } from "svelte";
+  import { get } from "svelte/store";
 
   let {
     range,
@@ -276,25 +278,29 @@
     }
   }
   function findModalParent(element: HTMLElement): HTMLElement | null {
-    let current = element;
+    return get(currentModal);
+    // let current = element;
 
-    // Traverse up to 6 levels up the DOM tree looking for a dialog
-    for (let i = 0; i < 6; i++) {
-      if (!current.parentElement) return null;
+    // // Traverse up to 6 levels up the DOM tree looking for a dialog
+    // for (let i = 0; i < 6; i++) {
+    //   if (!current.parentElement) return null;
 
-      current = current.parentElement;
+    //   current = current.parentElement;
 
-      // Check if it's a dialog element or has a dialog-related class
-      if (
-        current.tagName === "DIALOG" ||
-        current.classList.contains("modal") ||
-        current.classList.contains("modal-box")
-      ) {
-        return current;
-      }
-    }
+    //   // Check if it's a dialog element or has a dialog-related class
+    //   if (
+    //     current.tagName === "DIALOG" ||
+    //     current.classList.contains("modal") ||
+    //     current.classList.contains("modal-box")
+    //   ) {
+    //     console.log("tagName", current.tagName);
+    //     console.log("classList", current.classList);
 
-    return null;
+    //     return current;
+    //   }
+    // }
+
+    // return null;
   }
 </script>
 
