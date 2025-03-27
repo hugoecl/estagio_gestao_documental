@@ -65,6 +65,7 @@
 
   interface ExtendedHTMLDivElement extends HTMLDivElement {
     _scrollHandler?: (event: Event) => void;
+    _resizeHandler?: (event: Event) => void;
   }
 
   let cally: HTMLDivElement;
@@ -174,11 +175,17 @@
       // Save original parent
       originalParent = dropdownContent.parentElement;
 
+      const modalParent = findModalParent(cally);
+
       // Create container if it doesn't exist
       if (!dropdownContainer) {
         dropdownContainer = document.createElement("div");
         dropdownContainer.className = "datepicker-portal";
-        document.body.appendChild(dropdownContainer);
+        if (modalParent) {
+          modalParent.appendChild(dropdownContainer);
+        } else {
+          document.body.appendChild(dropdownContainer);
+        }
       }
 
       // Position function that can be reused
@@ -186,15 +193,53 @@
         const inputRect = cally.getBoundingClientRect();
         const dropdownRect = dropdownContent.getBoundingClientRect();
 
-        // Center the dropdown beneath the input
-        const left =
-          inputRect.left + inputRect.width / 2 - dropdownRect.width / 2;
+        // If we're in a modal, get the modal boundaries
+        if (modalParent) {
+          const modalBounds = modalParent.getBoundingClientRect();
 
-        // Apply position
-        dropdownContent.style.position = "fixed";
-        dropdownContent.style.top = `${inputRect.bottom + 5}px`; // 5px gap
-        dropdownContent.style.left = `${Math.max(5, left)}px`; // Prevent overflow left
-        dropdownContent.style.opacity = "1";
+          // Calculate initial centered position
+          let left =
+            inputRect.left -
+            modalBounds.left +
+            inputRect.width / 2 -
+            dropdownRect.width / 2;
+          const top = inputRect.bottom - modalBounds.top + 5;
+
+          // Ensure dropdown stays within modal boundaries
+          // Check if it would overflow right edge
+          if (left + dropdownRect.width > modalBounds.width - 20) {
+            // Right-align with 20px padding from modal edge
+            left = modalBounds.width - dropdownRect.width - 20;
+          }
+
+          // Check if it would overflow left edge
+          if (left < 20) {
+            // Left-align with 20px padding from modal edge
+            left = 20;
+          }
+
+          // Apply positions within modal context
+          dropdownContent.style.position = "absolute";
+          dropdownContent.style.top = `${top}px`;
+          dropdownContent.style.left = `${Math.max(5, left)}px`;
+        } else {
+          // Regular viewport positioning
+          const viewportWidth = document.documentElement.clientWidth;
+          let left =
+            inputRect.left + inputRect.width / 2 - dropdownRect.width / 2;
+
+          // Ensure dropdown stays in viewport
+          if (left + dropdownRect.width > viewportWidth - 20) {
+            left = viewportWidth - dropdownRect.width - 20;
+          }
+          if (left < 20) {
+            left = 20;
+          }
+
+          dropdownContent.style.position = "fixed";
+          dropdownContent.style.top = `${inputRect.bottom + 5}px`;
+          dropdownContent.style.left = `${left}px`;
+        }
       };
 
       // Move to container and position
@@ -205,8 +250,12 @@
       const scrollHandler = () => positionDropdown();
       window.addEventListener("scroll", scrollHandler, true);
 
+      const resizeHandler = () => positionDropdown();
+      window.addEventListener("resize", resizeHandler);
+
       // Store handler reference to remove later
       dropdownContent._scrollHandler = scrollHandler;
+      dropdownContent._resizeHandler = resizeHandler;
     } else if (
       originalParent &&
       dropdownContent.parentElement !== originalParent
@@ -227,6 +276,27 @@
       dropdownContent.style.top = "";
       dropdownContent.style.left = "";
     }
+  }
+  function findModalParent(element: HTMLElement): HTMLElement | null {
+    let current = element;
+
+    // Traverse up to 6 levels up the DOM tree looking for a dialog
+    for (let i = 0; i < 6; i++) {
+      if (!current.parentElement) return null;
+
+      current = current.parentElement;
+
+      // Check if it's a dialog element or has a dialog-related class
+      if (
+        current.tagName === "DIALOG" ||
+        current.classList.contains("modal") ||
+        current.classList.contains("modal-box")
+      ) {
+        return current;
+      }
+    }
+
+    return null;
   }
 </script>
 
@@ -263,7 +333,7 @@
 <details
   class={[
     "dropdown select-none max-sm:w-[90%]",
-    positionEnd ? "dropdown-end" : range ? dropdownPosition : "dropdown-center",
+    // positionEnd ? "dropdown-end" : range ? dropdownPosition : "dropdown-center",
   ]}
   bind:this={detailsDropdown}
 >
@@ -297,7 +367,7 @@
   <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
   <div
     tabindex="0"
-    class="dropdown-content rounded-box border border-zinc-200 bg-base-100 card-sm shadow-lg mt-1 w-max"
+    class="dropdown-content rounded-box border border-zinc-200 bg-base-200 card-sm shadow mt-1 w-max"
     bind:this={dropdownContent}
   >
     {#if range}
