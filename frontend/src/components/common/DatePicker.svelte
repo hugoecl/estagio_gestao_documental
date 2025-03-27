@@ -14,13 +14,11 @@
     range,
     formName,
     value = $bindable(),
-    positionEnd,
     required = true,
   }: {
     range: boolean;
     formName?: string;
     value?: string;
-    positionEnd?: boolean;
     required?: boolean;
   } = $props();
 
