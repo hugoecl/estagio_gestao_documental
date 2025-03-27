@@ -19,8 +19,8 @@
 
       frequentPages = data
         .sort((a, b) => b[1] - a[1])
-        .slice(0, 7)
-        .filter(([path]) => path !== "/");
+        .filter(([path]) => path !== "/" && path !== "/iniciar-sessao/")
+        .slice(0, 6);
     } catch (err) {
       console.error(err);
       error = "Não foi possível carregar as páginas frequentes";

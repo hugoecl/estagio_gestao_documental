@@ -8,8 +8,11 @@ let frequentPages: PageAnalytics = [];
 const data = await getAnalytics(Astro.request.headers.get("cookie"));
 frequentPages = data
   .sort((a, b) => b[1] - a[1])
-  .slice(0, 5)
-  .filter(([path]) => path !== "/" && path !== Astro.url.pathname);
+  .filter(
+    ([path]) =>
+      path !== "/" && path !== Astro.url.pathname && path !== "/iniciar-sessao/"
+  )
+  .slice(0, 4);
 const pathNames = extractPathsAndTitles(menuItems);
 ---
 

@@ -119,7 +119,6 @@ export function extractPathsAndTitles(
       const fullPath = item.path.startsWith("/")
         ? item.path
         : basePath + item.path;
-      result[fullPath] = item.title;
 
       if (fullPath !== "/") {
         result[fullPath] = item.title;
