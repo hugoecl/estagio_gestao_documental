@@ -1,3 +1,3 @@
 #!/bin/bash
 
-cargo run --release --features https
+cargo run --release --features https -- "$@"
