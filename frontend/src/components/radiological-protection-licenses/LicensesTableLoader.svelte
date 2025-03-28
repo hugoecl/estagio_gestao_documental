@@ -95,7 +95,7 @@
             ...selectedLicense,
             files: undefined,
         });
-        modal.show();
+        modal.showModal();
         // get the first child of the modal
         const modalBox = modal.children[0] as HTMLDivElement;
         currentModal.set(modalBox);
@@ -190,6 +190,16 @@
     }
 
     async function handleDeleted(): Promise<boolean> {
+        const { deleteLicense } = await import(
+            "@api/radiological-protection-licenses-api"
+        );
+
+        const success = await deleteLicense(selectedLicenseId!);
+
+        if (!success) {
+            return false;
+        }
+
         // @ts-ignore javascript can take string as indexes
         delete licenses[selectedLicenseId];
         return true;
