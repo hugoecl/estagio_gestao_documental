@@ -3,7 +3,14 @@
     import DatePicker from "@components/common/DatePicker.svelte";
     import API_BASE_URL from "@api/base-url";
     import { currentModal } from "@stores/modal-store";
-    import { SubmitResult, type FormField } from "@lib/types/form-modal";
+    import {
+        FieldType,
+        SubmitResult,
+        type FormField,
+        type SubmitResponse,
+    } from "@lib/types/form-modal";
+    import { DMYToDate } from "@utils/date-utils";
+    import { toSearchString } from "@utils/search-utils";
 
     // Props definition
     let {
@@ -33,7 +40,7 @@
         onSubmit: (
             formData: Record<string, any>,
             newFiles: File[],
-        ) => Promise<SubmitResult>;
+        ) => Promise<SubmitResponse>;
         onDelete?: () => Promise<boolean>;
         onFileDeleted?: (recordId: string, fileId: string) => Promise<boolean>;
         showDeleteButton?: boolean;
@@ -82,11 +89,64 @@
             "@components/alert/alert"
         );
 
-        const result = await onSubmit(formValues, newFiles);
+        const [result, data] = await onSubmit(formValues, newFiles);
 
+        // logic to handle properties of records that are not directly editable e.g search properties/dates/selects
         switch (result) {
             case SubmitResult.SUCCESS:
                 closeModal();
+
+                for (let i = 0, len = fields.length; i < len; i++) {
+                    const field = fields[i];
+                    const value = formValues[field.id];
+                    if (field.searchField) {
+                        switch (field.type) {
+                            case FieldType.DATE:
+                                data[field.searchField] = DMYToDate(value);
+                                break;
+
+                            case FieldType.DATE_RANGE:
+                                const start = value[0];
+                                const end = value[1];
+                                const [first, second, firstDate, secondDate] =
+                                    field.searchField.split(",");
+                                data[first] = start;
+                                data[second] = end;
+                                data[firstDate] = DMYToDate(start);
+                                data[secondDate] = DMYToDate(end);
+
+                                break;
+
+                            case FieldType.TEXTAREA:
+                            case FieldType.TEXT:
+                                data[field.searchField] = value
+                                    ? toSearchString(value)
+                                    : null;
+                                break;
+
+                            case FieldType.NUMBER:
+                                data[field.searchField] = value.toString();
+                                break;
+
+                            case FieldType.SELECT:
+                                const selectedOption = field.options!.find(
+                                    (option) => option.value === value,
+                                );
+                                const displayField = field.id.substring(
+                                    0,
+                                    field.id.length - 5,
+                                );
+
+                                data[displayField] = selectedOption?.label;
+
+                                data[field.searchField] = toSearchString(
+                                    selectedOption!.label,
+                                );
+                                break;
+                        }
+                    }
+                }
+
                 showAlert(
                     "Dados guardados com sucesso",
                     AlertType.SUCCESS,
@@ -102,13 +162,6 @@
                 break;
             case SubmitResult.UNCHANGED:
                 closeModal();
-                showAlert(
-                    "Nenhum dado alterado",
-                    AlertType.INFO,
-                    AlertPosition.TOP,
-                );
-                break;
-            case SubmitResult.UNCHANGED:
                 showAlert(
                     "Nenhum dado alterado",
                     AlertType.INFO,
@@ -216,9 +269,11 @@
     function closeModal() {
         modal?.close();
         currentModal.set(null);
+        newFiles = [];
     }
 </script>
 
+<!-- TODO: See the z-index of the modal -->
 <dialog class="modal z-99999999999" bind:this={modal} bind:this={formModal}>
     <div class="modal-box w-11/12 max-w-5xl">
         <div class="flex justify-between mb-4">
@@ -239,7 +294,7 @@
                     >
                         <legend class="fieldset-legend">{field.label}</legend>
 
-                        {#if field.type === "text"}
+                        {#if field.type === FieldType.TEXT}
                             <input
                                 type="text"
                                 class="input input-bordered w-full"
@@ -247,7 +302,7 @@
                                 bind:value={formValues[field.id]}
                                 required={field.required !== false}
                             />
-                        {:else if field.type === "number"}
+                        {:else if field.type === FieldType.NUMBER}
                             <input
                                 type="number"
                                 class="input input-bordered w-full"
@@ -255,7 +310,7 @@
                                 bind:value={formValues[field.id]}
                                 required={field.required !== false}
                             />
-                        {:else if field.type === "select" && field.options}
+                        {:else if field.type === FieldType.SELECT && field.options}
                             <select
                                 class="select select-bordered w-full"
                                 bind:value={formValues[field.id]}
@@ -267,27 +322,27 @@
                                     >
                                 {/each}
                             </select>
-                        {:else if field.type === "date"}
+                        {:else if field.type === FieldType.DATE}
                             <DatePicker
                                 range={false}
                                 bind:value={formValues[field.id]}
                                 required={field.required !== false}
                             />
-                        {:else if field.type === "dateRange"}
+                        {:else if field.type === FieldType.DATE_RANGE}
                             <DatePicker
                                 range={true}
                                 bind:value={
                                     () =>
-                                        `${formValues[field.id + "Start"]} - ${formValues[field.id + "End"]}`,
+                                        `${field.value[0]} - ${field.value[1]}`,
                                     (value) => {
                                         const start = value.slice(0, 10);
                                         const end = value.slice(13, 23);
-                                        formValues[field.id + "Start"] = start;
-                                        formValues[field.id + "End"] = end;
+                                        field.value[0] = start;
+                                        field.value[1] = end;
                                     }
                                 }
                             />
-                        {:else if field.type === "textarea"}
+                        {:else if field.type === FieldType.TEXTAREA}
                             <textarea
                                 class="textarea textarea-bordered w-full"
                                 placeholder={field.placeholder || ""}

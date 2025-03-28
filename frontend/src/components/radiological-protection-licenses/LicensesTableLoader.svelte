@@ -1,7 +1,13 @@
 <script lang="ts">
     import FormModal from "@components/common/FormModal.svelte";
     import Table from "@components/common/Table.svelte";
-    import { SubmitResult, type FormField } from "@lib/types/form-modal";
+    import {
+        FieldType,
+        SubmitResult,
+        type FormField,
+        type SubmitResponse,
+    } from "@lib/types/form-modal";
+    import { LocationsObject } from "@lib/types/locations";
     import type {
         License,
         Licenses,
@@ -18,6 +24,7 @@
         { header: "ID", field: "ID" },
         { header: "Âmbito", field: "scope" },
         { header: "Número da Licença", field: "licenseNumber" },
+        { header: "Local", field: "location" },
         { header: "Descrição", field: "description" },
         {
             header: "Data Início",
@@ -45,42 +52,52 @@
     let originalLicenseJson: string | null = $state(null);
     let selectedLicense: License | null = $state(null);
 
+    // TODO: See about making value of FormField nullable
+
     const fields: FormField[] = $derived([
         {
             id: "scope",
-            type: "text",
+            type: FieldType.TEXT,
             label: "Âmbito",
             placeholder: "Âmbito",
             value: selectedLicense ? (selectedLicense as License).scope : "",
+            searchField: "__searchScope",
         },
         {
             id: "licenseNumber",
-            type: "number",
+            type: FieldType.NUMBER,
             label: "Número da Licença",
             placeholder: "Número da Licença",
             value: selectedLicense
                 ? (selectedLicense as License).licenseNumber
                 : "",
+            searchField: "__searchLicenseNumber",
         },
         {
-            id: "dateStartString",
-            type: "date",
-            label: "Data Início",
+            id: "dateRange",
+            type: FieldType.DATE_RANGE,
+            label: "Data Início e Fim",
             value: selectedLicense
-                ? (selectedLicense as License).dateStartString
-                : "",
+                ? [
+                      (selectedLicense as License).dateStartString,
+                      (selectedLicense as License).dateEndString,
+                  ]
+                : [],
+            searchField: "dateStartString,dateEndString,dateStart,dateEnd",
         },
         {
-            id: "dateEndString",
-            type: "date",
-            label: "Data Fim",
+            id: "locationValue",
+            type: FieldType.SELECT,
+            label: "Local",
+            options: LocationsObject,
             value: selectedLicense
-                ? (selectedLicense as License).dateEndString
+                ? (selectedLicense as License).locationValue
                 : "",
+            searchField: "__searchLocation",
         },
         {
             id: "description",
-            type: "textarea",
+            type: FieldType.TEXTAREA,
             label: "Descrição (Opcional)",
             placeholder: "Descrição",
             required: false,
@@ -88,6 +105,7 @@
                 ? (selectedLicense as License).description
                 : "",
             colSpan: 2,
+            searchField: "description",
         },
     ]);
 
@@ -107,7 +125,7 @@
     async function handleSubmit(
         data: Record<string, any>,
         files: File[],
-    ): Promise<SubmitResult> {
+    ): Promise<SubmitResponse> {
         const { updateLicense, uploadLicenseFiles } = await import(
             "@api/radiological-protection-licenses-api"
         );
@@ -180,7 +198,7 @@
         }
         // Scenario 4: No changes
         else {
-            return SubmitResult.UNCHANGED;
+            return [SubmitResult.UNCHANGED, null];
         }
 
         if (success) {
@@ -191,10 +209,11 @@
                 updatedAt: now,
                 updatedAtString: nowString,
             };
-            return SubmitResult.SUCCESS;
+            // @ts-ignore javascript can take string as indexes
+            return [SubmitResult.SUCCESS, licenses[selectedLicenseId!]];
         }
 
-        return SubmitResult.ERROR;
+        return [SubmitResult.ERROR, null];
     }
 
     async function handleDeleted(): Promise<boolean> {

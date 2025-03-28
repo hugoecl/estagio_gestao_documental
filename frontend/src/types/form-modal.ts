@@ -1,11 +1,11 @@
-// Field type definitions
-export type FieldType =
-  | "text"
-  | "number"
-  | "select"
-  | "date"
-  | "dateRange"
-  | "textarea";
+export const enum FieldType {
+  TEXT,
+  NUMBER,
+  SELECT,
+  DATE,
+  DATE_RANGE,
+  TEXTAREA,
+}
 
 export interface SelectOption {
   value: string | number;
@@ -21,6 +21,7 @@ export interface FormField {
   required?: boolean;
   options?: SelectOption[]; // For select fields
   colSpan?: number; // How many columns to span (default: 1)
+  searchField?: string; // For search fields
 }
 
 export const enum SubmitResult {
@@ -28,3 +29,7 @@ export const enum SubmitResult {
   ERROR,
   UNCHANGED,
 }
+
+export type SubmitResponse =
+  | [SubmitResult.SUCCESS, Record<string, any>]
+  | [Exclude<SubmitResult, SubmitResult.SUCCESS>, null];
