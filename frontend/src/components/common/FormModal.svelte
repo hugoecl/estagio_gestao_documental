@@ -101,6 +101,7 @@
                 );
                 break;
             case SubmitResult.UNCHANGED:
+                closeModal();
                 showAlert(
                     "Nenhum dado alterado",
                     AlertType.INFO,
