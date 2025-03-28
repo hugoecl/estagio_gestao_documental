@@ -2,13 +2,16 @@
     import FormModal from "@components/common/FormModal.svelte";
     import Table from "@components/common/Table.svelte";
     import { SubmitResult, type FormField } from "@lib/types/form-modal";
-    import type { License } from "@lib/types/radiological-protection-licenses";
+    import type {
+        License,
+        Licenses,
+    } from "@lib/types/radiological-protection-licenses";
     import type { TableColumn } from "@lib/types/table";
     import { currentModal } from "@stores/modal-store";
     import { onMount } from "svelte";
 
     let loading = $state(true);
-    let licenses = $state({});
+    let licenses: Licenses = $state({});
     let modal: HTMLDialogElement;
 
     const columns: TableColumn[] = [
@@ -133,6 +136,9 @@
 
         let success = true;
 
+        const now = new Date();
+        const nowString = now.toLocaleString("pt-PT");
+
         // Scenario 1: Both license data nad files have changed
         if (hasChanged && hasNewFiles) {
             const [licenseResult, [filesResult, filesBaseId]] =
@@ -147,7 +153,7 @@
                 selectedLicense!.files[filesBaseId + i] = {
                     name: file.name,
                     path: `media/radiological-protection/${file.name}`,
-                    uploadedAt: new Date().toLocaleString("pt-PT"),
+                    uploadedAt: nowString,
                 };
             }
         }
@@ -168,7 +174,7 @@
                 selectedLicense!.files[filesBaseId + i] = {
                     name: file.name,
                     path: `media/radiological-protection/${file.name}`,
-                    uploadedAt: new Date().toLocaleString("pt-PT"),
+                    uploadedAt: nowString,
                 };
             }
         }
@@ -182,6 +188,8 @@
             licenses[selectedLicenseId!] = {
                 ...selectedLicense!,
                 ...data,
+                updatedAt: now,
+                updatedAtString: nowString,
             };
             return SubmitResult.SUCCESS;
         }
