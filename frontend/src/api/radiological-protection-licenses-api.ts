@@ -15,7 +15,7 @@ export async function getLicenses(): Promise<Licenses | null> {
     {
       method: "GET",
       credentials: "include",
-    }
+    },
   );
 
   if (response.ok) {
@@ -53,8 +53,8 @@ export async function getLicenses(): Promise<Licenses | null> {
 /**
  * @returns boolean indicating if the request was successful, the id of the contract created and the id of the first file uploaded
  */
-export async function uploadContract(
-  formData: FormData
+export async function uploadLicense(
+  formData: FormData,
 ): Promise<[boolean, number, number]> {
   const response = await handleFetch(
     `${API_BASE_URL}/ers/radiological-protection/licenses`,
@@ -62,7 +62,7 @@ export async function uploadContract(
       method: "POST",
       body: formData,
       credentials: "include",
-    }
+    },
   );
   const [licenseId, fileId] = (await response.text()).split(",");
 
@@ -71,7 +71,7 @@ export async function uploadContract(
 
 export async function uploadLicenseFiles(
   licenseId: string,
-  files: File[]
+  files: File[],
 ): Promise<[boolean, number]> {
   const formData = new FormData();
   for (let i = 0, len = files.length; i < len; i++) {
@@ -85,7 +85,7 @@ export async function uploadLicenseFiles(
       method: "POST",
       credentials: "include",
       body: formData,
-    }
+    },
   );
 
   if (!resp.ok) {
@@ -97,14 +97,14 @@ export async function uploadLicenseFiles(
 
 export async function deleteLicenseFile(
   licenseId: string,
-  fileId: string
+  fileId: string,
 ): Promise<boolean> {
   const resp = await handleFetch(
     `${API_BASE_URL}/ers/radiological-protection/licenses/${licenseId}/files/${fileId}`,
     {
       method: "DELETE",
       credentials: "include",
-    }
+    },
   );
 
   return resp.ok;
@@ -116,7 +116,7 @@ export async function deleteLicense(licenseId: string): Promise<boolean> {
     {
       method: "DELETE",
       credentials: "include",
-    }
+    },
   );
 
   return resp.ok;
@@ -124,7 +124,7 @@ export async function deleteLicense(licenseId: string): Promise<boolean> {
 
 export async function updateLicense(
   licenseId: string,
-  license: License
+  license: License,
 ): Promise<boolean> {
   const resp = await handleFetch(
     `${API_BASE_URL}/ers/radiological-protection/licenses/${licenseId}`,
@@ -142,7 +142,7 @@ export async function updateLicense(
       headers: {
         "Content-Type": "application/json",
       },
-    }
+    },
   );
   return resp.ok;
 }

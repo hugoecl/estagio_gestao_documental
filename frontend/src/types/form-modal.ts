@@ -1,5 +1,5 @@
 // Field type definitions
-type FieldType =
+export type FieldType =
   | "text"
   | "number"
   | "select"
@@ -7,12 +7,12 @@ type FieldType =
   | "dateRange"
   | "textarea";
 
-interface SelectOption {
+export interface SelectOption {
   value: string | number;
   label: string;
 }
 
-interface FormField {
+export interface FormField {
   id: string;
   type: FieldType;
   label: string;
@@ -23,9 +23,8 @@ interface FormField {
   colSpan?: number; // How many columns to span (default: 1)
 }
 
-interface FileData {
-  id: string;
-  name: string;
-  path: string;
-  uploadedAt: string;
+export const enum SubmitResult {
+  SUCCESS,
+  ERROR,
+  UNCHANGED,
 }
