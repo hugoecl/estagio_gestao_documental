@@ -105,13 +105,9 @@
         data: Record<string, any>,
         files: File[],
     ): Promise<SubmitResult> {
-        const [
-            { updateLicense, uploadLicenseFiles },
-            { showAlert, AlertType, AlertPosition },
-        ] = await Promise.all([
-            import("@api/radiological-protection-licenses-api"),
-            import("@components/alert/alert"),
-        ]);
+        const { updateLicense, uploadLicenseFiles } = await import(
+            "@api/radiological-protection-licenses-api"
+        );
 
         const formData = new FormData();
         const entries = Object.entries(data);
