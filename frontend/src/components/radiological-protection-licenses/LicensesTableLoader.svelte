@@ -209,6 +209,16 @@
         licenseId: string,
         fileId: string,
     ): Promise<boolean> {
+        const { deleteLicenseFile } = await import(
+            "@api/radiological-protection-licenses-api"
+        );
+
+        const success = await deleteLicenseFile(licenseId, fileId);
+
+        if (!success) {
+            return false;
+        }
+
         // @ts-ignore javascript can take string as indexes
         delete licenses[licenseId].files[fileId];
         return true;
