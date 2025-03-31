@@ -734,22 +734,23 @@
 											"type": "text"
 										},
 										{
-											"key": "license_number",
+											"key": "licenseNumber",
 											"value": "123123123",
 											"type": "text"
 										},
 										{
-											"key": "start_date",
-											"value": "12/04/2015",
+											"key": "dateRange",
+											"value": "12/04/2015 - 24/02/2018",
 											"type": "text"
 										},
 										{
 											"key": "end_date",
 											"value": "24/02/2018",
-											"type": "text"
+											"type": "text",
+											"disabled": true
 										},
 										{
-											"key": "location",
+											"key": "locationValue",
 											"value": "3",
 											"type": "text"
 										},
@@ -818,7 +819,7 @@
 								"method": "DELETE",
 								"header": [],
 								"url": {
-									"raw": "{{host}}/ers/radiological-protection/licenses/4",
+									"raw": "{{host}}/ers/radiological-protection/licenses/3",
 									"host": [
 										"{{host}}"
 									],
@@ -826,7 +827,7 @@
 										"ers",
 										"radiological-protection",
 										"licenses",
-										"4"
+										"3"
 									]
 								}
 							},
