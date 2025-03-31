@@ -1,3 +1,4 @@
+// TODO: Add compression: https://github.com/sondr3/astro-compressor/issues/13#issuecomment-1739721634
 import { defineMiddleware } from "astro:middleware";
 import API_BASE_URL from "@api/base-url";
 
