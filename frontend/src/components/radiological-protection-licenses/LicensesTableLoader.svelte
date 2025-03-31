@@ -52,7 +52,7 @@
     let originalLicenseJson: string | null = $state(null);
     let selectedLicense: License | null = $state(null);
 
-    // TODO: See about making value of FormField nullable
+    // TODO: See about making value of FormField nullable instead of using empty string
 
     const fields: FormField[] = $derived([
         {
@@ -105,7 +105,7 @@
                 ? (selectedLicense as License).description
                 : "",
             colSpan: 2,
-            searchField: "description",
+            searchField: "__searchDescription",
         },
     ]);
 
