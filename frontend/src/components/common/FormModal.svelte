@@ -414,6 +414,8 @@
                                 {/each}
                             </select>
                         {:else if field.type === FieldType.DATE}
+                            // TODO: check if date here works for adding a new
+                            record
                             <DatePicker
                                 range={false}
                                 bind:value={formValues[field.id]}
