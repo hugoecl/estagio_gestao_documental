@@ -22,6 +22,7 @@ export interface FormField {
   options?: SelectOption[]; // For select fields
   colSpan?: number; // How many columns to span (default: 1)
   searchField?: string; // For search fields
+  validate?: (value: any) => string | null;
 }
 
 export const enum SubmitResult {

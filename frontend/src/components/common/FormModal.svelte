@@ -60,6 +60,40 @@
     );
     let isDeleteSubmitting = $state(false);
 
+    let validationErrors = $state<Record<string, string>>({});
+    let showValidationErrors = $state(false);
+
+    function validateField(field: FormField, value: any): string | null {
+        if (!field.required && !value) {
+            return null;
+        }
+
+        if (field.validate) {
+            return field.validate(value);
+        }
+
+        return null;
+    }
+
+    function validateForm(): boolean {
+        const errors: Record<string, string> = {};
+        let isValid = true;
+
+        for (let i = 0, len = fields.length; i < len; i++) {
+            const field = fields[i];
+            const value = formValues[field.id];
+
+            const error = validateField(field, value);
+            if (error) {
+                errors[field.id] = error;
+                isValid = false;
+            }
+        }
+
+        validationErrors = errors;
+        return isValid;
+    }
+
     $effect(() => {
         for (let i = 0, len = fields.length; i < len; i++) {
             const field = fields[i];
@@ -78,11 +112,22 @@
 
     async function handleSubmit(e: SubmitEvent) {
         e.preventDefault();
-        isSubmitting = true;
 
         const { showAlert, AlertType, AlertPosition } = await import(
             "@components/alert/alert"
         );
+
+        validationErrors = {};
+        const isValid = validateForm();
+        if (!isValid) {
+            showValidationErrors = true;
+            showAlert(
+                "Por favor, corrija os erros no formulário.",
+                AlertType.ERROR,
+                AlertPosition.TOP,
+            );
+            return;
+        }
 
         if (!showDeleteButton && newFiles.length <= 0) {
             showAlert(
@@ -90,9 +135,10 @@
                 AlertType.ERROR,
                 AlertPosition.TOP,
             );
-            isSubmitting = false;
             return;
         }
+
+        isSubmitting = true;
 
         let dateRange: string | null = null;
 
@@ -197,6 +243,19 @@
         isSubmitting = false;
     }
 
+    function handleFieldBlur(field: FormField) {
+        if (!showValidationErrors) return;
+
+        const value = formValues[field.id];
+        const error = validateField(field, value);
+
+        if (error) {
+            validationErrors[field.id] = error;
+        } else {
+            delete validationErrors[field.id];
+        }
+    }
+
     function handleFileSelection(e: Event) {
         const input = e.target as HTMLInputElement;
         if (input.files) {
@@ -294,6 +353,8 @@
         modal?.close();
         currentModal.set(null);
         newFiles = [];
+        validationErrors = {};
+        showValidationErrors = false;
     }
 </script>
 
@@ -325,6 +386,7 @@
                                 placeholder={field.placeholder || ""}
                                 bind:value={formValues[field.id]}
                                 required={field.required !== false}
+                                onblur={() => handleFieldBlur(field)}
                             />
                         {:else if field.type === FieldType.NUMBER}
                             <input
@@ -334,6 +396,7 @@
                                 bind:value={formValues[field.id]}
                                 required={field.required !== false}
                                 min="0"
+                                onblur={() => handleFieldBlur(field)}
                             />
                         {:else if field.type === FieldType.SELECT}
                             <select
@@ -381,6 +444,12 @@
                                 bind:value={formValues[field.id]}
                                 required={field.required !== false}
                             ></textarea>
+                        {/if}
+
+                        {#if validationErrors[field.id]}
+                            <div class="text-error text-sm mt-1">
+                                {validationErrors[field.id]}
+                            </div>
                         {/if}
                     </fieldset>
                 {/each}
