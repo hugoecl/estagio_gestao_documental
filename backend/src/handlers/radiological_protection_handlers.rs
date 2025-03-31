@@ -33,9 +33,11 @@ pub async fn get_radiological_protection_licenses(
 #[derive(MultipartForm)]
 pub struct UploadeLicenseRequest {
     scope: Text<String>,
+    #[multipart(rename = "licenseNumber")]
     license_number: Text<u32>,
-    start_date: Text<String>,
-    end_date: Text<String>,
+    #[multipart(rename = "dateRange")]
+    date_range: Text<String>,
+    #[multipart(rename = "locationValue")]
     location: Text<i8>,
     description: Option<Text<String>>,
     files: Vec<MemoryFile>,
@@ -52,8 +54,12 @@ pub async fn upload_license(
 
     let scope = form.scope.into_inner();
     let license_number = form.license_number.into_inner();
-    let start_date = NaiveDate::parse_from_str(&form.start_date, "%d/%m/%Y").unwrap();
-    let end_date = NaiveDate::parse_from_str(&form.end_date, "%d/%m/%Y").unwrap();
+
+    let date_range = form.date_range.into_inner();
+    let start_date = &date_range[0..10];
+    let end_date = &date_range[13..23];
+    let start_date = NaiveDate::parse_from_str(start_date, "%d/%m/%Y").unwrap();
+    let end_date = NaiveDate::parse_from_str(end_date, "%d/%m/%Y").unwrap();
     let location = form.location.into_inner();
     let description = form.description.map(|d| d.into_inner());
     let files = form.files;
@@ -154,7 +160,7 @@ pub async fn upload_license(
         },
     );
 
-    HttpResponse::Ok().finish()
+    HttpResponse::Created().body(format!("{},{}", license_id, first_file_id))
 }
 
 #[derive(Deserialize)]

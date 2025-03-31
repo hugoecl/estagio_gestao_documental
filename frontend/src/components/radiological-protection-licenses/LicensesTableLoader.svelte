@@ -122,7 +122,20 @@
         currentModal.set(modalBox);
     }
 
-    async function handleSubmit(
+    function openNewLicenseModal() {
+        selectedLicenseId = null;
+        selectedLicense = null;
+        originalLicenseJson = JSON.stringify({
+            id: null,
+            description: "",
+            files: [],
+        });
+        modal.showModal();
+        const modalBox = modal.children[0] as HTMLDivElement;
+        currentModal.set(modalBox);
+    }
+
+    async function handleUpdateLicense(
         data: Record<string, any>,
         files: File[],
     ): Promise<SubmitResponse> {
@@ -130,26 +143,16 @@
             "@api/radiological-protection-licenses-api"
         );
 
-        const formData = new FormData();
-        const entries = Object.entries(data);
-
-        for (let i = 0; i < entries.length; i++) {
-            const [key, value] = entries[i];
-            formData.append(key, value);
-        }
-        for (let i = 0, len = files.length; i < len; i++) {
-            const file = files[i];
-            formData.append("files", file, `${file.name}_${file.size}`);
-        }
-
         const editedLicense = {
             ...selectedLicense!,
             files: undefined,
             ...data,
+            dateRange: undefined, // this is because in this case dateRange is an array, we may need to delete other properties
         } as unknown as License;
 
         const hasChanged =
             JSON.stringify(editedLicense) !== originalLicenseJson;
+
         const hasNewFiles = files.length > 0;
 
         let success = true;
@@ -216,6 +219,70 @@
         return [SubmitResult.ERROR, null];
     }
 
+    async function handleCreateLicense(
+        formData: FormData,
+        data: Record<string, any>,
+        files: File[],
+    ): Promise<SubmitResponse> {
+        const { uploadLicense } = await import(
+            "@api/radiological-protection-licenses-api"
+        );
+
+        const [ok, licenseId, fileBaseId] = await uploadLicense(formData);
+
+        if (ok) {
+            const now = new Date();
+            const nowString = now.toLocaleString("pt-PT");
+
+            licenses[licenseId] = {
+                ...data,
+                updatedAt: now,
+                updatedAtString: nowString,
+                createdAt: now,
+                createdAtString: nowString,
+                files: {},
+            } as unknown as License;
+
+            const license = licenses[licenseId];
+
+            for (let i = 0, len = files.length; i < len; i++) {
+                const file = files[i];
+                license.files[fileBaseId + i] = {
+                    name: file.name,
+                    path: `media/radiological-protection/${file.name}`,
+                    uploadedAt: nowString,
+                };
+            }
+
+            return [SubmitResult.SUCCESS, license];
+        }
+
+        return [SubmitResult.ERROR, null];
+    }
+
+    async function handleSubmit(
+        data: Record<string, any>,
+        files: File[],
+    ): Promise<SubmitResponse> {
+        const formData = new FormData();
+        const entries = Object.entries(data);
+
+        for (let i = 0; i < entries.length; i++) {
+            const [key, value] = entries[i];
+            formData.append(key, value);
+        }
+        for (let i = 0, len = files.length; i < len; i++) {
+            const file = files[i];
+            formData.append("files", file, `${file.name}_${file.size}`);
+        }
+
+        if (selectedLicenseId) {
+            return await handleUpdateLicense(data, files);
+        } else {
+            return await handleCreateLicense(formData, data, files);
+        }
+    }
+
     async function handleDeleted(): Promise<boolean> {
         const { deleteLicense } = await import(
             "@api/radiological-protection-licenses-api"
@@ -273,6 +340,13 @@
         })();
     });
 </script>
+
+<div class="mb-4 flex justify-between">
+    <h1 class="text-2xl font-bold">Licenças Radiológicas</h1>
+    <button class="btn btn-primary" onclick={openNewLicenseModal}>
+        Adicionar Nova Licença
+    </button>
+</div>
 
 <FormModal
     bind:formModal={modal}

@@ -12,7 +12,6 @@
     import { DMYToDate } from "@utils/date-utils";
     import { toSearchString } from "@utils/search-utils";
 
-    // Props definition
     let {
         formModal = $bindable(),
         title,
@@ -49,7 +48,6 @@
         apiBaseUrl?: string;
     } = $props();
 
-    // State
     let modal = $state<HTMLDialogElement | null>(null);
     let confirmModal = $state<HTMLDialogElement | null>(null);
     let formValues = $state<Record<string, any>>({});
@@ -62,7 +60,6 @@
     );
     let isDeleteSubmitting = $state(false);
 
-    // Initialize form values from fields
     $effect(() => {
         for (let i = 0, len = fields.length; i < len; i++) {
             const field = fields[i];
@@ -70,7 +67,6 @@
         }
     });
 
-    // Computed values
     const existingFiles = $derived(
         showFiles && files
             ? Object.entries(files).map(([id, file]) => ({
@@ -80,7 +76,6 @@
             : null,
     );
 
-    // Functions
     async function handleSubmit(e: SubmitEvent) {
         e.preventDefault();
         isSubmitting = true;
@@ -88,6 +83,29 @@
         const { showAlert, AlertType, AlertPosition } = await import(
             "@components/alert/alert"
         );
+
+        if (!showDeleteButton && newFiles.length <= 0) {
+            showAlert(
+                "Por favor, submeta pelo menos um ficheiro.",
+                AlertType.ERROR,
+                AlertPosition.TOP,
+            );
+            isSubmitting = false;
+            return;
+        }
+
+        let dateRange: string | null = null;
+
+        if (!showDeleteButton) {
+            const formEntries = new FormData(e.target as HTMLFormElement);
+            for (let i = 0, len = fields.length; i < len; i++) {
+                const field = fields[i];
+                if (field.type === FieldType.DATE_RANGE) {
+                    dateRange = formEntries.get(field.id) as string;
+                    formValues[field.id] = dateRange;
+                }
+            }
+        }
 
         const [result, data] = await onSubmit(formValues, newFiles);
 
@@ -106,8 +124,14 @@
                                 break;
 
                             case FieldType.DATE_RANGE:
-                                const start = value[0];
-                                const end = value[1];
+                                let start, end;
+                                if (!showDeleteButton) {
+                                    start = dateRange!.substring(0, 10);
+                                    end = dateRange!.substring(13, 23);
+                                } else {
+                                    start = value[0];
+                                    end = value[1];
+                                }
                                 const [first, second, firstDate, secondDate] =
                                     field.searchField.split(",");
                                 data[first] = start;
@@ -309,14 +333,18 @@
                                 placeholder={field.placeholder || ""}
                                 bind:value={formValues[field.id]}
                                 required={field.required !== false}
+                                min="0"
                             />
-                        {:else if field.type === FieldType.SELECT && field.options}
+                        {:else if field.type === FieldType.SELECT}
                             <select
                                 class="select select-bordered w-full"
                                 bind:value={formValues[field.id]}
                                 required={field.required !== false}
                             >
-                                {#each field.options as option}
+                                <option disabled selected hidden value=""
+                                    >{field.label}</option
+                                >
+                                {#each field.options! as option}
                                     <option value={option.value}
                                         >{option.label}</option
                                     >
@@ -329,19 +357,23 @@
                                 required={field.required !== false}
                             />
                         {:else if field.type === FieldType.DATE_RANGE}
-                            <DatePicker
-                                range={true}
-                                bind:value={
-                                    () =>
-                                        `${field.value[0]} - ${field.value[1]}`,
-                                    (value) => {
-                                        const start = value.slice(0, 10);
-                                        const end = value.slice(13, 23);
-                                        field.value[0] = start;
-                                        field.value[1] = end;
+                            {#if field.value.length > 0}
+                                <DatePicker
+                                    range={true}
+                                    bind:value={
+                                        () =>
+                                            `${field.value[0]} - ${field.value[1]}`,
+                                        (value) => {
+                                            const start = value.slice(0, 10);
+                                            const end = value.slice(13, 23);
+                                            field.value[0] = start;
+                                            field.value[1] = end;
+                                        }
                                     }
-                                }
-                            />
+                                />
+                            {:else}
+                                <DatePicker range={true} formName={field.id} />
+                            {/if}
                         {:else if field.type === FieldType.TEXTAREA}
                             <textarea
                                 class="textarea textarea-bordered w-full"
