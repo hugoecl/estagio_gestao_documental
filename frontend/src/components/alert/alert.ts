@@ -14,13 +14,18 @@ export const enum AlertPosition {
   BOTTOM_RIGHT = 1,
 }
 
-const toastTop = document.getElementById("toast-top")!;
-const toastBottomRight = document.getElementById("toast-bottom-right")!;
+let toastTop: HTMLElement;
+let toastBottomRight: HTMLElement;
+
+document.addEventListener("astro:page-load", () => {
+  toastTop = document.getElementById("toast-top")!;
+  toastBottomRight = document.getElementById("toast-bottom-right")!;
+});
 
 export function showAlert(
   message: string,
   type: AlertType,
-  position: AlertPosition
+  position: AlertPosition,
 ) {
   const alert = mount(Alert, {
     target: position === AlertPosition.TOP ? toastTop : toastBottomRight,
