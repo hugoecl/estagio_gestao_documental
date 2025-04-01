@@ -32,18 +32,21 @@ pub async fn get_contracts(
 
 #[derive(MultipartForm)]
 pub struct ContractFormRequest {
-    #[multipart(rename = "contract-number")]
+    #[multipart(rename = "contractNumber")]
     contract_number: Text<u32>,
     date: Text<String>,
-    #[multipart(rename = "date-range")]
+    #[multipart(rename = "dateRange")]
     date_range: Text<String>,
     description: Text<String>,
     files: Vec<MemoryFile>,
+    #[multipart(rename = "locationValue")]
     location: Text<i8>,
+    #[multipart(rename = "serviceValue")]
     service: Text<i8>,
+    #[multipart(rename = "statusValue")]
     status: Text<i8>,
     supplier: Text<String>,
-    #[multipart(rename = "type")]
+    #[multipart(rename = "typeValue")]
     type_of_contract: Text<i8>,
 }
 

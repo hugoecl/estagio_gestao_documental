@@ -7,8 +7,24 @@ export const ContractServices = [
   "Impressoras",
   "Comunicações",
 ] as const;
+export const ContractServicesObject = ContractServices.map(
+  (service, index) => ({
+    label: service,
+    value: index,
+  }),
+);
+
 export const ContractStatus = ["Ativo", "Inativo"] as const;
+export const ContractStatusObject = ContractStatus.map((status, index) => ({
+  label: status,
+  value: index,
+}));
+
 export const ContractTypes = ["Adenda", "Novo", "Renovação"] as const;
+export const ContractTypesObject = ContractTypes.map((type, index) => ({
+  label: type,
+  value: index,
+}));
 
 // TODO: See createdAt and updatedAt maybe show them in the modal
 export interface ContractFiles {

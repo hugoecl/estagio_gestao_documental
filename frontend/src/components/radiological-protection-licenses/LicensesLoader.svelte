@@ -220,10 +220,21 @@
     }
 
     async function handleCreateLicense(
-        formData: FormData,
         data: Record<string, any>,
         files: File[],
     ): Promise<SubmitResponse> {
+        const formData = new FormData();
+        const entries = Object.entries(data);
+
+        for (let i = 0; i < entries.length; i++) {
+            const [key, value] = entries[i];
+            formData.append(key, value);
+        }
+        for (let i = 0, len = files.length; i < len; i++) {
+            const file = files[i];
+            formData.append("files", file, `${file.name}_${file.size}`);
+        }
+
         const { uploadLicense } = await import(
             "@api/radiological-protection-licenses-api"
         );
@@ -264,22 +275,10 @@
         data: Record<string, any>,
         files: File[],
     ): Promise<SubmitResponse> {
-        const formData = new FormData();
-        const entries = Object.entries(data);
-
-        for (let i = 0; i < entries.length; i++) {
-            const [key, value] = entries[i];
-            formData.append(key, value);
-        }
-        for (let i = 0, len = files.length; i < len; i++) {
-            const file = files[i];
-            formData.append("files", file, `${file.name}_${file.size}`);
-        }
-
         if (selectedLicenseId) {
             return await handleUpdateLicense(data, files);
         } else {
-            return await handleCreateLicense(formData, data, files);
+            return await handleCreateLicense(data, files);
         }
     }
 
@@ -318,26 +317,24 @@
         return true;
     }
 
-    onMount(() => {
-        (async () => {
-            const [{ getLicenses }, { AlertPosition, AlertType, showAlert }] =
-                await Promise.all([
-                    import("@api/radiological-protection-licenses-api"),
-                    import("@components/alert/alert"),
-                ]);
+    onMount(async () => {
+        const [{ getLicenses }, { AlertPosition, AlertType, showAlert }] =
+            await Promise.all([
+                import("@api/radiological-protection-licenses-api"),
+                import("@components/alert/alert"),
+            ]);
 
-            const licensesOrNull = await getLicenses();
-            loading = false;
-            if (!licensesOrNull) {
-                showAlert(
-                    "Erro ao carregar licenças",
-                    AlertType.ERROR,
-                    AlertPosition.TOP,
-                );
-                return;
-            }
-            licenses = licensesOrNull;
-        })();
+        const licensesOrNull = await getLicenses();
+        loading = false;
+        if (!licensesOrNull) {
+            showAlert(
+                "Erro ao carregar licenças",
+                AlertType.ERROR,
+                AlertPosition.TOP,
+            );
+            return;
+        }
+        licenses = licensesOrNull;
     });
 </script>
 

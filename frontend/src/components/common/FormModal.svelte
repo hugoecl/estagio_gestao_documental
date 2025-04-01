@@ -166,7 +166,8 @@
                     if (field.searchField) {
                         switch (field.type) {
                             case FieldType.DATE:
-                                data[field.searchField] = DMYToDate(value);
+                                data[field.id] = DMYToDate(value);
+                                data[field.searchField] = value;
                                 break;
 
                             case FieldType.DATE_RANGE:
@@ -404,9 +405,9 @@
                                 bind:value={formValues[field.id]}
                                 required={field.required !== false}
                             >
-                                <option disabled selected hidden value=""
-                                    >{field.label}</option
-                                >
+                                <option disabled selected hidden value="">
+                                    {field.label}
+                                </option>
                                 {#each field.options! as option}
                                     <option value={option.value}
                                         >{option.label}</option
@@ -414,8 +415,6 @@
                                 {/each}
                             </select>
                         {:else if field.type === FieldType.DATE}
-                            // TODO: check if date here works for adding a new
-                            record
                             <DatePicker
                                 range={false}
                                 bind:value={formValues[field.id]}
