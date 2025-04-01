@@ -14,8 +14,10 @@ export const enum AlertPosition {
   BOTTOM_RIGHT = 1,
 }
 
-let toastTop: HTMLElement;
-let toastBottomRight: HTMLElement;
+// we are initially getting the elements here for the login and registration pages
+let toastTop: HTMLElement = document.getElementById("toast-top")!;
+let toastBottomRight: HTMLElement =
+  document.getElementById("toast-bottom-right")!;
 
 document.addEventListener("astro:page-load", () => {
   toastTop = document.getElementById("toast-top")!;
