@@ -100,3 +100,23 @@ CREATE TABLE IF NOT EXISTS radiological_protection_license_files (
     PRIMARY KEY (id),
     FOREIGN KEY (license_id) REFERENCES radiological_protection_licenses (id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS models (
+    id INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    version VARCHAR(10) NOT NULL,
+    model VARCHAR(10) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS model_files (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    model_id INT UNSIGNED NOT NULL,
+    file_path VARCHAR(255) NOT NULL COMMENT 'Is relative to the backend folder includes the file name',
+    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    FOREIGN KEY (model_id) REFERENCES models (id) ON DELETE CASCADE
+);
