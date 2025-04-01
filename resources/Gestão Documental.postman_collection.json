@@ -846,13 +846,13 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{host}}/models/",
+							"raw": "{{host}}/quality/models",
 							"host": [
 								"{{host}}"
 							],
 							"path": [
-								"models",
-								""
+								"quality",
+								"models"
 							]
 						}
 					},

@@ -5,7 +5,7 @@ use crate::utils::session_utils::validate_session;
 
 pub mod contract_routes;
 pub mod ers_routes;
-pub mod model_routes;
+pub mod quality_routes;
 pub mod user_routes;
 pub mod work_contract_routes;
 
@@ -29,7 +29,7 @@ pub fn init(cfg: &mut web::ServiceConfig) {
     user_routes::init(cfg);
     contract_routes::init(cfg);
     work_contract_routes::init(cfg);
-    model_routes::init(cfg);
+    quality_routes::init(cfg);
     ers_routes::init(cfg);
 
     cfg.service(serve_files);
