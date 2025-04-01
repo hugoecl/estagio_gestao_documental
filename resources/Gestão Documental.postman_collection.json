@@ -836,6 +836,29 @@
 					]
 				}
 			]
+		},
+		{
+			"name": "models",
+			"item": [
+				{
+					"name": "get_models",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{host}}/models/",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"models",
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			]
 		}
 	],
 	"variable": [
