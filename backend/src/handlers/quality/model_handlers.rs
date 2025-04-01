@@ -1,5 +1,19 @@
-use actix_web::{HttpResponse, Responder};
+use actix_session::Session;
+use actix_web::{HttpRequest, Responder, web};
 
-pub async fn get_models() -> impl Responder {
-    HttpResponse::Ok().body("Hello Models")
+use crate::{
+    State,
+    utils::{json_utils::json_response_with_etag, session_utils::validate_session},
+};
+
+pub async fn get_models(
+    session: Session,
+    state: web::Data<State>,
+    req: HttpRequest,
+) -> impl Responder {
+    if let Err(response) = validate_session(&session) {
+        return response;
+    }
+
+    json_response_with_etag(&state.cache.models, &req)
 }

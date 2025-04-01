@@ -165,9 +165,86 @@ pub struct RadiologicalProtectionLicenseCache {
     pub files: HashMap<u32, RadiologicalProtectionLicenseFileCache, RandomState>,
 }
 
+#[derive(Serialize, Clone)]
+pub struct ModelFileCache {
+    pub path: String,
+    #[serde(rename = "uploadedAt")]
+    #[serde(serialize_with = "serialize_datetime_dmy")]
+    pub uploaded_at: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(Serialize)]
+pub struct ModelCache {
+    pub name: String,
+    pub version: String,
+    pub model: String,
+    pub description: Option<String>,
+    #[serde(rename = "createdAt")]
+    #[serde(serialize_with = "serialize_datetime_dmy")]
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    #[serde(rename = "updatedAt")]
+    #[serde(serialize_with = "serialize_datetime_dmy")]
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+    pub files: HashMap<u32, ModelFileCache, RandomState>,
+}
+
 #[inline(always)]
 fn i8_to_bool(i: i8) -> bool {
     i != 0
+}
+
+async fn get_models_cache(
+    pool: &sqlx::Pool<sqlx::MySql>,
+) -> Result<HashMap<u32, ModelCache, RandomState>, sqlx::Error> {
+    let models = sqlx::query!("SELECT * FROM models").fetch_all(pool).await?;
+
+    let models_cache = HashMap::builder()
+        .hasher(RandomState::new())
+        .capacity(models.len())
+        .build();
+
+    let pinned_models_cache = models_cache.pin();
+
+    for model in models {
+        let files = sqlx::query!("SELECT * FROM model_files WHERE model_id = ?", model.id)
+            .fetch_all(pool)
+            .await?;
+
+        let files_cache = HashMap::builder()
+            .hasher(RandomState::new())
+            .capacity(files.len())
+            .build();
+
+        let pinned_files_cache = files_cache.pin();
+
+        for file in files {
+            pinned_files_cache.insert(
+                file.id,
+                ModelFileCache {
+                    path: file.file_path,
+                    uploaded_at: file.uploaded_at.unwrap(),
+                },
+            );
+        }
+
+        drop(pinned_files_cache);
+
+        pinned_models_cache.insert(
+            model.id,
+            ModelCache {
+                name: model.name,
+                version: model.version,
+                model: model.model,
+                description: model.description,
+                created_at: model.created_at.unwrap(),
+                updated_at: model.updated_at.unwrap(),
+                files: files_cache,
+            },
+        );
+    }
+
+    drop(pinned_models_cache);
+    Ok(models_cache)
 }
 
 async fn get_radiological_protection_licenses_cache(
@@ -463,6 +540,7 @@ pub struct Cache {
     pub work_contract_categories: HashMap<u32, WorkContractCategoryCache, RandomState>,
     pub radiological_protection_licenses:
         HashMap<u32, RadiologicalProtectionLicenseCache, RandomState>,
+    pub models: HashMap<u32, ModelCache, RandomState>,
 }
 
 impl Cache {
@@ -474,13 +552,15 @@ impl Cache {
             work_contract_cache,
             work_contract_categories_cache,
             radiological_protection_licenses_cache,
+            models_cache,
         ) = tokio::try_join!(
             get_users_cache(pool),
             get_contracts_cache(pool),
             get_analytics_cache(pool),
             get_work_contracts_cache(pool),
             get_work_contract_categories_cache(pool),
-            get_radiological_protection_licenses_cache(pool)
+            get_radiological_protection_licenses_cache(pool),
+            get_models_cache(pool)
         )?;
 
         Ok(Cache {
@@ -490,6 +570,7 @@ impl Cache {
             work_contracts: work_contract_cache,
             work_contract_categories: work_contract_categories_cache,
             radiological_protection_licenses: radiological_protection_licenses_cache,
+            models: models_cache,
         })
     }
 }
