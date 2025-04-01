@@ -51,5 +51,5 @@ if [ "$USE_HTTPS" = true ]; then
     RUSTFLAGS="-Z threads=4" cargo run --features https -- "${ADDITIONAL_ARGS[@]}"
 else
     echo "Running in standard mode with cranelift"
-    RUSTFLAGS="-Z threads=4 -C link-arg=-fuse-ld=/usr/bin/mold" CARGO_PROFILE_DEV_CODEGEN_BACKEND=cranelift cargo run -Zcodegen-backend -- "${ADDITIONAL_ARGS[@]}"
+    RUSTFLAGS="-Z threads=4 -C link-arg=-fuse-ld=/usr/bin/mold" CARGO_PROFILE_DEV_CODEGEN_BACKEND=cranelift cargo +nightly run -Zcodegen-backend -- "${ADDITIONAL_ARGS[@]}"
 fi
