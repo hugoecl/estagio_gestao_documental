@@ -2,12 +2,15 @@ use actix_multipart::form::{MultipartForm, text::Text};
 use actix_session::Session;
 use actix_web::{HttpRequest, HttpResponse, Responder, web};
 use ahash::RandomState;
+use log::error;
 use papaya::HashMap;
+use serde::Deserialize;
 
 use crate::{
     State,
     utils::{
-        json_utils::json_response_with_etag, memory_file::MemoryFile,
+        json_utils::{Json, json_response_with_etag},
+        memory_file::MemoryFile,
         session_utils::validate_session,
     },
 };
@@ -33,7 +36,7 @@ pub struct ModelFormRequest {
     files: Vec<MemoryFile>,
 }
 
-pub async fn upload_modal(
+pub async fn upload_model(
     session: Session,
     state: web::Data<State>,
     MultipartForm(form): MultipartForm<ModelFormRequest>,
@@ -45,7 +48,9 @@ pub async fn upload_modal(
     let name = form.name.into_inner();
     let version = form.version.into_inner();
     let model = form.model.into_inner();
-    let description = form.description.map(actix_multipart::form::text::Text::into_inner);
+    let description = form
+        .description
+        .map(actix_multipart::form::text::Text::into_inner);
 
     let now = chrono::Utc::now();
 
@@ -127,4 +132,73 @@ pub async fn upload_modal(
     );
 
     HttpResponse::Created().body(format!("{new_model_id},{first_file_id}"))
+}
+
+#[derive(Deserialize)]
+pub struct UpdateModelRequest {
+    name: String,
+    version: String,
+    model: String,
+    description: Option<String>,
+}
+
+pub async fn update_model(
+    session: Session,
+    state: web::Data<State>,
+    data: web::Bytes,
+    model_id: web::Path<u32>,
+) -> impl Responder {
+    if let Err(response) = validate_session(&session) {
+        return response;
+    }
+
+    let model_id = model_id.into_inner();
+
+    let pinned_models_cache = state.cache.models.pin();
+
+    let Some(old_model) = pinned_models_cache.get(&model_id) else {
+        return HttpResponse::NotFound().finish();
+    };
+
+    let Json(req): Json<UpdateModelRequest> = match Json::from_bytes(&data) {
+        Ok(json) => json,
+        Err(_) => return HttpResponse::BadRequest().finish(),
+    };
+
+    let now = chrono::Utc::now();
+
+    let old_files = old_model.files.clone();
+
+    let updated_model = crate::cache::ModelCache {
+        name: req.name.clone(),
+        version: req.version.clone(),
+        model: req.model.clone(),
+        description: req.description.clone(),
+        created_at: old_model.created_at,
+        updated_at: now,
+        files: old_files,
+    };
+
+    pinned_models_cache.insert(model_id, updated_model);
+    drop(pinned_models_cache);
+
+    tokio::spawn(async move {
+        let result = sqlx::query!(
+            "UPDATE models SET name = ?, version = ?, model = ?, description = ?, updated_at = ? WHERE id = ?",
+            req.name,
+            req.version,
+            req.model,
+            req.description,
+            now,
+            model_id
+        )
+        .execute(&state.db.pool)
+        .await;
+
+        if let Err(e) = result {
+            error!("Error updating model in database: {e}");
+        }
+    });
+
+    HttpResponse::Ok().finish()
 }

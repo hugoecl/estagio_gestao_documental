@@ -857,6 +857,86 @@
 						}
 					},
 					"response": []
+				},
+				{
+					"name": "upload_model",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "name",
+									"value": "Agua",
+									"type": "text"
+								},
+								{
+									"key": "version",
+									"value": "4.0",
+									"type": "text"
+								},
+								{
+									"key": "model",
+									"value": "17",
+									"type": "text"
+								},
+								{
+									"key": "description",
+									"value": "teste observações",
+									"type": "text",
+									"disabled": true
+								},
+								{
+									"key": "files",
+									"type": "file",
+									"src": [
+										"postman-cloud:///1f003d8e-e659-47a0-ac99-5a6c2e08e434",
+										"postman-cloud:///1f003d8e-e652-4270-acad-bacd15b23998"
+									]
+								}
+							]
+						},
+						"url": {
+							"raw": "{{host}}/quality/models",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"quality",
+								"models"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "update_model",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Trabalho\",\n    \"version\": \"17\",\n    \"model\": \"12\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{host}}/quality/models/7",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"quality",
+								"models",
+								"7"
+							]
+						}
+					},
+					"response": []
 				}
 			]
 		}
