@@ -12,8 +12,8 @@ impl<T> Json<T>
 where
     T: DeserializeOwned,
 {
-    pub fn from_bytes(bytes: web::Bytes) -> Result<Self, sonic_rs::Error> {
-        let obj = unsafe { sonic_rs::from_slice_unchecked(&bytes).unwrap() }; // Assuming the bytes are valid JSON
+    pub fn from_bytes(bytes: &web::Bytes) -> Result<Self, sonic_rs::Error> {
+        let obj = unsafe { sonic_rs::from_slice_unchecked(bytes)? }; // Assuming the bytes are valid JSON
         Ok(Json(obj))
     }
 }
@@ -69,7 +69,7 @@ mod tests {
     async fn test_from_bytes() {
         let data = r#"{"name":"John Doe","age":30}"#;
         let bytes = web::Bytes::from(data);
-        let json: Json<TestStruct> = Json::from_bytes(bytes).unwrap();
+        let json: Json<TestStruct> = Json::from_bytes(&bytes).unwrap();
         assert_eq!(
             json.0,
             TestStruct {

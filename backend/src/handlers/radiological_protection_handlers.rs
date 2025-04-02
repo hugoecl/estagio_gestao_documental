@@ -61,7 +61,9 @@ pub async fn upload_license(
     let start_date = NaiveDate::parse_from_str(start_date, "%d/%m/%Y").unwrap();
     let end_date = NaiveDate::parse_from_str(end_date, "%d/%m/%Y").unwrap();
     let location = form.location.into_inner();
-    let description = form.description.map(actix_multipart::form::text::Text::into_inner);
+    let description = form
+        .description
+        .map(actix_multipart::form::text::Text::into_inner);
     let files = form.files;
 
     let now = chrono::Utc::now();
@@ -186,12 +188,12 @@ pub async fn update_license(
     let license_id = license_id.into_inner();
 
     let pinned_license_cache = state.cache.radiological_protection_licenses.pin();
-    let license = match pinned_license_cache.get(&license_id) {
-        Some(l) => l,
-        None => return HttpResponse::NotFound().finish(),
+
+    let Some(license) = pinned_license_cache.get(&license_id) else {
+        return HttpResponse::NotFound().finish();
     };
 
-    let Json(data): Json<UpdateLicenseRequest> = Json::from_bytes(data).unwrap();
+    let Json(data): Json<UpdateLicenseRequest> = Json::from_bytes(&data).unwrap();
 
     let now = chrono::Utc::now();
 
@@ -286,9 +288,9 @@ pub async fn upload_license_files(
     let files_length = form.files.len();
 
     let pinned_license_cache = state.cache.radiological_protection_licenses.pin();
-    let license = match pinned_license_cache.get(&license_id) {
-        Some(l) => l,
-        None => return HttpResponse::NotFound().finish(),
+
+    let Some(license) = pinned_license_cache.get(&license_id) else {
+        return HttpResponse::NotFound().finish();
     };
 
     let base_path = format!("media/radiological_protection/licenses/{license_id}");
@@ -353,16 +355,15 @@ pub async fn delete_license_file(
     let (license_id, file_id) = path.into_inner();
 
     let pinned_license_cache = state.cache.radiological_protection_licenses.pin();
-    let license = match pinned_license_cache.get(&license_id) {
-        Some(l) => l,
-        None => return HttpResponse::NotFound().finish(),
+
+    let Some(license) = pinned_license_cache.get(&license_id) else {
+        return HttpResponse::NotFound().finish();
     };
 
     let pinned_license_files_cache = license.files.pin();
 
-    let file = match pinned_license_files_cache.remove(&file_id) {
-        Some(f) => f,
-        None => return HttpResponse::NotFound().finish(),
+    let Some(file) = pinned_license_files_cache.remove(&file_id) else {
+        return HttpResponse::NotFound().finish();
     };
 
     let file_path = file.path.clone();

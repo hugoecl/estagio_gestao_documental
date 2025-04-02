@@ -21,7 +21,7 @@ struct RegisterRequest {
 }
 
 pub async fn register(state: web::Data<State>, request_data: web::Bytes) -> impl Responder {
-    let Json(user): Json<RegisterRequest> = Json::from_bytes(request_data).unwrap();
+    let Json(user): Json<RegisterRequest> = Json::from_bytes(&request_data).unwrap();
     let pinned_users_cache = state.cache.users.pin();
 
     if pinned_users_cache
@@ -76,7 +76,7 @@ pub async fn login(
     request_date: web::Bytes,
     session: Session,
 ) -> impl Responder {
-    let Json(req): Json<LoginRequest> = Json::from_bytes(request_date).unwrap();
+    let Json(req): Json<LoginRequest> = Json::from_bytes(&request_date).unwrap();
     let pinned_users_cache = state.cache.users.pin();
 
     for (i, u) in &pinned_users_cache {
@@ -96,9 +96,8 @@ pub async fn check(session: Session, state: web::Data<State>, data: web::Bytes) 
         Err(response) => return response,
     };
 
-    let page_path = match String::from_utf8(data.to_vec()) {
-        Ok(p) => p,
-        Err(_) => return HttpResponse::BadRequest().finish(),
+    let Ok(page_path) = String::from_utf8(data.to_vec()) else {
+        return HttpResponse::BadRequest().finish();
     };
 
     let key = AnalyticsKey {
@@ -139,9 +138,9 @@ pub async fn check(session: Session, state: web::Data<State>, data: web::Bytes) 
         if incremented {
             sqlx::query!(
                 r#"
-                INSERT INTO user_page_analytics (user_id, page_path, visit_count, last_visited_at) 
+                INSERT INTO user_page_analytics (user_id, page_path, visit_count, last_visited_at)
                 VALUES (?, ?, ?, ?)
-                ON DUPLICATE KEY UPDATE 
+                ON DUPLICATE KEY UPDATE
                     visit_count = ?,
                     last_visited_at = ?
                 "#,
@@ -158,8 +157,8 @@ pub async fn check(session: Session, state: web::Data<State>, data: web::Bytes) 
         } else {
             sqlx::query!(
                 r#"
-                UPDATE user_page_analytics 
-                SET last_visited_at = ? 
+                UPDATE user_page_analytics
+                SET last_visited_at = ?
                 WHERE user_id = ? AND page_path = ?
                 "#,
                 now,

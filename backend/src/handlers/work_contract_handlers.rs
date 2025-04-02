@@ -44,7 +44,7 @@ pub async fn add_work_contract_category(
     if let Err(response) = validate_session(&session) {
         return response;
     }
-    let Json(category): Json<WorkContractCategoryRequest> = Json::from_bytes(data).unwrap();
+    let Json(category): Json<WorkContractCategoryRequest> = Json::from_bytes(&data).unwrap();
 
     let result = sqlx::query!(
         "INSERT INTO work_contract_categories (name, description) VALUES (?, ?)",
@@ -70,9 +70,7 @@ pub async fn add_work_contract_category(
             HttpResponse::Created().body(id.to_string())
         }
         Err(e) => {
-            error!(
-                "Database error during work contract category creation: {e}"
-            );
+            error!("Database error during work contract category creation: {e}");
             HttpResponse::InternalServerError().finish()
         }
     }
@@ -87,7 +85,7 @@ pub async fn update_work_contract_category(
     if let Err(response) = validate_session(&session) {
         return response;
     }
-    let Json(category): Json<WorkContractCategoryRequest> = Json::from_bytes(data).unwrap();
+    let Json(category): Json<WorkContractCategoryRequest> = Json::from_bytes(&data).unwrap();
     let id = id.into_inner();
 
     let result = sqlx::query!(
@@ -102,10 +100,11 @@ pub async fn update_work_contract_category(
     match result {
         Ok(_) => {
             let pinned_cache = state.cache.work_contract_categories.pin();
-            let old_contract = match pinned_cache.get(&id) {
-                Some(contract) => contract,
-                None => return HttpResponse::NotFound().finish(),
+
+            let Some(old_contract) = pinned_cache.get(&id) else {
+                return HttpResponse::NotFound().finish();
             };
+
             pinned_cache.insert(
                 id,
                 WorkContractCategoryCache {
@@ -197,7 +196,9 @@ pub async fn upload_work_contract(
     let type_value = form.type_of_contract.into_inner();
     let location_value = form.location.into_inner();
     let category_id = form.category_id.into_inner();
-    let description = form.description.map(actix_multipart::form::text::Text::into_inner);
+    let description = form
+        .description
+        .map(actix_multipart::form::text::Text::into_inner);
     let now = chrono::Utc::now();
 
     let result = sqlx::query!(
@@ -326,21 +327,19 @@ pub async fn update_work_contract(
 
     let pinned_work_contracts_cache = state.cache.work_contracts.pin();
 
-    let old_contract = match pinned_work_contracts_cache.get(&contract_id) {
-        Some(contract) => contract,
-        None => return HttpResponse::NotFound().finish(),
+    let Some(old_contract) = pinned_work_contracts_cache.get(&contract_id) else {
+        return HttpResponse::NotFound().finish();
     };
 
-    let Json(req): Json<UpdateWorkContractRequest> = match Json::from_bytes(data) {
+    let Json(req): Json<UpdateWorkContractRequest> = match Json::from_bytes(&data) {
         Ok(json) => json,
         Err(_) => return HttpResponse::BadRequest().finish(),
     };
 
     let now = chrono::Utc::now();
 
-    let start_date = match NaiveDate::parse_from_str(&req.start_date, "%d/%m/%Y") {
-        Ok(date) => date,
-        Err(_) => return HttpResponse::BadRequest().body("Invalid start_date format"),
+    let Ok(start_date) = NaiveDate::parse_from_str(&req.start_date, "%d/%m/%Y") else {
+        return HttpResponse::BadRequest().body("Invalid start_date format");
     };
 
     let end_date = match req.end_date {
@@ -439,9 +438,9 @@ pub async fn upload_work_contract_files(
     let files_length = form.files.len();
 
     let pinned_work_contracts_cache = state.cache.work_contracts.pin();
-    let contract = match pinned_work_contracts_cache.get(&contract_id) {
-        Some(contract) => contract,
-        None => return HttpResponse::NotFound().finish(),
+
+    let Some(contract) = pinned_work_contracts_cache.get(&contract_id) else {
+        return HttpResponse::NotFound().finish();
     };
 
     let base_path = format!("media/work_contracts/{contract_id}");
@@ -502,9 +501,8 @@ pub async fn delete_work_contract_file(
 
     let pinned_work_contracts_cache = state.cache.work_contracts.pin();
 
-    let contract = match pinned_work_contracts_cache.get(&contract_id) {
-        Some(contract) => contract,
-        None => return HttpResponse::NotFound().finish(),
+    let Some(contract) = pinned_work_contracts_cache.get(&contract_id) else {
+        return HttpResponse::NotFound().finish();
     };
 
     let pinned_contract_files_cache = contract.files.pin();

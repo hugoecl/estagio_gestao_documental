@@ -205,7 +205,7 @@ pub async fn update_contract(
         return HttpResponse::NotFound().finish();
     }
 
-    let Json(req): Json<UpdateContractRequest> = Json::from_bytes(data).unwrap();
+    let Json(req): Json<UpdateContractRequest> = Json::from_bytes(&data).unwrap();
 
     let now = chrono::Utc::now();
 
@@ -304,9 +304,9 @@ pub async fn upload_contract_files(
     let files_length = form.files.len();
 
     let pinned_contracts_cache = state.cache.contracts.pin();
-    let contract = match pinned_contracts_cache.get(&contract_id) {
-        Some(contract) => contract,
-        None => return HttpResponse::NotFound().finish(),
+
+    let Some(contract) = pinned_contracts_cache.get(&contract_id) else {
+        return HttpResponse::NotFound().finish();
     };
 
     let base_path = format!("media/contracts/{contract_id}");
@@ -367,9 +367,8 @@ pub async fn delete_contract_file(
     let pinned_contracts_cache = state.cache.contracts.pin();
 
     let contract = pinned_contracts_cache.get(&contract_id);
-    let contract = if let Some(contract) = contract {
-        contract
-    } else {
+
+    let Some(contract) = contract else {
         return HttpResponse::NotFound().finish();
     };
 
