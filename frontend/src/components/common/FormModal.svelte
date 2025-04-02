@@ -1,5 +1,4 @@
 <script lang="ts">
-    // TODO: add optional validation e.g NIF
     import DatePicker from "@components/common/DatePicker.svelte";
     import API_BASE_URL from "@api/base-url";
     import { currentModal } from "@stores/modal-store";
