@@ -14,6 +14,10 @@ pub fn init(cfg: &mut web::ServiceConfig) {
             .route(
                 "/models/{id}",
                 web::put().to(crate::handlers::quality::model_handlers::update_model),
+            )
+            .route(
+                "/models/{id}/files",
+                web::post().to(crate::handlers::quality::model_handlers::upload_model_files),
             ),
     );
 }
