@@ -1,10 +1,5 @@
 import type { Locations } from "@lib/types/locations";
-
-export interface LicenseFiles {
-  name: string;
-  path: string;
-  uploadedAt: string;
-}
+import type { FileData } from "@lib/types/files";
 
 export interface License {
   scope: string;
@@ -19,7 +14,7 @@ export interface License {
   createdAt: Date;
   updatedAt: Date;
 
-  files: Record<number, LicenseFiles>;
+  files: Record<number, FileData>;
 
   // Things made for the sake of performance primarily when searching that are added when the data is fetched
 

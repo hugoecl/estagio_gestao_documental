@@ -1,4 +1,5 @@
 import type { Locations } from "@lib/types/locations";
+import type { FileData } from "@lib/types/files";
 
 export const ContractServices = [
   "Eletricidade",
@@ -27,11 +28,6 @@ export const ContractTypesObject = ContractTypes.map((type, index) => ({
 }));
 
 // TODO: See createdAt and updatedAt maybe show them in the modal
-export interface ContractFiles {
-  name: string;
-  path: string;
-  uploadedAt: string;
-}
 export interface Contract {
   contractNumber: number;
   date: Date;
@@ -45,7 +41,7 @@ export interface Contract {
   type: (typeof ContractTypes)[number];
   createdAt: string;
   updatedAt: string;
-  files: Record<number, ContractFiles>;
+  files: Record<number, FileData>;
 
   // Things made for the sake of performance that are added when the data is fetched
   dateString: string;

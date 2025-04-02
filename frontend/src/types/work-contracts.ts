@@ -1,4 +1,5 @@
 import type { Locations } from "@lib/types/locations";
+import type { FileData } from "@lib/types/files";
 
 export interface WorkContractCategory {
   name: string;
@@ -17,11 +18,6 @@ export type WorkContractCategories = Record<number, WorkContractCategory>;
 
 export const WorkContractTypes = ["Adenda", "Contrato de Funcionário"] as const;
 
-export interface WorkContractFiles {
-  name: string;
-  path: string;
-  uploadedAt: string;
-}
 export interface WorkContract {
   employeeName: string;
   nif: string;
@@ -34,7 +30,7 @@ export interface WorkContract {
   description?: string;
   createdAt: string;
   updatedAt: string;
-  files: Record<number, WorkContractFiles>;
+  files: Record<number, FileData>;
 
   // Things made for the sake of performance that are added when the data is fetched
   dateStartString: string;
