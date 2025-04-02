@@ -100,7 +100,7 @@ pub async fn upload_contract(
 
     let base_path = format!("media/contracts/{}", new_contract_id);
     let base_path_clone = base_path.clone();
-    let _ = tokio::task::spawn_blocking(move || {
+    tokio::task::spawn_blocking(move || {
         std::fs::create_dir_all(base_path_clone).unwrap();
     })
     .await
@@ -201,7 +201,7 @@ pub async fn update_contract(
 
     let pinned_contracts_cache = state.cache.contracts.pin();
     let old_contect = pinned_contracts_cache.get(&contract_id).unwrap();
-    if let None = pinned_contracts_cache.get(&contract_id) {
+    if pinned_contracts_cache.get(&contract_id).is_none() {
         return HttpResponse::NotFound().finish();
     }
 
@@ -270,7 +270,7 @@ pub async fn delete_contract(
     let pinned_contracts_cache = state.cache.contracts.pin();
 
     let contract = pinned_contracts_cache.remove(&contract_id);
-    if let None = contract {
+    if contract.is_none() {
         return HttpResponse::NotFound().finish();
     }
 
@@ -376,7 +376,7 @@ pub async fn delete_contract_file(
     let pinned_contract_files_cache = contract.files.pin();
 
     let contract_file = pinned_contract_files_cache.remove(&file_id);
-    if let None = contract_file {
+    if contract_file.is_none() {
         return HttpResponse::NotFound().finish();
     }
     let file_path = contract_file.unwrap().path.clone();

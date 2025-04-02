@@ -246,7 +246,7 @@ pub async fn delete_license(
 
     let pinned_license_cache = state.cache.radiological_protection_licenses.pin();
 
-    if let None = pinned_license_cache.remove(&license_id) {
+    if pinned_license_cache.remove(&license_id).is_none() {
         return HttpResponse::NotFound().finish();
     }
 

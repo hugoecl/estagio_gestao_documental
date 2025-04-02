@@ -11,7 +11,7 @@ pub mod work_contract_routes;
 
 #[get("/{filename:.*}")]
 async fn serve_files(req: HttpRequest, session: Session) -> Result<actix_files::NamedFile, Error> {
-    if let Err(_) = validate_session(&session) {
+    if validate_session(&session).is_err() {
         return Err(ErrorUnauthorized("Não autorizado"));
     }
 

@@ -191,10 +191,9 @@ pub async fn upload_work_contract(
     let employee_name = form.employee_name.into_inner();
     let nif = form.nif.into_inner();
     let start_date = NaiveDate::parse_from_str(&form.start_date.into_inner(), "%d/%m/%Y").unwrap();
-    let end_date = match form.end_date {
-        Some(end_date) => Some(NaiveDate::parse_from_str(&end_date, "%d/%m/%Y").unwrap()),
-        None => None,
-    };
+    let end_date = form
+        .end_date
+        .map(|end_date| NaiveDate::parse_from_str(&end_date, "%d/%m/%Y").unwrap());
 
     let type_value = form.type_of_contract.into_inner();
     let location_value = form.location.into_inner();
@@ -224,7 +223,7 @@ pub async fn upload_work_contract(
 
             let base_path = format!("media/work_contracts/{}", new_contract_id);
             let base_path_clone = base_path.clone();
-            let _ = tokio::task::spawn_blocking(move || {
+            tokio::task::spawn_blocking(move || {
                 std::fs::create_dir_all(base_path_clone).unwrap();
             })
             .await
@@ -376,7 +375,7 @@ pub async fn update_work_contract(
 
     tokio::spawn(async move {
         let result = sqlx::query!(
-            "UPDATE work_contracts SET employee_name = ?, nif = ?, start_date = ?, end_date = ?, 
+            "UPDATE work_contracts SET employee_name = ?, nif = ?, start_date = ?, end_date = ?,
              type = ?, location = ?, category_id = ?, description = ?, updated_at = ? WHERE id = ?",
             req.employee_name,
             req.nif,
