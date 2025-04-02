@@ -45,7 +45,7 @@ pub async fn upload_modal(
     let name = form.name.into_inner();
     let version = form.version.into_inner();
     let model = form.model.into_inner();
-    let description = form.description.map(|d| d.into_inner());
+    let description = form.description.map(actix_multipart::form::text::Text::into_inner);
 
     let now = chrono::Utc::now();
 
@@ -61,7 +61,7 @@ pub async fn upload_modal(
 
     let new_model_id = result.last_insert_id() as u32;
 
-    let base_path = format!("media/quality/models/{}", new_model_id);
+    let base_path = format!("media/quality/models/{new_model_id}");
     let base_path_clone = base_path.clone();
     tokio::task::spawn_blocking(move || {
         std::fs::create_dir_all(base_path_clone).unwrap();
@@ -79,7 +79,7 @@ pub async fn upload_modal(
 
     let mut file_paths = Vec::with_capacity(files_length);
 
-    for file in form.files.into_iter() {
+    for file in form.files {
         let file_path = format!("{}/{}", base_path, file.file_name);
         file_paths.push(file_path.clone());
 
@@ -126,5 +126,5 @@ pub async fn upload_modal(
         },
     );
 
-    HttpResponse::Created().body(format!("{},{}", new_model_id, first_file_id))
+    HttpResponse::Created().body(format!("{new_model_id},{first_file_id}"))
 }

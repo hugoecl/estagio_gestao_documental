@@ -32,7 +32,7 @@ fn generate_entity_tag(content: &[u8]) -> EntityTag {
     let mut hasher = AHasher::default();
     hasher.write(content);
     let hash = hasher.finish();
-    EntityTag::new_weak(format!("{:x}", hash))
+    EntityTag::new_weak(format!("{hash:x}"))
 }
 
 pub fn json_response_with_etag(obj: &impl Serialize, req: &HttpRequest) -> HttpResponse {

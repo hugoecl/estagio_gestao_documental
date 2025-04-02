@@ -415,7 +415,7 @@ async fn get_analytics_cache(
 
     let pinned_analytics_cache = analytics_cache.pin();
 
-    for entry in analytics.into_iter() {
+    for entry in analytics {
         let key = AnalyticsKey {
             user_id: entry.user_id,
             page_path: entry.page_path,
@@ -447,7 +447,7 @@ async fn get_users_cache(
 
     let pinned_users_cache = users_cache.pin();
 
-    for user in users.into_iter() {
+    for user in users {
         pinned_users_cache.insert(
             user.id,
             UserCache {
@@ -481,7 +481,7 @@ async fn get_contracts_cache(
         .build();
     let pinned_contracts_cache = contracts_cache.pin();
 
-    for contract in contracts.into_iter() {
+    for contract in contracts {
         let files = sqlx::query!(
             "SELECT * FROM contract_files WHERE contract_id = ?",
             contract.id
@@ -496,7 +496,7 @@ async fn get_contracts_cache(
             .build();
         let pinned_file_cache = file_cache.pin();
 
-        for file in files.into_iter() {
+        for file in files {
             pinned_file_cache.insert(
                 file.id,
                 ContractFilesCache {

@@ -71,8 +71,7 @@ pub async fn add_work_contract_category(
         }
         Err(e) => {
             error!(
-                "Database error during work contract category creation: {}",
-                e
+                "Database error during work contract category creation: {e}"
             );
             HttpResponse::InternalServerError().finish()
         }
@@ -119,7 +118,7 @@ pub async fn update_work_contract_category(
             HttpResponse::NoContent().finish()
         }
         Err(e) => {
-            error!("Database error during work contract category update: {}", e);
+            error!("Database error during work contract category update: {e}");
             HttpResponse::InternalServerError().finish()
         }
     }
@@ -144,7 +143,7 @@ pub async fn delete_work_contract_category(
                     .execute(&state.db.pool)
                     .await;
                 if let Err(e) = result {
-                    error!("Error deleting work contract category from database: {}", e);
+                    error!("Error deleting work contract category from database: {e}");
                 }
             });
 
@@ -198,7 +197,7 @@ pub async fn upload_work_contract(
     let type_value = form.type_of_contract.into_inner();
     let location_value = form.location.into_inner();
     let category_id = form.category_id.into_inner();
-    let description = form.description.map(|d| d.into_inner());
+    let description = form.description.map(actix_multipart::form::text::Text::into_inner);
     let now = chrono::Utc::now();
 
     let result = sqlx::query!(
@@ -221,7 +220,7 @@ pub async fn upload_work_contract(
         Ok(result) => {
             let new_contract_id = result.last_insert_id() as u32;
 
-            let base_path = format!("media/work_contracts/{}", new_contract_id);
+            let base_path = format!("media/work_contracts/{new_contract_id}");
             let base_path_clone = base_path.clone();
             tokio::task::spawn_blocking(move || {
                 std::fs::create_dir_all(base_path_clone).unwrap();
@@ -237,7 +236,7 @@ pub async fn upload_work_contract(
             let pinned_files_cache = work_contract_files_cache.pin();
 
             let mut file_paths = Vec::with_capacity(files_length);
-            for file in form.files.into_iter() {
+            for file in form.files {
                 let file_path = format!("{}/{}", base_path, file.file_name);
                 file_paths.push(file_path.clone());
 
@@ -292,10 +291,10 @@ pub async fn upload_work_contract(
                 .pin()
                 .insert(new_contract_id, contract_cache);
 
-            HttpResponse::Created().body(format!("{},{}", new_contract_id, first_file_id))
+            HttpResponse::Created().body(format!("{new_contract_id},{first_file_id}"))
         }
         Err(e) => {
-            error!("Database error during work contract creation: {}", e);
+            error!("Database error during work contract creation: {e}");
             HttpResponse::InternalServerError().finish()
         }
     }
@@ -392,7 +391,7 @@ pub async fn update_work_contract(
         .await;
 
         if let Err(e) = result {
-            error!("Error updating work contract in database: {}", e);
+            error!("Error updating work contract in database: {e}");
         }
     });
 
@@ -417,7 +416,7 @@ pub async fn delete_work_contract(
                     .execute(&state.db.pool)
                     .await;
                 if let Err(e) = result {
-                    error!("Error deleting work contract from database: {}", e);
+                    error!("Error deleting work contract from database: {e}");
                 }
             });
             HttpResponse::Ok().finish()
@@ -445,12 +444,12 @@ pub async fn upload_work_contract_files(
         None => return HttpResponse::NotFound().finish(),
     };
 
-    let base_path = format!("media/work_contracts/{}", contract_id);
+    let base_path = format!("media/work_contracts/{contract_id}");
     let now = chrono::Utc::now();
 
     let mut file_paths = Vec::with_capacity(files_length);
 
-    for file in form.files.into_iter() {
+    for file in form.files {
         let file_path = format!("{}/{}", base_path, file.file_name);
         file_paths.push(file_path.clone());
 
@@ -528,7 +527,7 @@ pub async fn delete_work_contract_file(
             .await;
 
         if let Err(e) = result {
-            error!("Error deleting work contract file from database: {}", e);
+            error!("Error deleting work contract file from database: {e}");
         }
     });
 

@@ -61,7 +61,7 @@ pub async fn upload_license(
     let start_date = NaiveDate::parse_from_str(start_date, "%d/%m/%Y").unwrap();
     let end_date = NaiveDate::parse_from_str(end_date, "%d/%m/%Y").unwrap();
     let location = form.location.into_inner();
-    let description = form.description.map(|d| d.into_inner());
+    let description = form.description.map(actix_multipart::form::text::Text::into_inner);
     let files = form.files;
 
     let now = chrono::Utc::now();
@@ -79,14 +79,14 @@ pub async fn upload_license(
     ).execute(&state.db.pool).await {
         Ok(r) => r,
         Err(e) => {
-            error!("Database error during license upload: {}", e);
+            error!("Database error during license upload: {e}");
             return HttpResponse::InternalServerError().finish();
         }
     };
 
     let license_id = result.last_insert_id() as u32;
 
-    let base_path = format!("media/radiological_protection/licenses/{}", license_id);
+    let base_path = format!("media/radiological_protection/licenses/{license_id}");
     let base_path_clone = base_path.clone();
     tokio::task::spawn_blocking(move || {
         std::fs::create_dir_all(base_path_clone).unwrap();
@@ -104,7 +104,7 @@ pub async fn upload_license(
 
     let mut file_paths = Vec::with_capacity(files_length);
 
-    for file in files.into_iter() {
+    for file in files {
         let file_path = format!("{}/{}", base_path, file.file_name);
         file_paths.push(file_path.clone());
 
@@ -124,7 +124,7 @@ pub async fn upload_license(
     let file_result = match query_builder.build().execute(&state.db.pool).await {
         Ok(r) => r,
         Err(e) => {
-            error!("Database error during license file upload: {}", e);
+            error!("Database error during license file upload: {e}");
             return HttpResponse::InternalServerError().finish();
         }
     };
@@ -160,7 +160,7 @@ pub async fn upload_license(
         },
     );
 
-    HttpResponse::Created().body(format!("{},{}", license_id, first_file_id))
+    HttpResponse::Created().body(format!("{license_id},{first_file_id}"))
 }
 
 #[derive(Deserialize)]
@@ -252,8 +252,7 @@ pub async fn delete_license(
 
     tokio::task::spawn_blocking(move || {
         std::fs::remove_dir_all(format!(
-            "media/radiological_protection/licenses/{}",
-            license_id
+            "media/radiological_protection/licenses/{license_id}"
         ))
         .unwrap();
     });
@@ -292,12 +291,12 @@ pub async fn upload_license_files(
         None => return HttpResponse::NotFound().finish(),
     };
 
-    let base_path = format!("media/radiological_protection/licenses/{}", license_id);
+    let base_path = format!("media/radiological_protection/licenses/{license_id}");
     let now = chrono::Utc::now();
 
     let mut file_paths = Vec::with_capacity(files_length);
 
-    for file in form.files.into_iter() {
+    for file in form.files {
         let file_path = format!("{}/{}", base_path, file.file_name);
         file_paths.push(file_path.clone());
 
@@ -317,7 +316,7 @@ pub async fn upload_license_files(
     let file_result = match query_builder.build().execute(&state.db.pool).await {
         Ok(r) => r,
         Err(e) => {
-            error!("Database error during license file upload: {}", e);
+            error!("Database error during license file upload: {e}");
             return HttpResponse::InternalServerError().finish();
         }
     };

@@ -77,12 +77,12 @@ async fn main() -> std::io::Result<()> {
         Ok(db) => match Cache::new(&db.pool).await {
             Ok(cache) => (db, cache),
             Err(e) => {
-                eprintln!("Failed to create cache: {:?}", e);
+                eprintln!("Failed to create cache: {e:?}");
                 return Ok(());
             }
         },
         Err(e) => {
-            eprintln!("Failed to connect to the database: {:?}", e);
+            eprintln!("Failed to connect to the database: {e:?}");
             return Ok(());
         }
     };

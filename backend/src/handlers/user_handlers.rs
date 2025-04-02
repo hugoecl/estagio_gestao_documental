@@ -46,7 +46,7 @@ pub async fn register(state: web::Data<State>, request_data: web::Bytes) -> impl
     let result = match result {
         Ok(r) => r,
         Err(e) => {
-            error!("Database error during user registration: {}", e);
+            error!("Database error during user registration: {e}");
             return HttpResponse::InternalServerError().finish();
         }
     };
@@ -79,7 +79,7 @@ pub async fn login(
     let Json(req): Json<LoginRequest> = Json::from_bytes(request_date).unwrap();
     let pinned_users_cache = state.cache.users.pin();
 
-    for (i, u) in pinned_users_cache.iter() {
+    for (i, u) in &pinned_users_cache {
         if u.email == req.email && verify(&req.password, &u.password) {
             session.insert("user_id", i).unwrap();
             session.insert("is_admin", u.is_admin).unwrap();

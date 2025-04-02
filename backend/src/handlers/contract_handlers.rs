@@ -98,7 +98,7 @@ pub async fn upload_contract(
 
     let new_contract_id = result.last_insert_id() as u32;
 
-    let base_path = format!("media/contracts/{}", new_contract_id);
+    let base_path = format!("media/contracts/{new_contract_id}");
     let base_path_clone = base_path.clone();
     tokio::task::spawn_blocking(move || {
         std::fs::create_dir_all(base_path_clone).unwrap();
@@ -116,7 +116,7 @@ pub async fn upload_contract(
 
     let mut file_paths = Vec::with_capacity(files_length);
 
-    for file in form.files.into_iter() {
+    for file in form.files {
         let file_path = format!("{}/{}", base_path, file.file_name);
         file_paths.push(file_path.clone());
 
@@ -170,7 +170,7 @@ pub async fn upload_contract(
         },
     );
 
-    HttpResponse::Created().body(format!("{},{}", new_contract_id, first_file_id))
+    HttpResponse::Created().body(format!("{new_contract_id},{first_file_id}"))
 }
 
 #[derive(Deserialize)]
@@ -275,7 +275,7 @@ pub async fn delete_contract(
     }
 
     tokio::task::spawn_blocking(move || {
-        std::fs::remove_dir_all(format!("media/contracts/{}", contract_id))
+        std::fs::remove_dir_all(format!("media/contracts/{contract_id}"))
     });
 
     drop(pinned_contracts_cache);
@@ -309,12 +309,12 @@ pub async fn upload_contract_files(
         None => return HttpResponse::NotFound().finish(),
     };
 
-    let base_path = format!("media/contracts/{}", contract_id);
+    let base_path = format!("media/contracts/{contract_id}");
     let now = chrono::Utc::now();
 
     let mut file_paths = Vec::with_capacity(files_length);
 
-    for file in form.files.into_iter() {
+    for file in form.files {
         let file_path = format!("{}/{}", base_path, file.file_name);
         file_paths.push(file_path.clone());
 
@@ -380,7 +380,7 @@ pub async fn delete_contract_file(
         return HttpResponse::NotFound().finish();
     }
     let file_path = contract_file.unwrap().path.clone();
-    tokio::task::spawn_blocking(move || std::fs::remove_file(format!("media{}", file_path)));
+    tokio::task::spawn_blocking(move || std::fs::remove_file(format!("media{file_path}")));
 
     drop(pinned_contract_files_cache);
     drop(pinned_contracts_cache);
