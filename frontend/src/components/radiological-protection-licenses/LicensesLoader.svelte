@@ -260,7 +260,7 @@
                 const file = files[i];
                 license.files[fileBaseId + i] = {
                     name: file.name,
-                    path: `media/radiological_protection/licenses/${selectedLicenseId}/${file.name}`,
+                    path: `media/radiological_protection/licenses/${licenseId}/${file.name}`,
                     uploadedAt: nowString,
                 };
             }

@@ -128,7 +128,7 @@
             return;
         }
 
-        if (!showDeleteButton && newFiles.length <= 0) {
+        if (!recordId && newFiles.length <= 0) {
             showAlert(
                 "Por favor, submeta pelo menos um ficheiro.",
                 AlertType.ERROR,
@@ -141,7 +141,7 @@
 
         let dateRange: string | null = null;
 
-        if (!showDeleteButton) {
+        if (!recordId) {
             const formEntries = new FormData(e.target as HTMLFormElement);
             for (let i = 0, len = fields.length; i < len; i++) {
                 const field = fields[i];
@@ -171,7 +171,7 @@
 
                             case FieldType.DATE_RANGE:
                                 let start, end;
-                                if (!showDeleteButton) {
+                                if (!recordId) {
                                     start = dateRange!.substring(0, 10);
                                     end = dateRange!.substring(13, 23);
                                 } else {
@@ -475,7 +475,7 @@
                                         <td>{file.uploadedAt}</td>
                                         <td>
                                             <div
-                                                class="flex justify-end space-x-2"
+                                                class="flex justify-between space-x-2"
                                             >
                                                 <a
                                                     href={`${apiBaseUrl}/${file.path}`}
@@ -484,17 +484,19 @@
                                                 >
                                                     Ver
                                                 </a>
-                                                <button
-                                                    type="button"
-                                                    class="btn btn-xs btn-error"
-                                                    disabled={isSubmitting}
-                                                    onclick={() =>
-                                                        showDeleteFileConfirmation(
-                                                            file.id,
-                                                        )}
-                                                >
-                                                    Eliminar
-                                                </button>
+                                                {#if showDeleteButton}
+                                                    <button
+                                                        type="button"
+                                                        class="btn btn-xs btn-error"
+                                                        disabled={isSubmitting}
+                                                        onclick={() =>
+                                                            showDeleteFileConfirmation(
+                                                                file.id,
+                                                            )}
+                                                    >
+                                                        Eliminar
+                                                    </button>
+                                                {/if}
                                             </div>
                                         </td>
                                     </tr>

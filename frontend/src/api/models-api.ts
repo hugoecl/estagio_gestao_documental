@@ -42,3 +42,45 @@ export async function getModels(): Promise<Models | null> {
   }
   return json;
 }
+
+export async function uploadModelFiles(
+  modelId: string,
+  files: File[],
+): Promise<[boolean, number]> {
+  const formData = new FormData();
+  for (let i = 0, len = files.length; i < len; i++) {
+    const file = files[i];
+    formData.append("files", file, `${file.name}_${file.size}`);
+  }
+
+  const resp = await handleFetch(
+    `${API_BASE_URL}/quality/models/${modelId}/files`,
+    {
+      method: "POST",
+      credentials: "include",
+      body: formData,
+    },
+  );
+
+  if (!resp.ok) {
+    return [false, -1];
+  }
+  return [resp.ok, parseInt(await resp.text(), 10)];
+}
+
+export async function updateModel(
+  modelId: string,
+  model: Model,
+): Promise<boolean> {
+  const resp = await handleFetch(`${API_BASE_URL}/quality/models/${modelId}`, {
+    method: "PUT",
+    credentials: "include",
+    body: JSON.stringify({
+      name: model.name,
+      version: model.version,
+      model: model.model,
+      description: model.description,
+    }),
+  });
+  return resp.ok;
+}

@@ -19,7 +19,7 @@ export const menuItems: MenuItem[] = [
           { title: "P2", path: "p2/" },
         ],
       },
-      { title: "Módulos", path: "modulos/" },
+      { title: "Modelos", path: "modelos/" },
       { title: "Não Conformidade", path: "nao-conformidade/" },
       {
         title: "Fornecedores",
@@ -109,7 +109,7 @@ export const menuItems: MenuItem[] = [
 
 export function extractPathsAndTitles(
   items: MenuItem[],
-  basePath: string = ""
+  basePath: string = "",
 ): Record<string, string> {
   let result: Record<string, string> = {};
 
