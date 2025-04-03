@@ -226,7 +226,7 @@
         const formData = new FormData();
         const entries = Object.entries(data);
 
-        for (let i = 0; i < entries.length; i++) {
+        for (let i = 0, len = entries.length; i < len; i++) {
             const [key, value] = entries[i];
             formData.append(key, value);
         }
