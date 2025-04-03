@@ -173,7 +173,7 @@
                 const file = files[i];
                 selectedLicense!.files[filesBaseId + i] = {
                     name: file.name,
-                    path: `media/radiological-protection/${file.name}`,
+                    path: `media/radiological_protection/licenses/${selectedLicenseId}/${file.name}`,
                     uploadedAt: nowString,
                 };
             }
@@ -194,7 +194,7 @@
                 const file = files[i];
                 selectedLicense!.files[filesBaseId + i] = {
                     name: file.name,
-                    path: `media/radiological-protection/${file.name}`,
+                    path: `media/radiological_protection/licenses/${selectedLicenseId}/${file.name}`,
                     uploadedAt: nowString,
                 };
             }
@@ -260,7 +260,7 @@
                 const file = files[i];
                 license.files[fileBaseId + i] = {
                     name: file.name,
-                    path: `media/radiological-protection/${file.name}`,
+                    path: `media/radiological_protection/licenses/${selectedLicenseId}/${file.name}`,
                     uploadedAt: nowString,
                 };
             }
