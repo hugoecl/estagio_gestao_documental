@@ -3,7 +3,6 @@ CREATE TABLE IF NOT EXISTS users (
     username VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     password BINARY(48) NOT NULL,
-    is_admin BOOLEAN NOT NULL DEFAULT false,
     PRIMARY KEY (id)
 );
 
@@ -18,105 +17,113 @@ CREATE TABLE IF NOT EXISTS user_page_analytics (
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS contracts (
+
+-- Custom Pages Table
+CREATE TABLE IF NOT EXISTS custom_pages (
     id INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL,
-    contract_number INT UNSIGNED NOT NULL,
-    date DATE NOT NULL,
-    date_start DATE NOT NULL,
-    date_end DATE NOT NULL,
-    description TEXT NOT NULL,
-    location TINYINT NOT NULL COMMENT '0: Viana do Castelo, 1: Braga, 2: Porto, 3: Vila Real',
-    service TINYINT NOT NULL COMMENT '0: Electricity, 1: Water, 2: Cleaning, 3: Printers, 4: Comunications',
-    status TINYINT NOT NULL COMMENT '0: Active, 1: Inactive',
-    supplier VARCHAR(100) NOT NULL,
-    type TINYINT NOT NULL COMMENT '0: Addendum, 1: New, 2: Renew',
+    name VARCHAR(255) NOT NULL COMMENT 'Display name of the page',
+    path VARCHAR(255) NOT NULL UNIQUE COMMENT 'URL path for the page',
+    parent_path VARCHAR(255) COMMENT 'Parent path for nested navigation',
+    description TEXT,
+    icon VARCHAR(100) COMMENT 'FontAwesome icon name',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id)
 );
 
-CREATE TABLE IF NOT EXISTS contract_files (
-    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    contract_id INT UNSIGNED NOT NULL,
-    file_path VARCHAR(255) NOT NULL COMMENT 'Is relative to the backend folder includes the file name',
-    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (id),
-    FOREIGN KEY (contract_id) REFERENCES contracts (id) ON DELETE CASCADE
-);
-
-CREATE TABLE IF NOT EXISTS work_contract_categories (
+-- Field Types Table
+CREATE TABLE IF NOT EXISTS field_types (
     id INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL,
-    name VARCHAR(100) NOT NULL,
-    description TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (id),
-    UNIQUE KEY unique_category_name (name)
+    name VARCHAR(50) NOT NULL UNIQUE,
+    PRIMARY KEY (id)
 );
 
-CREATE TABLE IF NOT EXISTS work_contracts (
+-- -- Insert common field types
+-- INSERT INTO field_types (name) VALUES 
+-- ('TEXT'), ('NUMBER'), ('DATE'), ('DATE_RANGE'), ('SELECT'), ('BOOLEAN'), ('TEXTAREA'), ('EMAIL');
+
+-- Page Fields Table
+CREATE TABLE IF NOT EXISTS page_fields (
     id INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL,
-    employee_name VARCHAR(255) NOT NULL,
-    nif VARCHAR(9) NOT NULL,
-    start_date DATE NOT NULL,
-    end_date DATE,
-    type TINYINT NOT NULL COMMENT '0: Adenda, 1: Contrato de Funcionario',
-    location TINYINT NOT NULL COMMENT '0: Viana do Castelo, 1: Braga, 2: Porto, 3: Vila Real',
-    category_id INT UNSIGNED NOT NULL,
-    description TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    page_id INT UNSIGNED NOT NULL,
+    name VARCHAR(100) NOT NULL COMMENT 'Field name/ID',
+    display_name VARCHAR(255) NOT NULL COMMENT 'Human-readable field name',
+    field_type_id INT UNSIGNED NOT NULL,
+    required BOOLEAN NOT NULL DEFAULT false,
+    options JSON COMMENT 'Options for SELECT fields',
+    validation_name VARCHAR(100) COMMENT 'Name of validation function',
+    is_searchable BOOLEAN NOT NULL DEFAULT true,
+    is_displayed_in_table BOOLEAN NOT NULL DEFAULT true,
+    order_index INT UNSIGNED NOT NULL DEFAULT 0,
     PRIMARY KEY (id),
-    FOREIGN KEY (category_id) REFERENCES work_contract_categories (id)
+    FOREIGN KEY (page_id) REFERENCES custom_pages (id) ON DELETE CASCADE,
+    FOREIGN KEY (field_type_id) REFERENCES field_types (id)
 );
 
-CREATE TABLE IF NOT EXISTS work_contract_files (
-    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    contract_id INT UNSIGNED NOT NULL,
-    file_path VARCHAR(255) NOT NULL COMMENT 'Is relative to the backend folder includes the file name',
-    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (id),
-    FOREIGN KEY (contract_id) REFERENCES work_contracts (id) ON DELETE CASCADE
-);
-
-CREATE TABLE IF NOT EXISTS radiological_protection_licenses (
+-- Roles Table
+CREATE TABLE IF NOT EXISTS roles (
     id INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL,
-    license_number INT UNSIGNED NOT NULL,
-    start_date DATE NOT NULL,
-    end_date DATE NOT NULL,
-    scope VARCHAR(255) NOT NULL,
-    location TINYINT NOT NULL COMMENT '0: Viana do Castelo, 1: Braga, 2: Porto, 3: Vila Real',
+    name VARCHAR(100) NOT NULL UNIQUE,
     description TEXT,
+    is_admin BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id)
 );
 
-CREATE TABLE IF NOT EXISTS radiological_protection_license_files (
-    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    license_id INT UNSIGNED NOT NULL,
-    file_path VARCHAR(255) NOT NULL COMMENT 'Is relative to the backend folder includes the file name',
-    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (id),
-    FOREIGN KEY (license_id) REFERENCES radiological_protection_licenses (id) ON DELETE CASCADE
+-- -- Insert default admin role
+-- INSERT INTO roles (name, description, is_admin) VALUES 
+-- ('Admin', 'Administrador com acesso completo', true);
+
+-- User Roles Table (Many-to-many relationship)
+CREATE TABLE IF NOT EXISTS user_roles (
+    user_id INT UNSIGNED NOT NULL,
+    role_id INT UNSIGNED NOT NULL,
+    PRIMARY KEY (user_id, role_id),
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+    FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS models (
+-- Page Permissions Table
+CREATE TABLE IF NOT EXISTS page_permissions (
     id INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL,
-    name VARCHAR(255) NOT NULL,
-    version VARCHAR(10) NOT NULL,
-    model VARCHAR(10) NOT NULL,
-    description TEXT,
+    page_id INT UNSIGNED NOT NULL,
+    role_id INT UNSIGNED NOT NULL,
+    can_view BOOLEAN NOT NULL DEFAULT false,
+    can_create BOOLEAN NOT NULL DEFAULT false,
+    can_edit BOOLEAN NOT NULL DEFAULT false,
+    can_delete BOOLEAN NOT NULL DEFAULT false,
+    can_manage_fields BOOLEAN NOT NULL DEFAULT false,
+    PRIMARY KEY (id),
+    UNIQUE KEY unique_page_role (page_id, role_id),
+    FOREIGN KEY (page_id) REFERENCES custom_pages (id) ON DELETE CASCADE,
+    FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE
+);
+
+-- Page Records Table (for storing dynamic data)
+CREATE TABLE IF NOT EXISTS page_records (
+    id INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL,
+    page_id INT UNSIGNED NOT NULL,
+    data JSON NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (id)
+    created_by INT UNSIGNED NOT NULL,
+    updated_by INT UNSIGNED,
+    PRIMARY KEY (id),
+    FOREIGN KEY (page_id) REFERENCES custom_pages (id),
+    FOREIGN KEY (created_by) REFERENCES users (id),
+    FOREIGN KEY (updated_by) REFERENCES users (id)
 );
 
-CREATE TABLE IF NOT EXISTS model_files (
-    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    model_id INT UNSIGNED NOT NULL,
-    file_path VARCHAR(255) NOT NULL COMMENT 'Is relative to the backend folder includes the file name',
+-- Page Record Files Table
+CREATE TABLE IF NOT EXISTS page_record_files (
+    id INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL,
+    record_id INT UNSIGNED NOT NULL,
+    file_name VARCHAR(255) NOT NULL,
+    file_path VARCHAR(255) NOT NULL,
     uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    uploaded_by INT UNSIGNED NOT NULL,
     PRIMARY KEY (id),
-    FOREIGN KEY (model_id) REFERENCES models (id) ON DELETE CASCADE
+    FOREIGN KEY (record_id) REFERENCES page_records (id) ON DELETE CASCADE,
+    FOREIGN KEY (uploaded_by) REFERENCES users (id)
 );

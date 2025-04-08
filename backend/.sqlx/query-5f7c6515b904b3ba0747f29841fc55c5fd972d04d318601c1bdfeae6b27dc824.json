@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "\n            UPDATE custom_pages \n            SET name = ?, description = ?, icon = ?\n            WHERE id = ?\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "5f7c6515b904b3ba0747f29841fc55c5fd972d04d318601c1bdfeae6b27dc824"
+}

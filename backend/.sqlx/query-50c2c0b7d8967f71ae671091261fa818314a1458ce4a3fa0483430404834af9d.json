@@ -1,6 +1,6 @@
 {
   "db_name": "MySQL",
-  "query": "DELETE FROM contracts WHERE id = ?",
+  "query": "DELETE FROM custom_pages WHERE id = ?",
   "describe": {
     "columns": [],
     "parameters": {
@@ -8,5 +8,5 @@
     },
     "nullable": []
   },
-  "hash": "bd1d843c4f851e545f499abe5d4c439853d7e4101178d2166ead26270b1b6388"
+  "hash": "50c2c0b7d8967f71ae671091261fa818314a1458ce4a3fa0483430404834af9d"
 }

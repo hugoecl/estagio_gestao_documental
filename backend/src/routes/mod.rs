@@ -1,11 +1,14 @@
 use actix_session::Session;
 use actix_web::{Error, HttpRequest, error::ErrorUnauthorized, get, web};
 
-use crate::utils::session_utils::validate_session;
+use crate::auth::validate_session;
 
 pub mod contract_routes;
+pub mod custom_page_routes;
 pub mod ers_routes;
+pub mod field_routes;
 pub mod quality_routes;
+pub mod role_routes;
 pub mod user_routes;
 pub mod work_contract_routes;
 
@@ -31,6 +34,9 @@ pub fn init(cfg: &mut web::ServiceConfig) {
     work_contract_routes::init(cfg);
     quality_routes::init(cfg);
     ers_routes::init(cfg);
+    custom_page_routes::init(cfg);
+    field_routes::init(cfg);
+    role_routes::init(cfg);
 
     cfg.service(serve_files);
 }

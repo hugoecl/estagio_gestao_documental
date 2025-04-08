@@ -1,4 +1,5 @@
 // TODO: See about running the schema on build.rs
+// TODO: Benchmark web::Bytes and sonic vs web::Json and serde_json
 
 #[cfg(feature = "https")]
 use std::{fs::File, io::BufReader};
@@ -18,6 +19,7 @@ static GLOBAL: MiMalloc = MiMalloc;
 
 const SECS_IN_WEEK: i64 = 60 * 60 * 24 * 7;
 
+mod auth;
 mod cache;
 mod db;
 mod handlers;

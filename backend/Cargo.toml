@@ -29,11 +29,13 @@ papaya = { version = "0.2", features = ["serde"] }
 rustls = { version = "0.23", optional = true }
 rustls-pemfile = { version = "2.2", optional = true }
 serde = { version = "1", features = ["derive"] }
-sonic-rs = "0.4"
+serde_json = "1"
+sonic-rs = "0.4.1"
 sqlx = { version = "0.8", default-features = false, features = [
     "runtime-tokio",
     "mysql",
     "macros",
+    "json",
     "chrono",
 ] }
 tokio = { version = "1", features = ["macros"] }
