@@ -3,14 +3,11 @@ use actix_web::{Error, HttpRequest, error::ErrorUnauthorized, get, web};
 
 use crate::auth::validate_session;
 
-pub mod contract_routes;
 pub mod custom_page_routes;
-pub mod ers_routes;
 pub mod field_routes;
-pub mod quality_routes;
+pub mod record_routes;
 pub mod role_routes;
 pub mod user_routes;
-pub mod work_contract_routes;
 
 #[get("/{filename:.*}")]
 async fn serve_files(req: HttpRequest, session: Session) -> Result<actix_files::NamedFile, Error> {
@@ -30,13 +27,10 @@ async fn serve_files(req: HttpRequest, session: Session) -> Result<actix_files::
 
 pub fn init(cfg: &mut web::ServiceConfig) {
     user_routes::init(cfg);
-    contract_routes::init(cfg);
-    work_contract_routes::init(cfg);
-    quality_routes::init(cfg);
-    ers_routes::init(cfg);
     custom_page_routes::init(cfg);
     field_routes::init(cfg);
     role_routes::init(cfg);
+    record_routes::init(cfg);
 
     cfg.service(serve_files);
 }

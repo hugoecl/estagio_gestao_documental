@@ -20,7 +20,7 @@ pub fn hash(password: &str) -> [u8; 48] {
 }
 
 #[inline(always)]
-pub fn verify(password: &str, combined_bytes: &[u8; 48]) -> bool {
+pub fn verify(password: &str, combined_bytes: &[u8]) -> bool {
     let hash = Hash {
         alg: argon2_kdf::Algorithm::Argon2id,
         mem_cost_kib: 65536,

@@ -17,19 +17,45 @@ impl Db {
 
         sqlx::raw_sql(SCHEMA).execute(&pool).await?;
 
-        let admin_password = hash("admin");
-
         sqlx::query!(
-            "INSERT IGNORE INTO users (username, email, password, is_admin) VALUES (?, ?, ?, ?)",
-            "admin",
-            "admin@jcc.pt",
-            &admin_password[..],
+            "INSERT IGNORE INTO roles (name, description, is_admin) VALUES (?, ?, ?)",
+            "Admin",
+            "Administrador com acesso completo",
             true
         )
         .execute(&pool)
         .await?;
 
+        let admin_role = sqlx::query!("SELECT id FROM roles WHERE is_admin = true LIMIT 1")
+            .fetch_one(&pool)
+            .await?;
+
+        let admin_password = hash("admin");
+
+        sqlx::query!(
+            "INSERT IGNORE INTO users (username, email, password) VALUES (?, ?, ?)",
+            "admin",
+            "admin@jcc.pt",
+            &admin_password[..]
+        )
+        .execute(&pool)
+        .await?;
+
+        let admin_user_id = sqlx::query!("SELECT id FROM users WHERE email = ?", "admin@jcc.pt")
+            .fetch_one(&pool)
+            .await?
+            .id;
+
+        sqlx::query!(
+            "INSERT IGNORE INTO user_roles (user_id, role_id) VALUES (?, ?)",
+            admin_user_id,
+            admin_role.id
+        )
+        .execute(&pool)
+        .await?;
+
         println!("Connected to Database");
+        println!("Admin user created with role Admin");
 
         Ok(Db { pool })
     }
