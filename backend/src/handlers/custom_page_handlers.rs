@@ -4,7 +4,12 @@ use actix_web::{HttpResponse, Responder, web};
 use crate::{
     State,
     auth::{is_admin, user_can_manage_page, validate_session},
-    models::custom_page::{CreateCustomPageRequest, CustomPage, UpdateCustomPageRequest},
+    models::{
+        custom_page::{
+            CreateCustomPageRequest, CustomPage, RolePermissionRequest, UpdateCustomPageRequest,
+        },
+        role::Role,
+    },
     utils::json_utils::{Json, json_response},
 };
 
@@ -135,6 +140,33 @@ pub async fn get_navigation_menu(state: web::Data<State>, session: Session) -> i
         Ok(menu) => json_response(&menu),
         Err(e) => {
             log::error!("Error fetching navigation menu: {}", e);
+            HttpResponse::InternalServerError().finish()
+        }
+    }
+}
+
+pub async fn update_page_permissions(
+    state: web::Data<State>,
+    path: web::Path<u32>,
+    data: web::Bytes,
+    session: Session,
+) -> impl Responder {
+    if let Err(resp) = is_admin(&session) {
+        return resp;
+    }
+
+    let Json(permissions): Json<Vec<RolePermissionRequest>> = match Json::from_bytes(&data) {
+        Ok(json) => json,
+        Err(e) => {
+            log::error!("Error parsing JSON: {}", e);
+            return HttpResponse::BadRequest().finish();
+        }
+    };
+
+    match Role::update_page_permissions(&state.db.pool, *path, &permissions).await {
+        Ok(_) => HttpResponse::Ok().finish(),
+        Err(e) => {
+            log::error!("Error parsing JSON: {}", e);
             HttpResponse::InternalServerError().finish()
         }
     }

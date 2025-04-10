@@ -55,7 +55,6 @@ impl Db {
         .await?;
 
         println!("Connected to Database");
-        println!("Admin user created with role Admin");
 
         Ok(Db { pool })
     }

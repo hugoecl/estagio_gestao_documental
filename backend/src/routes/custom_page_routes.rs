@@ -27,6 +27,10 @@ pub fn init(cfg: &mut web::ServiceConfig) {
             .route(
                 "/{page_id}/fields",
                 web::post().to(field_handlers::add_page_field),
+            )
+            .route(
+                "/{page_id}/permissions",
+                web::put().to(custom_page_handlers::update_page_permissions),
             ),
     );
 }

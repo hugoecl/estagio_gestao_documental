@@ -17,7 +17,6 @@ CREATE TABLE IF NOT EXISTS user_page_analytics (
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
-
 -- Custom Pages Table
 CREATE TABLE IF NOT EXISTS custom_pages (
     id INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL,
@@ -25,7 +24,7 @@ CREATE TABLE IF NOT EXISTS custom_pages (
     path VARCHAR(255) NOT NULL UNIQUE COMMENT 'URL path for the page',
     parent_path VARCHAR(255) COMMENT 'Parent path for nested navigation',
     description TEXT,
-    icon VARCHAR(100) COMMENT 'FontAwesome icon name',
+    icon VARCHAR(20) COMMENT 'FontAwesome icon name',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id)
@@ -38,9 +37,15 @@ CREATE TABLE IF NOT EXISTS field_types (
     PRIMARY KEY (id)
 );
 
--- -- Insert common field types
--- INSERT INTO field_types (name) VALUES 
--- ('TEXT'), ('NUMBER'), ('DATE'), ('DATE_RANGE'), ('SELECT'), ('BOOLEAN'), ('TEXTAREA'), ('EMAIL');
+-- Insert common field types
+INSERT IGNORE INTO field_types (name)
+VALUES
+    ('TEXT'),
+    ('NUMBER'),
+    ('SELECT'),
+    ('DATE'),
+    ('DATE_RANGE'),
+    ('TEXTAREA');
 
 -- Page Fields Table
 CREATE TABLE IF NOT EXISTS page_fields (
@@ -72,9 +77,8 @@ CREATE TABLE IF NOT EXISTS roles (
 );
 
 -- -- Insert default admin role
--- INSERT INTO roles (name, description, is_admin) VALUES 
+-- INSERT IGNORE INTO roles (name, description, is_admin) VALUES
 -- ('Admin', 'Administrador com acesso completo', true);
-
 -- User Roles Table (Many-to-many relationship)
 CREATE TABLE IF NOT EXISTS user_roles (
     user_id INT UNSIGNED NOT NULL,

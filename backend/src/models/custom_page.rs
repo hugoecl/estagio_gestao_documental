@@ -115,7 +115,7 @@ impl CustomPage {
             sqlx::query!(
                 r#"
                 INSERT INTO page_fields (
-                    page_id, name, display_name, field_type_id, required, 
+                    page_id, name, display_name, field_type_id, required,
                     options, validation_name, is_searchable, is_displayed_in_table, order_index
                 )
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -165,8 +165,8 @@ impl CustomPage {
         sqlx::query_as!(
             CustomPage,
             r#"
-            SELECT 
-                id, name, path, parent_path, description, 
+            SELECT
+                id, name, path, parent_path, description,
                 icon, created_at as "created_at!", updated_at as "updated_at!"
             FROM custom_pages
             ORDER BY name
@@ -183,8 +183,8 @@ impl CustomPage {
         let page = sqlx::query_as!(
             CustomPage,
             r#"
-            SELECT 
-                id, name, path, parent_path, description, 
+            SELECT
+                id, name, path, parent_path, description,
                 icon, created_at as "created_at!", updated_at as "updated_at!"
             FROM custom_pages
             WHERE id = ?
@@ -199,9 +199,9 @@ impl CustomPage {
         let permissions = sqlx::query_as!(
             PagePermission,
             r#"
-            SELECT 
+            SELECT
                 p.id, p.page_id, p.role_id, r.name as role_name,
-                p.can_view as "can_view: bool", p.can_create as "can_create: bool", p.can_edit as "can_edit: bool", 
+                p.can_view as "can_view: bool", p.can_create as "can_create: bool", p.can_edit as "can_edit: bool",
                 p.can_delete as "can_delete: bool", p.can_manage_fields as "can_manage_fields: bool"
             FROM page_permissions p
             JOIN roles r ON p.role_id = r.id
@@ -226,7 +226,7 @@ impl CustomPage {
     ) -> Result<(), sqlx::Error> {
         sqlx::query!(
             r#"
-            UPDATE custom_pages 
+            UPDATE custom_pages
             SET name = ?, description = ?, icon = ?
             WHERE id = ?
             "#,

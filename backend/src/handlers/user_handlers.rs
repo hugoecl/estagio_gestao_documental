@@ -97,7 +97,7 @@ pub async fn login(
 
     let user = match user {
         Ok(Some(user)) => user,
-        Ok(None) => return HttpResponse::Unauthorized().body("Invalid credentials"),
+        Ok(None) => return HttpResponse::Unauthorized().finish(),
         Err(e) => {
             error!("Database error during login: {}", e);
             return HttpResponse::InternalServerError().body("Database error");
