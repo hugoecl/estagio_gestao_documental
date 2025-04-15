@@ -1,5 +1,5 @@
 use actix_session::Session;
-use actix_web::{HttpResponse, Responder, web};
+use actix_web::{HttpRequest, HttpResponse, Responder, web};
 
 use crate::{
     State,
@@ -10,16 +10,20 @@ use crate::{
         },
         role::Role,
     },
-    utils::json_utils::{Json, json_response},
+    utils::json_utils::{Json, json_response, json_response_with_etag},
 };
 
-pub async fn get_custom_pages(state: web::Data<State>, session: Session) -> impl Responder {
+pub async fn get_custom_pages(
+    state: web::Data<State>,
+    session: Session,
+    req: HttpRequest,
+) -> impl Responder {
     if let Err(resp) = validate_session(&session) {
         return resp;
     }
 
     match CustomPage::get_all(&state.db.pool).await {
-        Ok(pages) => json_response(&pages),
+        Ok(pages) => json_response_with_etag(&pages, &req),
         Err(e) => {
             log::error!("Error fetching custom pages: {}", e);
             HttpResponse::InternalServerError().finish()
@@ -131,13 +135,17 @@ pub async fn delete_custom_page(
     }
 }
 
-pub async fn get_navigation_menu(state: web::Data<State>, session: Session) -> impl Responder {
+pub async fn get_navigation_menu(
+    state: web::Data<State>,
+    session: Session,
+    req: HttpRequest,
+) -> impl Responder {
     if let Err(resp) = validate_session(&session) {
         return resp;
     }
 
     match CustomPage::get_navigation_menu(&state.db.pool).await {
-        Ok(menu) => json_response(&menu),
+        Ok(menu) => json_response_with_etag(&menu, &req),
         Err(e) => {
             log::error!("Error fetching navigation menu: {}", e);
             HttpResponse::InternalServerError().finish()

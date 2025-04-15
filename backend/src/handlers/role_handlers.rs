@@ -1,20 +1,24 @@
 use actix_session::Session;
-use actix_web::{HttpResponse, Responder, web};
+use actix_web::{HttpRequest, HttpResponse, Responder, web};
 
 use crate::{
     State,
     auth::{is_admin, validate_session},
     models::role::{CreateRoleRequest, Role, UpdateRoleRequest},
-    utils::json_utils::{Json, json_response},
+    utils::json_utils::{Json, json_response, json_response_with_etag},
 };
 
-pub async fn get_roles(state: web::Data<State>, session: Session) -> impl Responder {
+pub async fn get_roles(
+    state: web::Data<State>,
+    session: Session,
+    req: HttpRequest,
+) -> impl Responder {
     if let Err(resp) = validate_session(&session) {
         return resp;
     }
 
     match Role::get_all(&state.db.pool).await {
-        Ok(roles) => json_response(&roles),
+        Ok(roles) => json_response_with_etag(&roles, &req),
         Err(e) => {
             log::error!("Error fetching roles: {}", e);
             HttpResponse::InternalServerError().finish()

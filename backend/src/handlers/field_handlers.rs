@@ -12,13 +12,17 @@ use crate::{
     utils::json_utils::{Json, json_response, json_response_with_etag},
 };
 
-pub async fn get_field_types(state: web::Data<State>, session: Session) -> impl Responder {
+pub async fn get_field_types(
+    state: web::Data<State>,
+    session: Session,
+    req: HttpRequest,
+) -> impl Responder {
     if let Err(resp) = validate_session(&session) {
         return resp;
     }
 
     match FieldType::get_all(&state.db.pool).await {
-        Ok(field_types) => json_response(&field_types),
+        Ok(field_types) => json_response_with_etag(&field_types, &req),
         Err(e) => {
             log::error!("Error fetching field types: {}", e);
             HttpResponse::InternalServerError().finish()
@@ -30,13 +34,14 @@ pub async fn get_page_fields(
     state: web::Data<State>,
     session: Session,
     path: web::Path<u32>,
+    req: HttpRequest,
 ) -> impl Responder {
     if let Err(resp) = validate_session(&session) {
         return resp;
     }
 
     match PageField::get_by_page_id(&state.db.pool, path.into_inner()).await {
-        Ok(fields) => json_response(&fields),
+        Ok(fields) => json_response_with_etag(&fields, &req),
         Err(e) => {
             log::error!("Error fetching page fields: {}", e);
             HttpResponse::InternalServerError().finish()

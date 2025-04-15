@@ -1,6 +1,6 @@
 use actix_multipart::form::MultipartForm;
 use actix_session::Session;
-use actix_web::{HttpResponse, Responder, web};
+use actix_web::{HttpRequest, HttpResponse, Responder, web};
 use serde::Deserialize;
 
 use crate::{
@@ -15,7 +15,7 @@ use crate::{
     },
     utils::{
         forms::FilesFormRequest,
-        json_utils::{Json, json_response},
+        json_utils::{Json, json_response, json_response_with_etag},
     },
 };
 
@@ -29,6 +29,7 @@ pub async fn get_page_records(
     path: web::Path<u32>,
     query: web::Query<RecordSearchQuery>,
     session: Session,
+    req: HttpRequest,
 ) -> impl Responder {
     let user_id = match validate_session(&session) {
         Ok(user_id) => user_id,
@@ -56,7 +57,7 @@ pub async fn get_page_records(
     };
 
     match records {
-        Ok(records) => json_response(&records),
+        Ok(records) => json_response_with_etag(&records, &req),
         Err(e) => {
             log::error!("Error fetching page records: {}", e);
             HttpResponse::InternalServerError().finish()
