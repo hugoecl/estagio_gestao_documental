@@ -21,16 +21,13 @@ pub fn init(cfg: &mut web::ServiceConfig) {
             .route(
                 "/{record_id}/files/{file_id}",
                 web::delete().to(record_handlers::delete_record_file),
-            ),
-    )
-    .service(
-        web::scope("/pages")
+            )
             .route(
-                "/{page_id}/records",
+                "/pages/{page_id}/records",
                 web::get().to(record_handlers::get_page_records),
             )
             .route(
-                "/{page_id}/records",
+                "/pages/{page_id}/records",
                 web::post().to(record_handlers::create_record),
             ),
     );

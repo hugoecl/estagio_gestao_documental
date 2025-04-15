@@ -56,6 +56,8 @@ pub async fn get_page_records(
         PageRecord::get_by_page_id(&state.db.pool, page_id).await
     };
 
+    println!("Record: {:?}", records.as_ref().unwrap());
+
     match records {
         Ok(records) => json_response_with_etag(&records, &req),
         Err(e) => {
@@ -124,7 +126,7 @@ pub async fn create_record(
         }
     };
 
-    let Json(mut create_record_req): Json<CreatePageRecordRequest> = match Json::from_bytes(&data) {
+    let Json(create_record_req): Json<CreatePageRecordRequest> = match Json::from_bytes(&data) {
         Ok(data) => data,
         Err(e) => {
             log::error!("Error parsing JSON: {}", e);
@@ -132,9 +134,7 @@ pub async fn create_record(
         }
     };
 
-    create_record_req.page_id = page_id;
-
-    match PageRecord::create(&state.db.pool, &create_record_req, user_id as u32).await {
+    match PageRecord::create(&state.db.pool, &create_record_req, page_id, user_id as u32).await {
         Ok(id) => HttpResponse::Created().body(id.to_string()),
         Err(e) => {
             log::error!("Error creating page record: {}", e);

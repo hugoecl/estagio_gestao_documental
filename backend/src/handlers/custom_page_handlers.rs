@@ -10,7 +10,7 @@ use crate::{
         },
         role::Role,
     },
-    utils::json_utils::{Json, json_response, json_response_with_etag},
+    utils::json_utils::{Json, json_response_with_etag},
 };
 
 pub async fn get_custom_pages(
@@ -35,13 +35,14 @@ pub async fn get_custom_page(
     state: web::Data<State>,
     path: web::Path<u32>,
     session: Session,
+    req: HttpRequest,
 ) -> impl Responder {
     if let Err(resp) = validate_session(&session) {
         return resp;
     }
 
     match CustomPage::get_by_id(&state.db.pool, path.into_inner()).await {
-        Ok(page) => json_response(&page),
+        Ok(page) => json_response_with_etag(&page, &req),
         Err(e) => {
             log::error!("Error fetching custom page: {}", e);
             HttpResponse::InternalServerError().finish()
