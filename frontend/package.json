@@ -20,7 +20,7 @@
     "typescript": "^5.8.3"
   },
   "devDependencies": {
-    "daisyui": "^5.0.19",
+    "daisyui": "^5.0.20",
     "astro-compressor": "^1.0.0"
   }
 }
