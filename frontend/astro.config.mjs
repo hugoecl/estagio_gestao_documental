@@ -1,4 +1,5 @@
 // @ts-check
+// TODO: see about astro session
 import { defineConfig } from "astro/config";
 import tailwindcss from "@tailwindcss/vite";
 
@@ -24,7 +25,6 @@ export default defineConfig({
   },
   output: "server",
   adapter: node({
-    mode: "standalone"
-  })
-
+    mode: "standalone",
+  }),
 });
