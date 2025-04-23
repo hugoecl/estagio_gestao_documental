@@ -15,7 +15,6 @@ pub struct PageRecord {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreatePageRecordRequest {
-    pub page_id: u32,
     pub data: serde_json::Value,
 }
 
@@ -44,6 +43,7 @@ impl PageRecord {
     pub async fn create(
         pool: &sqlx::MySqlPool,
         request: &CreatePageRecordRequest,
+        page_id: u32,
         user_id: u32,
     ) -> Result<u32, sqlx::Error> {
         let result = sqlx::query!(
@@ -51,7 +51,7 @@ impl PageRecord {
             INSERT INTO page_records (page_id, data, created_by, updated_by)
             VALUES (?, ?, ?, ?)
             "#,
-            request.page_id,
+            page_id,
             request.data,
             user_id,
             user_id
@@ -66,18 +66,26 @@ impl PageRecord {
         pool: &sqlx::MySqlPool,
         page_id: u32,
     ) -> Result<Vec<PageRecord>, sqlx::Error> {
-        sqlx::query_as!(
+        let records = sqlx::query_as!(
             PageRecord,
             r#"
-            SELECT id, page_id, data, created_at as "created_at!", updated_at as "updated_at!", created_by, updated_by
+            SELECT
+                id,
+                page_id,
+                data as `data: serde_json::Value`,
+                created_at as "created_at!",
+                updated_at as "updated_at!",
+                created_by,
+                updated_by
             FROM page_records
             WHERE page_id = ?
-            ORDER BY updated_at DESC
             "#,
             page_id
         )
-        .fetch_all(pool)
-        .await
+        .fetch_all(pool) // Pass pool directly, not &pool
+        .await?; // Propagate potential error
+
+        Ok(records) // Wrap the successful result in Ok
     }
 
     pub async fn get_by_id(
@@ -87,13 +95,13 @@ impl PageRecord {
         let record = sqlx::query_as!(
             PageRecord,
             r#"
-            SELECT 
-                id, 
-                page_id, 
-                data, 
-                created_at as "created_at!", 
-                updated_at as "updated_at!", 
-                created_by, 
+            SELECT
+                id,
+                page_id,
+                data as `data: serde_json::Value`,
+                created_at as "created_at!",
+                updated_at as "updated_at!",
+                created_by,
                 updated_by
             FROM page_records
             WHERE id = ?
@@ -126,7 +134,7 @@ impl PageRecord {
     ) -> Result<(), sqlx::Error> {
         sqlx::query!(
             r#"
-            UPDATE page_records 
+            UPDATE page_records
             SET data = ?, updated_by = ?
             WHERE id = ?
             "#,

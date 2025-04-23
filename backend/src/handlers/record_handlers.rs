@@ -56,8 +56,6 @@ pub async fn get_page_records(
         PageRecord::get_by_page_id(&state.db.pool, page_id).await
     };
 
-    println!("Record: {:?}", records.as_ref().unwrap());
-
     match records {
         Ok(records) => json_response_with_etag(&records, &req),
         Err(e) => {
@@ -71,6 +69,7 @@ pub async fn get_record(
     state: web::Data<State>,
     path: web::Path<u32>,
     session: Session,
+    req: HttpRequest,
 ) -> impl Responder {
     let user_id = match validate_session(&session) {
         Ok(user_id) => user_id,
@@ -99,7 +98,7 @@ pub async fn get_record(
         }
     }
 
-    json_response(&record_with_files)
+    json_response_with_etag(&record_with_files, &req)
 }
 
 pub async fn create_record(
@@ -202,7 +201,14 @@ pub async fn update_record(
             }
         }
     }
-    return HttpResponse::BadRequest().body("Invalid data format");
+
+    match PageRecord::update(&state.db.pool, record_id, &data, user_id as u32).await {
+        Ok(_) => HttpResponse::Ok().finish(),
+        Err(e) => {
+            log::error!("Error updating page record: {}", e);
+            HttpResponse::InternalServerError().finish()
+        }
+    }
 }
 
 pub async fn delete_record(
