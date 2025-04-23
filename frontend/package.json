@@ -9,18 +9,18 @@
     "astro": "astro"
   },
   "dependencies": {
-    "@astrojs/node": "^9.2.0",
-    "@astrojs/svelte": "^7.0.10",
+    "@astrojs/node": "^9.2.1",
+    "@astrojs/svelte": "^7.0.11",
     "@fortawesome/fontawesome-free": "^6.7.2",
     "@tailwindcss/vite": "^4.1.4",
-    "astro": "^5.7.0",
+    "astro": "^5.7.5",
     "cally": "^0.8.0",
-    "svelte": "^5.27.0",
+    "svelte": "^5.28.2",
     "tailwindcss": "^4.1.4",
     "typescript": "^5.8.3"
   },
   "devDependencies": {
-    "daisyui": "^5.0.20",
+    "daisyui": "^5.0.27",
     "astro-compressor": "^1.0.0"
   }
 }
