@@ -13,7 +13,7 @@ actix-session = { version = "0.10", features = ["cookie-session"] }
 actix-web = { version = "4", features = ["rustls-0_23"] }
 ahash = "0.8"
 argh = { version = "0.1", default-features = false, features = ["help"] }
-argon2-kdf = { git = "https://github.com/lucascompython/argon2-kdf", branch = "main" }
+argon2-kdf = "1.6"
 chrono = { version = "0.4", default-features = false, features = [
     "std",
     "clock",

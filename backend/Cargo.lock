@@ -46,7 +46,7 @@ dependencies = [
  "actix-web",
  "bitflags",
  "bytes",
- "derive_more 0.99.19",
+ "derive_more 0.99.20",
  "futures-core",
  "http-range",
  "log",
@@ -116,7 +116,7 @@ dependencies = [
  "actix-multipart-derive",
  "actix-utils",
  "actix-web",
- "derive_more 0.99.19",
+ "derive_more 0.99.20",
  "futures-core",
  "futures-util",
  "httparse",
@@ -493,13 +493,14 @@ checksum = "a464143cc82dedcdc3928737445362466b7674b5db4e2eb8e869846d6d84f4f6"
 
 [[package]]
 name = "argon2-kdf"
-version = "1.5.4"
-source = "git+https://github.com/lucascompython/argon2-kdf?branch=main#2bdfed19b63819cc0579085d9050115d60055ff7"
+version = "1.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1ec6ede6f276934e0b41d20e3715c54c76f43ffcedcd0212704efc4e0dd5afb0"
 dependencies = [
  "base64 0.22.1",
  "bindgen 0.71.1",
  "cc",
- "rand 0.8.5",
+ "rand 0.9.1",
 ]
 
 [[package]]
@@ -954,9 +955,9 @@ dependencies = [
 
 [[package]]
 name = "derive_more"
-version = "0.99.19"
+version = "0.99.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3da29a38df43d6f156149c9b43ded5e018ddff2a855cf2cfd62e8cd7d079c69f"
+checksum = "6edb4b64a43d977b8e99788fe3a04d483834fba1215a7e02caa415b626497f7f"
 dependencies = [
  "convert_case",
  "proc-macro2",
@@ -1885,18 +1886,18 @@ dependencies = [
 
 [[package]]
 name = "munge"
-version = "0.4.3"
+version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a0091202c98cf06da46c279fdf50cccb6b1c43b4521abdf6a27b4c7e71d5d9d7"
+checksum = "9e22e7961c873e8b305b176d2a4e1d41ce7ba31bc1c52d2a107a89568ec74c55"
 dependencies = [
  "munge_macro",
 ]
 
 [[package]]
 name = "munge_macro"
-version = "0.4.3"
+version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "734799cf91479720b2f970c61a22850940dd91e27d4f02b1c6fc792778df2459"
+checksum = "0ac7d860b767c6398e88fe93db73ce53eb496057aa6895ffa4d60cb02e1d1c6b"
 dependencies = [
  "proc-macro2",
  "quote",

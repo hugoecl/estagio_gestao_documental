@@ -21,14 +21,14 @@ pub fn hash(password: &str) -> [u8; 48] {
 
 #[inline(always)]
 pub fn verify(password: &str, combined_bytes: &[u8]) -> bool {
-    let hash = Hash {
-        alg: argon2_kdf::Algorithm::Argon2id,
-        mem_cost_kib: 65536,
-        iterations: 4,
-        threads: 4,
-        salt: combined_bytes[..16].to_vec(), // TODO: https://github.com/lucascompython/argon2-kdf/tree/feat-arrays-instead-of-vecs
-        hash: combined_bytes[16..].to_vec(),
-    };
+    let hash = Hash::from_parts(
+        &combined_bytes[16..],
+        &combined_bytes[..16],
+        argon2_kdf::Algorithm::Argon2id,
+        65536,
+        4,
+        4,
+    );
 
     hash.verify(password.as_bytes())
 }
