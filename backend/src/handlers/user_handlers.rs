@@ -1,7 +1,7 @@
 use actix_session::Session;
 use actix_web::{HttpResponse, Responder, web};
 use log::error;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     State,
@@ -139,6 +139,12 @@ pub async fn login(
     HttpResponse::Ok().finish()
 }
 
+#[derive(Serialize)]
+pub struct CheckResponse {
+    #[serde(rename = "isAdmin")]
+    pub is_admin: bool,
+}
+
 pub async fn check(session: Session, state: web::Data<State>, data: web::Bytes) -> impl Responder {
     let user_id = match validate_session(&session) {
         Ok(id) => id as u32,
@@ -148,6 +154,11 @@ pub async fn check(session: Session, state: web::Data<State>, data: web::Bytes) 
     let Ok(page_path) = String::from_utf8(data.to_vec()) else {
         return HttpResponse::BadRequest().finish();
     };
+
+    let is_admin = session
+        .get::<bool>("is_admin")
+        .unwrap_or(Some(false))
+        .unwrap_or(false);
 
     let now = chrono::Utc::now();
 
@@ -209,7 +220,7 @@ pub async fn check(session: Session, state: web::Data<State>, data: web::Bytes) 
         }
     }
 
-    HttpResponse::Ok().finish()
+    json_response(&CheckResponse { is_admin })
 }
 
 pub async fn logout(session: Session) -> impl Responder {

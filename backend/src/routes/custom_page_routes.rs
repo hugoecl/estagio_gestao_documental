@@ -6,6 +6,10 @@ pub fn init(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/custom_pages")
             .route(
+                "/by-path/{path:.*}",
+                web::get().to(custom_page_handlers::get_custom_page_by_path),
+            )
+            .route(
                 "/menu",
                 web::get().to(custom_page_handlers::get_navigation_menu),
             )

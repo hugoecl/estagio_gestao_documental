@@ -57,11 +57,23 @@ pub struct CreatePageFieldRequest {
     pub order_index: u32,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone, Default)] // Add Default
+pub struct UserPagePermissions {
+    pub can_view: bool,
+    pub can_create: bool,
+    pub can_edit: bool,
+    pub can_delete: bool,
+    pub can_manage_fields: bool,
+    pub is_admin: bool, // Include admin status for convenience
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CustomPageWithFields {
     pub page: CustomPage,
     pub fields: Vec<PageField>,
     pub permissions: Vec<PagePermission>,
+    #[serde(rename = "currentUserPermissions")] // Match frontend type
+    pub current_user_permissions: Option<UserPagePermissions>, // Make it optional
 }
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
@@ -216,6 +228,7 @@ impl CustomPage {
             page,
             fields,
             permissions,
+            current_user_permissions: None, // Initialize as None
         })
     }
 

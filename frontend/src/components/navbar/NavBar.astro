@@ -2,47 +2,61 @@
 import SideBar from "@components/navbar/SideBar.astro";
 import ThemeController from "@components/navbar/ThemeController.astro";
 import NotificationsButton from "@components/navbar/NotificationsButton.astro";
-import SettingsDropdown from "@components/navbar/SettingsDropdown.astro";
+import SettingsDropdown from "@components/navbar/SettingsDropdown.svelte";
 import MenuIcon from "@assets/menu_icon.svg?raw";
 ---
 
 <div class="drawer lg:drawer-open">
-  <input id="sidebar-drawer" type="checkbox" class="drawer-toggle" />
-  <div class="drawer-content flex flex-col">
-    <div class="navbar bg-base-100 shadow-sm w-full">
-      <div class="flex-none lg:hidden">
+    <input id="sidebar-drawer" type="checkbox" class="drawer-toggle" />
+    <div class="drawer-content flex flex-col">
+        <div class="navbar bg-base-100 shadow-sm w-full sticky top-0 z-50">
+            <div class="flex-none lg:hidden">
+                <label
+                    for="sidebar-drawer"
+                    aria-label="open sidebar"
+                    class="btn btn-square btn-ghost"
+                >
+                    <Fragment set:html={MenuIcon} />
+                </label>
+            </div>
+            <div class="flex-1 px-2 mx-2">
+                <a href="/" class="text-lg font-bold">Intranet</a>
+            </div>
+            <div class="flex-none">
+                <ThemeController />
+                <NotificationsButton />
+                <SettingsDropdown client:load />
+            </div>
+        </div>
+
+        <main class="flex-1 overflow-y-auto p-4">
+            <slot />
+        </main>
+    </div>
+    <div class="drawer-side z-40">
         <label
-          for="sidebar-drawer"
-          aria-label="open sidebar"
-          class="btn btn-square btn-ghost"
-        >
-          <Fragment set:html={MenuIcon} />
-        </label>
-      </div>
-      <div class="flex-1 flex justify-center lg:flex-none lg:mx-auto">
-        <a href="/" class="text-lg font-bold">Intranet</a>
-      </div>
-      <ThemeController />
-      <NotificationsButton />
-      <SettingsDropdown />
+            for="sidebar-drawer"
+            aria-label="close sidebar"
+            class="drawer-overlay"></label>
+        <SideBar transition:persist="sidebar" />
     </div>
-    <div class="p-2">
-      <slot />
-    </div>
-  </div>
-  <div class="drawer-side">
-    <label
-      for="sidebar-drawer"
-      aria-label="close sidebar"
-      class="drawer-overlay"></label>
-    <SideBar />
-  </div>
 </div>
 
 <style>
-  @media (min-width: 1024px) {
-    .drawer-side {
-      width: 255px;
+    /* Ensure drawer content allows scrolling */
+    .drawer-content {
+        height: 100vh; /* Full viewport height */
+        overflow: hidden; /* Prevent body scroll */
     }
-  }
+    main {
+        /* Allow main content area to scroll */
+        overflow-y: auto;
+    }
+
+    /* Adjust drawer side for large screens */
+    @media (min-width: 1024px) {
+        .drawer-side {
+            /* Adjust if necessary, e.g., if using fixed sidebar */
+        }
+    }
 </style>

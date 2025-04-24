@@ -5,6 +5,7 @@ use crate::{
     State,
     auth::{is_admin, user_can_manage_page, validate_session},
     models::{
+        auth::calculate_user_page_permissions,
         custom_page::{
             CreateCustomPageRequest, CustomPage, RolePermissionRequest, UpdateCustomPageRequest,
         },
@@ -179,4 +180,88 @@ pub async fn update_page_permissions(
             HttpResponse::InternalServerError().finish()
         }
     }
+}
+
+pub async fn get_custom_page_by_path(
+    state: web::Data<State>,
+    path_param: web::Path<String>,
+    session: Session,
+    req: HttpRequest, // Keep req for potential ETag later if needed
+) -> impl Responder {
+    let user_id = match validate_session(&session) {
+        Ok(id) => id,
+        Err(resp) => return resp,
+    };
+
+    let requested_path = path_param.into_inner();
+    // Ensure path starts and ends with '/' for consistent DB lookup, if that's how they are stored
+    let formatted_path = format!("/{}", requested_path.trim_matches('/'));
+    // Check if the original path ended with a slash, if so, add it back.
+    // This handles cases like /contratos vs /contratos/
+    let final_path = if requested_path.ends_with('/') && !formatted_path.ends_with('/') {
+        format!("{}/", formatted_path)
+    } else if !requested_path.ends_with('/') && formatted_path.ends_with('/') {
+        // If DB path has trailing slash but request didn't, maybe remove it? Or ensure DB is consistent.
+        // Let's assume DB paths might have trailing slashes.
+        formatted_path
+    } else {
+        formatted_path
+    };
+
+    // 1. Find page ID by path
+    let page_info = match sqlx::query!("SELECT id FROM custom_pages WHERE path = ?", final_path)
+        .fetch_optional(&state.db.pool)
+        .await
+    {
+        Ok(Some(record)) => record,
+        Ok(None) => return HttpResponse::NotFound().finish(),
+        Err(e) => {
+            log::error!("Error fetching page ID by path '{}': {}", final_path, e);
+            return HttpResponse::InternalServerError().finish();
+        }
+    };
+
+    let page_id = page_info.id;
+
+    // 2. Get full page details (including all role permissions)
+    let mut page_with_fields = match CustomPage::get_by_id(&state.db.pool, page_id).await {
+        Ok(page_data) => page_data,
+        Err(sqlx::Error::RowNotFound) => return HttpResponse::NotFound().finish(), // Should not happen if ID was found, but good practice
+        Err(e) => {
+            log::error!("Error fetching page details for ID {}: {}", page_id, e);
+            return HttpResponse::InternalServerError().finish();
+        }
+    };
+
+    // 3. Calculate current user's specific permissions for this page
+    match calculate_user_page_permissions(&state.db.pool, user_id, &page_with_fields.permissions)
+        .await
+    {
+        Ok(user_perms) => {
+            // 4. Check if user can view this page
+            if !user_perms.can_view {
+                log::warn!(
+                    "User {} attempted to view page {} ({}) without permission.",
+                    user_id,
+                    page_id,
+                    final_path
+                );
+                return HttpResponse::Forbidden().finish(); // Or NotFound() to obscure existence
+            }
+            // Attach calculated permissions to the response
+            page_with_fields.current_user_permissions = Some(user_perms);
+        }
+        Err(e) => {
+            log::error!(
+                "Error calculating user permissions for user {} on page {}: {}",
+                user_id,
+                page_id,
+                e
+            );
+            return HttpResponse::InternalServerError().finish();
+        }
+    }
+
+    // 5. Return the data
+    json_response_with_etag(&page_with_fields, &req)
 }

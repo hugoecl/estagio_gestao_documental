@@ -1,49 +1,147 @@
 ---
-import type { MenuItem } from "@lib/types/menu";
+import type { NavigationItem } from "@lib/types/custom-page"; // Use the correct type
 
 interface Props {
-  items: MenuItem[];
-  isRoot?: boolean;
-  parentPath?: string;
+    items: NavigationItem[];
+    isRoot?: boolean;
+    parentPath?: string; // Base path from parent
 }
 
 const { items, isRoot = false, parentPath = "" } = Astro.props;
 
-function buildPath(item: MenuItem, parentPath: string): string {
-  if ("path" in item && item.path) {
-    // If path starts with "/", it's absolute
-    return item.path.startsWith("/") ? item.path : `${parentPath}/${item.path}`;
-  }
-  return "#";
+// Helper to build the final URL path
+function buildPath(
+    itemPath: string | null,
+    itemParentPath: string | null,
+    currentBasePath: string,
+): string {
+    if (!itemPath) return "#"; // No path defined
+
+    // If itemPath is absolute, use it directly
+    if (itemPath.startsWith("/")) {
+        return itemPath.endsWith("/") ? itemPath : `${itemPath}/`;
+    }
+
+    // Construct path relative to currentBasePath
+    const fullPath = `${currentBasePath}${itemPath}`;
+
+    // Ensure trailing slash
+    return fullPath.endsWith("/") ? fullPath : `${fullPath}/`;
 }
 ---
 
 <ul
-  class:list={{
-    "menu bg-base-100 border border-zinc-200 rounded-box w-56": isRoot,
-  }}
+    class:list={[
+        "menu bg-base-100 rounded-box w-full", // Adjusted width for drawer
+        { "border border-zinc-200": isRoot }, // Apply border only if root
+    ]}
 >
-  {
-    items.map((item) => {
-      const currentPath =
-        "parentPath" in item && item.parentPath
-          ? parentPath
-            ? `${parentPath}/${item.parentPath}`
-            : item.parentPath
-          : parentPath;
+    {
+        items.map((item) => {
+            // Determine the base path for this item's potential children
+            let childBasePath = parentPath; // Start with the path passed from the parent
+            if (item.parent_path) {
+                // If item defines its own parent_path, construct the base path from it
+                childBasePath = item.parent_path.startsWith("/")
+                    ? item.parent_path + "/"
+                    : parentPath + item.parent_path + "/";
+            }
+            // Ensure childBasePath ends with a slash
+            if (childBasePath && !childBasePath.endsWith("/")) {
+                childBasePath += "/";
+            }
 
-      return (
-        <li>
-          {item.children ? (
-            <details>
-              <summary>{item.title}</summary>
-              <Astro.self items={item.children} parentPath={currentPath} />
-            </details>
-          ) : (
-            <a href={buildPath(item, currentPath)}>{item.title}</a>
-          )}
-        </li>
-      );
-    })
-  }
+            const finalPath = buildPath(
+                item.path,
+                item.parent_path,
+                parentPath,
+            );
+
+            return (
+                <li>
+                    {item.children && item.children.length > 0 ? (
+                        <details>
+                            {/* If the parent itself has a path, make the summary a link */}
+                            {finalPath !== "#" ? (
+                                <summary>
+                                    <a href={finalPath}>{item.title}</a>
+                                </summary>
+                            ) : (
+                                <summary>{item.title}</summary>
+                            )}
+                            {/* Pass the calculated childBasePath to the recursive call */}
+                            <Astro.self
+                                items={item.children}
+                                parentPath={childBasePath}
+                            />
+                        </details>
+                    ) : (
+                        <a href={finalPath}>
+                            {item.icon && (
+                                <i class={`fa-solid fa-${item.icon} w-4 h-4`} />
+                            )}
+                            {item.title}
+                        </a>
+                    )}
+                </li>
+            );
+        })
+    }
 </ul>
+
+<style>
+    /* Add styles for icons if needed */
+    li a i,
+    details summary i {
+        margin-right: 0.5rem; /* Adjust spacing */
+    }
+    /* Ensure nested menus have appropriate padding/styling */
+    ul ul {
+        padding-left: 1rem; /* Indent nested menus */
+    }
+    /* Style details summary to look like menu items */
+    details > summary {
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        /* Inherit menu item styles */
+        padding: var(--menu-item-padding, 0.5rem 1rem);
+        min-height: var(--menu-item-size, 3rem);
+        user-select: none;
+        border-radius: var(--rounded-btn, 0.5rem);
+    }
+    details > summary:hover {
+        background-color: var(--fallback-b2, oklch(var(--b2) / 1));
+    }
+    details > summary > a {
+        /* Reset link styles if summary is a link */
+        color: inherit;
+        text-decoration: none;
+        display: inline-flex; /* Or flex */
+        align-items: center;
+        width: 100%;
+        padding: 0; /* Remove padding from link, apply to summary */
+    }
+
+    /* Remove default marker */
+    details > summary::marker,
+    details > summary::-webkit-details-marker {
+        display: none;
+    }
+    /* Add custom arrow */
+    details > summary::after {
+        content: "";
+        display: inline-block;
+        width: 0.5rem;
+        height: 0.5rem;
+        border-style: solid;
+        border-color: currentColor;
+        border-width: 0 2px 2px 0;
+        transform: rotate(45deg);
+        margin-left: auto; /* Push arrow to the right */
+        transition: transform 0.2s ease-in-out;
+    }
+    details[open] > summary::after {
+        transform: rotate(225deg);
+    }
+</style>

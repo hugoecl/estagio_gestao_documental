@@ -1,0 +1,87 @@
+export interface CustomPage {
+  id: number;
+  name: string;
+  path: string;
+  parent_path: string | null;
+  description: string | null;
+  icon: string | null;
+  created_at: string; // Consider using Date objects after fetching
+  updated_at: string; // Consider using Date objects after fetching
+}
+
+export interface RolePermissionRequest {
+  role_id: number;
+  can_view: boolean;
+  can_create: boolean;
+  can_edit: boolean;
+  can_delete: boolean;
+  can_manage_fields: boolean;
+}
+
+export interface CreatePageFieldRequest {
+  name: string;
+  display_name: string;
+  field_type_id: number;
+  required: boolean;
+  options: any | null; // JSON value
+  validation_name: string | null;
+  is_searchable: boolean;
+  is_displayed_in_table: boolean;
+  order_index: number;
+}
+
+export interface CreateCustomPageRequest {
+  name: string;
+  path: string;
+  parent_path: string | null;
+  description: string | null;
+  icon: string | null;
+  fields: CreatePageFieldRequest[];
+  permissions: RolePermissionRequest[];
+}
+
+export interface UpdateCustomPageRequest {
+  name: string;
+  description: string | null;
+  icon: string | null;
+}
+
+export interface PagePermission {
+  id: number;
+  page_id: number;
+  role_id: number;
+  role_name: string;
+  can_view: boolean;
+  can_create: boolean;
+  can_edit: boolean;
+  can_delete: boolean;
+  can_manage_fields: boolean;
+}
+
+// Represents the user's specific permissions for the current page
+// This might need to be derived or fetched separately if not included in CustomPageWithFields
+export interface UserPagePermissions {
+  can_view: boolean;
+  can_create: boolean;
+  can_edit: boolean;
+  can_delete: boolean;
+  can_manage_fields: boolean;
+  is_admin: boolean; // Useful shortcut
+}
+
+export interface CustomPageWithFields {
+  page: CustomPage;
+  fields: import("@lib/types/fields").PageField[]; // Use PageField from fields.ts
+  permissions: PagePermission[]; // Permissions for *all* roles
+  // We might need to add the current user's specific permissions here
+  currentUserPermissions?: UserPagePermissions;
+}
+
+// Matches backend NavigationItem
+export interface NavigationItem {
+  title: string;
+  path: string | null;
+  parent_path: string | null;
+  icon: string | null;
+  children: NavigationItem[];
+}
