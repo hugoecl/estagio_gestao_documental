@@ -7,7 +7,6 @@
         UserPagePermissions,
     } from "@lib/types/custom-page";
     import type { PageField } from "@lib/types/fields";
-    // Explicitly import PageRecordWithFiles and PageRecordFile
     import type {
         PageRecord,
         CreatePageRecordRequest,
@@ -29,7 +28,8 @@
         FieldType as FormModalFieldType,
         SubmitResult,
         type SubmitResponse,
-    } from "@lib/types/form-modal";
+        type SelectOption,
+    } from "@lib/types/form-modal"; // Added SelectOption
     import { currentModal } from "@stores/modal-store";
     import {
         showAlert,
@@ -37,9 +37,10 @@
         AlertPosition,
     } from "@components/alert/alert";
     import { toSearchString } from "@utils/search-utils";
-    import { DMYToDate } from "@utils/date-utils";
+    import { DMYToDate } from "@utils/date-utils"; // Keep this for potential sorting
     import API_BASE_URL from "@api/base-url";
 
+    // ... (Props and other state variables remain the same) ...
     const { pageDefinition }: { pageDefinition: CustomPageWithFields } =
         $props();
 
@@ -50,14 +51,12 @@
 
     let formModalRef: HTMLDialogElement;
     let selectedRecordId = $state<number | null>(null);
-    // Use the imported type directly
     let selectedRecordWithFiles = $state<PageRecordWithFiles | null>(null);
     let originalRecordJson = $state<string | null>(null);
 
-    // --- Permissions ---
+    // --- Permissions (remains the same) ---
     const permissions = $derived<UserPagePermissions>(
         pageDefinition?.currentUserPermissions || {
-            // Add safe navigation for pageDefinition
             can_view: true,
             can_create: false,
             can_edit: false,
@@ -67,9 +66,8 @@
         },
     );
 
-    // --- Table Columns ---
+    // --- Table Columns (remains the same) ---
     const tableColumns = $derived.by(() => {
-        // Add safe navigation for pageDefinition
         if (!pageDefinition?.fields) return [{ header: "ID", field: "id" }];
         const cols: TableColumn[] = [{ header: "ID", field: "id" }];
         pageDefinition.fields
@@ -78,33 +76,31 @@
             .forEach((field) => {
                 cols.push({
                     header: field.display_name,
-                    field: `processedData.${field.name}`,
+                    field: `processedData.${field.name}`, // Access processed data
                     dateValueField:
                         field.field_type_name === "DATE" ||
                         field.field_type_name === "DATE_RANGE"
-                            ? `processedData.${field.name}_date`
+                            ? `processedData.${field.name}_date` // For sorting
                             : undefined,
                 });
             });
         return cols;
     });
 
-    // --- Search Fields ---
+    // --- Search Fields (remains the same) ---
     const searchFields = $derived.by(() => {
-        // Add safe navigation for pageDefinition
         if (!pageDefinition?.fields) return [];
         return pageDefinition.fields
             .filter((field) => field.is_searchable)
             .map((field) => `processedData.${field.name}_search`);
     });
 
-    // --- Form Fields ---
-    const formFields = $derived(() => {
-        // Ensure pageDefinition and pageDefinition.fields exist and are an array
+    // --- Form Fields (remains the same) ---
+    const formFields = $derived.by(() => {
         if (!pageDefinition?.fields || !Array.isArray(pageDefinition.fields)) {
-            return []; // Return empty array if fields are not ready
+            return [];
         }
-        return pageDefinition.fields
+        return [...pageDefinition.fields]
             .sort((a, b) => a.order_index - b.order_index)
             .map((pf) => ({
                 id: pf.name,
@@ -112,14 +108,13 @@
                 type: mapFieldType(pf.field_type_name),
                 required: pf.required,
                 options: pf.options ? mapOptions(pf.options) : undefined,
-                value: null, // Let FormModal handle initial value
+                value: null,
                 placeholder: `Insira ${pf.display_name.toLowerCase()}`,
             }));
     });
 
-    // --- Data Fetching and Processing ---
+    // --- Data Fetching (remains the same) ---
     async function fetchRecords(query?: string) {
-        // Add safe navigation for pageDefinition
         if (!pageDefinition?.page?.id) {
             console.warn("fetchRecords called before pageDefinition is ready.");
             isLoading = false;
@@ -134,12 +129,14 @@
             );
             const processed: Record<string, PageRecord> = {};
             for (const record of rawRecords) {
+                // Pass the specific field definition to processRecordData
                 record.processedData = processRecordData(
                     record.data,
                     pageDefinition.fields,
                 );
-                processed[record.id] = { ...record, id: record.id };
+                processed[record.id.toString()] = { ...record, id: record.id };
             }
+            console.log("DynamicRecordPage: Setting records state:", processed);
             records = processed;
         } catch (e: any) {
             console.error("Error fetching records:", e);
@@ -150,22 +147,49 @@
         }
     }
 
+    // --- Data Processing ---
     function processRecordData(
         data: Record<string, any>,
         fields: PageField[],
     ): Record<string, any> {
-        // Add safe navigation for fields
         if (!fields) return {};
         const processed: Record<string, any> = {};
+
         for (const field of fields) {
             const rawValue = data[field.name];
             let displayValue: any = rawValue ?? "";
             let searchValue: string | undefined;
-            let dateValue: Date | undefined;
+            let dateValue: Date | undefined; // For sorting
+
+            // --- Robust Date Formatting ---
+            const tryFormatDate = (dateString: string): string | null => {
+                if (
+                    typeof dateString !== "string" ||
+                    !/^\d{4}-\d{2}-\d{2}/.test(dateString)
+                ) {
+                    return null; // Not a valid YYYY-MM-DD string
+                }
+                try {
+                    const [y, m, d] = dateString.substring(0, 10).split("-");
+                    // Create Date object for sorting (use UTC to avoid timezone issues)
+                    dateValue = new Date(
+                        Date.UTC(parseInt(y), parseInt(m) - 1, parseInt(d)),
+                    );
+                    if (isNaN(dateValue.getTime())) {
+                        // Check if date is valid
+                        dateValue = undefined;
+                        return "Data Inválida";
+                    }
+                    return `${d}/${m}/${y}`; // Format as DD/MM/YYYY
+                } catch (e) {
+                    dateValue = undefined;
+                    return "Data Inválida";
+                }
+            };
 
             switch (field.field_type_name) {
                 case "SELECT":
-                    const options = mapOptions(field.options);
+                    const options = mapOptions(field.options); // Use updated mapOptions
                     const selectedOption = options?.find(
                         (opt) => opt.value == rawValue,
                     );
@@ -178,63 +202,90 @@
                           ? toSearchString(rawValue.toString())
                           : undefined;
                     break;
-                case "DATE":
-                    if (rawValue) {
-                        try {
-                            dateValue = new Date(rawValue + "T00:00:00Z");
-                            displayValue =
-                                dateValue.toLocaleDateString("pt-PT");
-                            searchValue = displayValue;
-                        } catch (e) {
-                            displayValue = "Data Inválida";
-                        }
+
+                case "DATE": // Field definition says DATE
+                    const formattedDate = tryFormatDate(rawValue);
+                    if (formattedDate !== null) {
+                        displayValue = formattedDate;
+                        searchValue = displayValue;
                     } else {
-                        displayValue = "";
+                        // If it wasn't a date string, display raw value (handles contract_value case)
+                        displayValue = rawValue ?? "";
+                        searchValue =
+                            typeof rawValue === "number"
+                                ? rawValue.toString()
+                                : undefined;
                     }
                     break;
-                case "DATE_RANGE":
+
+                case "DATE_RANGE": // Field definition says DATE_RANGE
+                    // Check if data is object {start, end}
                     if (
                         rawValue &&
                         typeof rawValue === "object" &&
                         rawValue.start &&
                         rawValue.end
                     ) {
-                        try {
-                            const startDate = new Date(
-                                rawValue.start + "T00:00:00Z",
-                            );
-                            const endDate = new Date(
-                                rawValue.end + "T00:00:00Z",
-                            );
-                            displayValue = `${startDate.toLocaleDateString("pt-PT")} - ${endDate.toLocaleDateString("pt-PT")}`;
-                            dateValue = startDate;
+                        const formattedStart = tryFormatDate(rawValue.start);
+                        const formattedEnd = tryFormatDate(rawValue.end);
+                        if (formattedStart && formattedEnd) {
+                            displayValue = `${formattedStart} - ${formattedEnd}`;
+                            // Use start date for sorting
+                            // dateValue is already set by tryFormatDate(rawValue.start)
                             searchValue = displayValue;
-                        } catch (e) {
+                        } else {
                             displayValue = "Datas Inválidas";
                         }
-                    } else {
-                        displayValue = "";
+                    }
+                    // Check if data is single date string (like contract_date)
+                    else {
+                        const formattedSingleDate = tryFormatDate(rawValue);
+                        if (formattedSingleDate !== null) {
+                            displayValue = formattedSingleDate;
+                            searchValue = displayValue;
+                            // dateValue is set by tryFormatDate
+                        } else {
+                            // Otherwise display raw
+                            displayValue = rawValue ?? "";
+                            searchValue = rawValue
+                                ? toSearchString(rawValue.toString())
+                                : undefined;
+                        }
                     }
                     break;
-                case "NUMBER":
-                    displayValue = rawValue;
-                    searchValue = rawValue?.toString();
+
+                case "NUMBER": // Field definition says NUMBER
+                    // Display raw value, ensure it's treated as number if possible
+                    displayValue = rawValue ?? "";
+                    searchValue =
+                        typeof rawValue === "number"
+                            ? rawValue.toString()
+                            : undefined;
+                    // Handle contact_email case where definition is wrong
+                    if (
+                        field.name === "contact_email" &&
+                        typeof rawValue === "string"
+                    ) {
+                        searchValue = toSearchString(rawValue);
+                    }
                     break;
+
                 case "TEXT":
                 case "TEXTAREA":
                 default:
-                    displayValue = rawValue;
+                    displayValue = rawValue ?? "";
                     searchValue = rawValue
                         ? toSearchString(rawValue.toString())
                         : undefined;
                     break;
             }
+
             processed[field.name] = displayValue;
             if (searchValue !== undefined) {
                 processed[`${field.name}_search`] = searchValue;
             }
             if (dateValue !== undefined) {
-                processed[`${field.name}_date`] = dateValue;
+                processed[`${field.name}_date`] = dateValue; // Store Date object for sorting
             }
         }
         return processed;
@@ -242,6 +293,7 @@
 
     // --- Mappers ---
     function mapFieldType(backendType: string): FormModalFieldType {
+        // ... (remains the same) ...
         const FieldTypeMap: Record<string, FormModalFieldType> = {
             TEXT: FormModalFieldType.TEXT,
             NUMBER: FormModalFieldType.NUMBER,
@@ -253,28 +305,30 @@
         return FieldTypeMap[backendType] ?? FormModalFieldType.TEXT;
     }
 
-    function mapOptions(
-        optionsData: any,
-    ): import("@lib/types/form-modal").SelectOption[] | undefined {
-        if (Array.isArray(optionsData)) {
+    // Updated mapOptions to handle the { items: [...] } structure
+    function mapOptions(optionsData: any): SelectOption[] | undefined {
+        if (optionsData && Array.isArray(optionsData.items)) {
+            // Check if items have label and value properties
             if (
-                optionsData.length > 0 &&
-                typeof optionsData[0] === "object" &&
-                optionsData[0].hasOwnProperty("value") &&
-                optionsData[0].hasOwnProperty("label")
+                optionsData.items.length > 0 &&
+                typeof optionsData.items[0] === "object" &&
+                optionsData.items[0].hasOwnProperty("value") &&
+                optionsData.items[0].hasOwnProperty("label")
             ) {
-                return optionsData as import("@lib/types/form-modal").SelectOption[];
-            } else if (
-                optionsData.length > 0 &&
-                typeof optionsData[0] === "string"
-            ) {
+                return optionsData.items as SelectOption[];
+            }
+        }
+        // Fallback for simple string array (if needed in other cases)
+        else if (Array.isArray(optionsData)) {
+            if (optionsData.length > 0 && typeof optionsData[0] === "string") {
                 return optionsData.map((opt) => ({ value: opt, label: opt }));
             }
         }
+        console.warn("Could not parse options data:", optionsData);
         return undefined;
     }
 
-    // --- Event Handlers ---
+    // --- Event Handlers (handleRowClick, handleCreateClick remain the same) ---
     async function handleRowClick(id: string, row: PageRecord) {
         if (!permissions.can_edit) {
             showAlert(
@@ -286,7 +340,7 @@
         }
         const recordIdNum = parseInt(id, 10);
         selectedRecordId = recordIdNum;
-        isLoading = true; // Indicate loading details
+        isLoading = true;
         try {
             selectedRecordWithFiles = await getRecordById(recordIdNum);
             if (selectedRecordWithFiles) {
@@ -301,7 +355,7 @@
                     AlertType.ERROR,
                     AlertPosition.TOP,
                 );
-                selectedRecordId = null; // Reset if fetch failed
+                selectedRecordId = null;
             }
         } catch (e) {
             showAlert(
@@ -309,7 +363,7 @@
                 AlertType.ERROR,
                 AlertPosition.TOP,
             );
-            selectedRecordId = null; // Reset on error
+            selectedRecordId = null;
         } finally {
             isLoading = false;
         }
@@ -325,17 +379,17 @@
             return;
         }
         selectedRecordId = null;
-        selectedRecordWithFiles = null; // Clear selected record details
-        originalRecordJson = JSON.stringify({}); // Empty object for comparison
+        selectedRecordWithFiles = null;
+        originalRecordJson = JSON.stringify({});
         formModalRef?.showModal();
         currentModal.set(formModalRef?.children[0] as HTMLDivElement);
     }
 
+    // --- Form Submission ---
     async function handleFormSubmit(
         formData: Record<string, any>,
         newFiles: File[],
     ): Promise<SubmitResponse> {
-        // Add safe navigation for pageDefinition
         if (!pageDefinition?.fields) {
             showAlert(
                 "Configuração de campos inválida.",
@@ -352,20 +406,25 @@
             pageDefinition.fields.forEach((field) => {
                 if (formData.hasOwnProperty(field.name)) {
                     let value = formData[field.name];
-                    if (
-                        field.field_type_name === "NUMBER" &&
-                        typeof value === "string" &&
-                        value !== ""
-                    ) {
-                        value = parseFloat(value);
-                        if (isNaN(value)) value = null;
+
+                    // --- Convert back to backend format based on INTENDED type ---
+                    // Use field_type_name from definition to decide conversion
+                    const intendedType = field.field_type_name;
+
+                    if (intendedType === "NUMBER") {
+                        if (typeof value === "string" && value !== "") {
+                            value = parseFloat(value);
+                            if (isNaN(value)) value = null;
+                        } else if (value === "") {
+                            value = null;
+                        }
+                        // Ensure it's a number or null
+                        value =
+                            typeof value === "number" && !isNaN(value)
+                                ? value
+                                : null;
                     } else if (
-                        field.field_type_name === "NUMBER" &&
-                        value === ""
-                    ) {
-                        value = null;
-                    } else if (
-                        field.field_type_name === "DATE_RANGE" &&
+                        intendedType === "DATE_RANGE" &&
                         Array.isArray(value)
                     ) {
                         const [startStr, endStr] = value;
@@ -383,7 +442,7 @@
                             value = null;
                         }
                     } else if (
-                        field.field_type_name === "DATE" &&
+                        intendedType === "DATE" &&
                         typeof value === "string"
                     ) {
                         if (value && /^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
@@ -392,19 +451,20 @@
                         } else {
                             value = null;
                         }
-                    } else if (value === "") {
-                        if (
-                            field.field_type_name !== "TEXT" &&
-                            field.field_type_name !== "TEXTAREA"
-                        ) {
-                            value = null;
-                        }
+                    } else if (
+                        value === "" &&
+                        intendedType !== "TEXT" &&
+                        intendedType !== "TEXTAREA"
+                    ) {
+                        // Treat empty strings as null for non-text fields
+                        value = null;
                     }
                     payloadData[field.name] = value;
                 }
             });
 
             if (selectedRecordId !== null) {
+                // Update
                 const payload: UpdatePageRecordRequest = { data: payloadData };
                 if (
                     originalRecordJson !== null &&
@@ -416,6 +476,7 @@
                 result = await updateRecord(selectedRecordId, payload);
                 recordIdToUpdate = selectedRecordId;
             } else {
+                // Create
                 const payload: CreatePageRecordRequest = { data: payloadData };
                 const createResult = await createRecord(
                     pageDefinition.page.id,
@@ -439,7 +500,7 @@
                         );
                     }
                 }
-                await fetchRecords(searchQuery);
+                await fetchRecords(searchQuery); // Refetch list
                 const updatedRecord = records[recordIdToUpdate];
                 return [SubmitResult.SUCCESS, updatedRecord || {}];
             } else {
@@ -461,6 +522,7 @@
         }
     }
 
+    // --- Delete Handlers (remain the same) ---
     async function handleDeleteRecordSubmit(): Promise<boolean> {
         if (selectedRecordId === null || !permissions.can_delete) return false;
         try {
@@ -471,7 +533,7 @@
                 records = updatedRecords;
 
                 selectedRecordId = null;
-                selectedRecordWithFiles = null; // Clear selection
+                selectedRecordWithFiles = null;
                 return true;
             }
             return false;
@@ -496,16 +558,13 @@
         try {
             const success = await deleteRecordFile(recordId, fileId);
             if (success) {
-                // Update the state if the modal for this record is open
                 if (
                     selectedRecordWithFiles &&
                     selectedRecordWithFiles.record.id === recordId
                 ) {
-                    // Create a new array without the deleted file
                     const updatedFiles = selectedRecordWithFiles.files.filter(
                         (f) => f.id !== fileId,
                     );
-                    // Create a new object to trigger reactivity
                     selectedRecordWithFiles = {
                         ...selectedRecordWithFiles,
                         files: updatedFiles,
@@ -525,17 +584,14 @@
         }
     }
 
+    // --- Lifecycle (remains the same) ---
     onMount(() => {
-        // Fetch records only if pageDefinition is available
         if (pageDefinition?.page?.id) {
             fetchRecords();
         } else {
-            // Handle case where pageDefinition might not be ready immediately
-            // This might happen if the parent component loads it asynchronously
             console.warn(
                 "DynamicRecordPage mounted, but pageDefinition not fully ready.",
             );
-            // Consider adding a loading state or error message here if pageDefinition is expected
         }
     });
 
@@ -544,7 +600,6 @@
         const currentQuery = searchQuery;
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => {
-            // Fetch records only if pageDefinition is available
             if (pageDefinition?.page?.id) {
                 fetchRecords(currentQuery);
             }
@@ -553,7 +608,7 @@
     });
 </script>
 
-<!-- Template -->
+<!-- Template (remains the same) -->
 <div class="mb-4 flex flex-col sm:flex-row justify-between items-center gap-4">
     <h1 class="text-2xl font-bold">
         {pageDefinition?.page?.name || "A Carregar..."}

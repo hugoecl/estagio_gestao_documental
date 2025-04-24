@@ -1,27 +1,24 @@
 <script lang="ts">
     import type { TableColumn } from "@lib/types/table";
-    // Removed toSearchString import as filtering is now external
 
     // Props
     let {
-        data, // Expects Record<string, any> where key is ID
+        data, // Expects Record<string, any>
         columns,
-        keyField, // Still needed to identify the ID column
-        // searchFields, // No longer needed for client-side filtering
+        keyField, // Field name containing the unique ID (e.g., 'id')
         loading = false,
         emptyMessage,
         searchEmptyMessage = "Nenhum resultado encontrado",
-        rowClassName = "hover:bg-base-300 cursor-pointer", // Added cursor-pointer
+        rowClassName = "hover:bg-base-300 cursor-pointer",
         onRowClick,
-        searchQuery = $bindable(""), // Bindable search query for parent control
-        totalItems = 0, // Total items from server for pagination
+        searchQuery = $bindable(""), // Bindable search query
+        totalItems = 0,
         currentPage = $bindable(1),
         perPage = $bindable(10),
     }: {
         data: Record<string, any>;
         columns: TableColumn[];
         keyField: string;
-        // searchFields: string[]; // Removed
         loading?: boolean;
         emptyMessage: string;
         searchEmptyMessage?: string;
@@ -42,38 +39,48 @@
     let sortColumn = $state<string | null>(null);
     let sortDirection = $state<SortDirection>(SortDirection.NONE);
 
-    // Derived Data (No filtering/sorting here anymore)
-    const displayedEntries = $derived(Object.entries(data)); // Just convert data to array
+    // Derived Data
+    // Convert the input data (Record<string, any>) into an array of [id, rowObject] pairs
+    const displayedEntries = $derived.by(() => {
+        console.log("Table Data Prop:", data); // Log input data
+        const entries = Object.entries(data || {}); // Ensure data is not null/undefined
+        console.log("Displayed Entries (derived):", entries); // Log the derived array
+        return entries;
+    });
 
     // --- Sorting ---
-    // Sorting logic remains client-side for now, applied *after* server fetches data for the current page
-    // This is simpler but less accurate than server-side sorting.
-    // For full server-side sorting, you'd need to pass sortColumn/sortDirection to the parent/API call.
-    const sortedEntries = $derived(() => {
+    // Apply sorting to the displayedEntries array
+    const sortedEntries = $derived.by(() => {
+        // Log the value *before* sorting
+        console.log("Entries before sorting:", displayedEntries);
+
         if (sortColumn === null || sortDirection === SortDirection.NONE) {
-            return displayedEntries;
+            return displayedEntries; // Return the unsorted array
         }
         const column = columns.find((col) => col.header === sortColumn);
         if (!column) return displayedEntries;
 
-        // Find the actual field name, handling potential nesting like 'processedData.name'
         const fieldPath = column.field.split(".");
 
-        return [...displayedEntries].sort(([, rowA], [, rowB]) => {
-            // Helper to get potentially nested value
+        // Create a new sorted array
+        const sorted = [...displayedEntries].sort(([, rowA], [, rowB]) => {
             const getValue = (row: any, path: string[]) =>
                 path.reduce((obj, key) => obj?.[key], row);
 
             const valueA = getValue(rowA, fieldPath);
             const valueB = getValue(rowB, fieldPath);
 
-            // Handle ID column specifically if needed (often numeric)
+            // Use keyField prop for ID sorting
             if (column.field === keyField) {
-                const idA = parseInt(rowA.id, 10); // Assuming ID is in row.id
-                const idB = parseInt(rowB.id, 10);
-                return sortDirection === SortDirection.ASC
-                    ? idA - idB
-                    : idB - idA;
+                // Access the ID using the keyField prop
+                const idA = parseInt(rowA[keyField], 10);
+                const idB = parseInt(rowB[keyField], 10);
+                // Handle potential NaN if keyField value isn't a number string
+                if (!isNaN(idA) && !isNaN(idB)) {
+                    return sortDirection === SortDirection.ASC
+                        ? idA - idB
+                        : idB - idA;
+                }
             }
 
             if (column.dateValueField) {
@@ -93,23 +100,24 @@
                     : valueB - valueA;
             }
 
-            // LocaleCompare for strings, handle null/undefined
             const strA = valueA?.toString() ?? "";
             const strB = valueB?.toString() ?? "";
             return sortDirection === SortDirection.ASC
                 ? strA.localeCompare(strB, "pt-PT")
                 : strB.localeCompare(strA, "pt-PT");
         });
+        console.log("Sorted Entries (derived):", sorted); // Log the sorted array
+        return sorted;
     });
 
-    function getSortIndicator(columnId: string): string {
-        if (sortColumn !== columnId) return "";
+    function getSortIndicator(columnHeader: string): string {
+        if (sortColumn !== columnHeader) return "";
         return sortDirection === SortDirection.ASC ? "↑" : "↓";
     }
 
     function toggleSort(column: TableColumn): void {
         if (sortColumn === column.header) {
-            sortDirection = (sortDirection + 1) % 3; // Cycle 0, 1, 2
+            sortDirection = (sortDirection + 1) % 3;
             if (sortDirection === SortDirection.NONE) {
                 sortColumn = null;
             }
@@ -117,8 +125,6 @@
             sortColumn = column.header;
             sortDirection = SortDirection.ASC;
         }
-        // NOTE: If implementing server-side sorting, emit an event here instead of sorting locally.
-        // Example: dispatch('sortchange', { column: sortColumn, direction: sortDirection });
     }
 
     // --- Pagination ---
@@ -142,7 +148,7 @@
 
     function goToPage(page: number) {
         if (page >= 1 && page <= totalPages && page !== currentPage) {
-            currentPage = page; // Update bound prop, parent should refetch data
+            currentPage = page;
         }
     }
 
@@ -151,58 +157,40 @@
             parseInt((e.target as HTMLInputElement).value, 10) || 10;
         if (newPerPage !== perPage) {
             perPage = newPerPage;
-            currentPage = 1; // Go to first page when changing items per page
+            currentPage = 1;
         }
     }
 
-    // Helper to get cell value, handling nested paths
+    // Helper to get cell value
     function getCellValue(row: any, fieldPath: string): any {
-        return fieldPath.split(".").reduce((obj, key) => obj?.[key], row) ?? "";
+        if (typeof row !== "object" || row === null) return "";
+        try {
+            // Special case for 'id' field - use the keyField prop
+            if (fieldPath === keyField) {
+                return row[keyField] ?? "";
+            }
+            // Otherwise, use the reduce method
+            return (
+                fieldPath.split(".").reduce((obj, key) => obj?.[key], row) ?? ""
+            );
+        } catch (e) {
+            console.error(
+                `Error getting cell value for path "${fieldPath}" in row:`,
+                row,
+                e,
+            );
+            return "Error";
+        }
     }
 </script>
 
 <div
     class="overflow-x-auto rounded-box border border-base-content/10 bg-base-100 shadow"
 >
-    <!-- Search bar -->
-    <div class="p-2 flex justify-center border-b border-base-content/10">
-        <div class="join w-full max-w-md mx-auto">
-            <div
-                class="join-item flex items-center px-3 bg-base-200 rounded-l-lg"
-            >
-                <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 16 16"
-                    fill="currentColor"
-                    class="w-4 h-4 opacity-70"
-                    ><path
-                        fill-rule="evenodd"
-                        d="M9.965 11.026a5 5 0 1 1 1.06-1.06l2.755 2.754a.75.75 0 1 1-1.06 1.06l-2.755-2.754ZM10.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z"
-                        clip-rule="evenodd"
-                    /></svg
-                >
-            </div>
-            <input
-                type="text"
-                placeholder="Pesquisar..."
-                class="input input-bordered join-item w-full focus:outline-none focus:border-primary"
-                bind:value={searchQuery}
-            />
-            {#if searchQuery}
-                <button
-                    class="btn join-item bg-base-200 rounded-r-lg"
-                    onclick={() => (searchQuery = "")}
-                    title="Limpar pesquisa"
-                >
-                    ×
-                </button>
-            {/if}
-        </div>
-    </div>
+    <!--  Search bar removed - handled externally -->
 
     <div class="overflow-x-auto">
         <table class="table table-pin-rows table-sm md:table-md">
-            <!-- -- Adjust size -->
             <thead>
                 <tr>
                     {#each columns as column (column.header)}
@@ -240,6 +228,7 @@
                         </td>
                     </tr>
                 {:else}
+                    <!-- Iterate over the derived sortedEntries array -->
                     {#each sortedEntries as [id, row] (id)}
                         <tr
                             class={rowClassName}
@@ -254,22 +243,10 @@
                     {/each}
                 {/if}
             </tbody>
-            {#if !loading && displayedEntries.length > 0}
-                <tfoot>
-                    <tr>
-                        {#each columns as column (column.header)}
-                            <th class={column.responsive || ""}
-                                >{column.header}</th
-                            >
-                        {/each}
-                    </tr>
-                </tfoot>
-            {/if}
         </table>
     </div>
 
-    <!-- Pagination -->
-    {#if !loading && totalItems > 0}
+    {#if !loading && totalItems > 0 && totalPages > 1}
         <div
             class="flex flex-col md:flex-row justify-between items-center gap-2 p-2 bg-base-200 border-t border-base-content/10"
         >
