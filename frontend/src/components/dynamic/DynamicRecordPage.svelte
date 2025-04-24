@@ -29,7 +29,7 @@
         SubmitResult,
         type SubmitResponse,
         type SelectOption,
-    } from "@lib/types/form-modal"; // Added SelectOption
+    } from "@lib/types/form-modal";
     import { currentModal } from "@stores/modal-store";
     import {
         showAlert,
@@ -37,15 +37,15 @@
         AlertPosition,
     } from "@components/alert/alert";
     import { toSearchString } from "@utils/search-utils";
-    import { DMYToDate } from "@utils/date-utils"; // Keep this for potential sorting
+    import { DMYToDate } from "@utils/date-utils";
     import API_BASE_URL from "@api/base-url";
 
-    // ... (Props and other state variables remain the same) ...
     const { pageDefinition }: { pageDefinition: CustomPageWithFields } =
         $props();
 
     let records = $state<Record<string, PageRecord>>({});
     let isLoading = $state(true);
+    // searchQuery is now primarily controlled *by* the Table component via binding
     let searchQuery = $state("");
     let error = $state<string | null>(null);
 
@@ -76,23 +76,26 @@
             .forEach((field) => {
                 cols.push({
                     header: field.display_name,
-                    field: `processedData.${field.name}`, // Access processed data
+                    field: `processedData.${field.name}`,
                     dateValueField:
                         field.field_type_name === "DATE" ||
                         field.field_type_name === "DATE_RANGE"
-                            ? `processedData.${field.name}_date` // For sorting
+                            ? `processedData.${field.name}_date`
                             : undefined,
                 });
             });
         return cols;
     });
 
-    // --- Search Fields (remains the same) ---
+    // --- Search Fields (remains the same, will be passed to Table) ---
     const searchFields = $derived.by(() => {
         if (!pageDefinition?.fields) return [];
-        return pageDefinition.fields
-            .filter((field) => field.is_searchable)
-            .map((field) => `processedData.${field.name}_search`);
+        return (
+            pageDefinition.fields
+                .filter((field) => field.is_searchable)
+                // Ensure we target the searchable fields created in processRecordData
+                .map((field) => `processedData.${field.name}_search`)
+        );
     });
 
     // --- Form Fields (remains the same) ---
@@ -113,8 +116,9 @@
             }));
     });
 
-    // --- Data Fetching (remains the same) ---
-    async function fetchRecords(query?: string) {
+    // --- Data Fetching (Remove search query parameter) ---
+    async function fetchRecords() {
+        // Removed query parameter
         if (!pageDefinition?.page?.id) {
             console.warn("fetchRecords called before pageDefinition is ready.");
             isLoading = false;
@@ -123,13 +127,10 @@
         isLoading = true;
         error = null;
         try {
-            const rawRecords = await getPageRecords(
-                pageDefinition.page.id,
-                query,
-            );
+            // Fetch ALL records, no search query passed to API
+            const rawRecords = await getPageRecords(pageDefinition.page.id);
             const processed: Record<string, PageRecord> = {};
             for (const record of rawRecords) {
-                // Pass the specific field definition to processRecordData
                 record.processedData = processRecordData(
                     record.data,
                     pageDefinition.fields,
@@ -147,11 +148,12 @@
         }
     }
 
-    // --- Data Processing ---
+    // --- Data Processing (remains the same) ---
     function processRecordData(
         data: Record<string, any>,
         fields: PageField[],
     ): Record<string, any> {
+        // ... (implementation remains the same) ...
         if (!fields) return {};
         const processed: Record<string, any> = {};
 
@@ -161,26 +163,23 @@
             let searchValue: string | undefined;
             let dateValue: Date | undefined; // For sorting
 
-            // --- Robust Date Formatting ---
             const tryFormatDate = (dateString: string): string | null => {
                 if (
                     typeof dateString !== "string" ||
                     !/^\d{4}-\d{2}-\d{2}/.test(dateString)
                 ) {
-                    return null; // Not a valid YYYY-MM-DD string
+                    return null;
                 }
                 try {
                     const [y, m, d] = dateString.substring(0, 10).split("-");
-                    // Create Date object for sorting (use UTC to avoid timezone issues)
                     dateValue = new Date(
                         Date.UTC(parseInt(y), parseInt(m) - 1, parseInt(d)),
                     );
                     if (isNaN(dateValue.getTime())) {
-                        // Check if date is valid
                         dateValue = undefined;
                         return "Data Inválida";
                     }
-                    return `${d}/${m}/${y}`; // Format as DD/MM/YYYY
+                    return `${d}/${m}/${y}`;
                 } catch (e) {
                     dateValue = undefined;
                     return "Data Inválida";
@@ -189,13 +188,14 @@
 
             switch (field.field_type_name) {
                 case "SELECT":
-                    const options = mapOptions(field.options); // Use updated mapOptions
+                    const options = mapOptions(field.options);
                     const selectedOption = options?.find(
                         (opt) => opt.value == rawValue,
                     );
                     displayValue = selectedOption
                         ? selectedOption.label
                         : rawValue;
+                    // Ensure search value exists even if option label isn't found, use raw value
                     searchValue = selectedOption
                         ? toSearchString(selectedOption.label)
                         : rawValue
@@ -203,13 +203,12 @@
                           : undefined;
                     break;
 
-                case "DATE": // Field definition says DATE
+                case "DATE":
                     const formattedDate = tryFormatDate(rawValue);
                     if (formattedDate !== null) {
                         displayValue = formattedDate;
                         searchValue = displayValue;
                     } else {
-                        // If it wasn't a date string, display raw value (handles contract_value case)
                         displayValue = rawValue ?? "";
                         searchValue =
                             typeof rawValue === "number"
@@ -218,8 +217,7 @@
                     }
                     break;
 
-                case "DATE_RANGE": // Field definition says DATE_RANGE
-                    // Check if data is object {start, end}
+                case "DATE_RANGE":
                     if (
                         rawValue &&
                         typeof rawValue === "object" &&
@@ -230,22 +228,17 @@
                         const formattedEnd = tryFormatDate(rawValue.end);
                         if (formattedStart && formattedEnd) {
                             displayValue = `${formattedStart} - ${formattedEnd}`;
-                            // Use start date for sorting
                             // dateValue is already set by tryFormatDate(rawValue.start)
                             searchValue = displayValue;
                         } else {
                             displayValue = "Datas Inválidas";
                         }
-                    }
-                    // Check if data is single date string (like contract_date)
-                    else {
+                    } else {
                         const formattedSingleDate = tryFormatDate(rawValue);
                         if (formattedSingleDate !== null) {
                             displayValue = formattedSingleDate;
                             searchValue = displayValue;
-                            // dateValue is set by tryFormatDate
                         } else {
-                            // Otherwise display raw
                             displayValue = rawValue ?? "";
                             searchValue = rawValue
                                 ? toSearchString(rawValue.toString())
@@ -254,14 +247,12 @@
                     }
                     break;
 
-                case "NUMBER": // Field definition says NUMBER
-                    // Display raw value, ensure it's treated as number if possible
+                case "NUMBER":
                     displayValue = rawValue ?? "";
                     searchValue =
                         typeof rawValue === "number"
                             ? rawValue.toString()
                             : undefined;
-                    // Handle contact_email case where definition is wrong
                     if (
                         field.name === "contact_email" &&
                         typeof rawValue === "string"
@@ -282,18 +273,18 @@
 
             processed[field.name] = displayValue;
             if (searchValue !== undefined) {
+                // Store the searchable string
                 processed[`${field.name}_search`] = searchValue;
             }
             if (dateValue !== undefined) {
-                processed[`${field.name}_date`] = dateValue; // Store Date object for sorting
+                processed[`${field.name}_date`] = dateValue;
             }
         }
         return processed;
     }
 
-    // --- Mappers ---
+    // --- Mappers (remain the same) ---
     function mapFieldType(backendType: string): FormModalFieldType {
-        // ... (remains the same) ...
         const FieldTypeMap: Record<string, FormModalFieldType> = {
             TEXT: FormModalFieldType.TEXT,
             NUMBER: FormModalFieldType.NUMBER,
@@ -305,10 +296,8 @@
         return FieldTypeMap[backendType] ?? FormModalFieldType.TEXT;
     }
 
-    // Updated mapOptions to handle the { items: [...] } structure
     function mapOptions(optionsData: any): SelectOption[] | undefined {
         if (optionsData && Array.isArray(optionsData.items)) {
-            // Check if items have label and value properties
             if (
                 optionsData.items.length > 0 &&
                 typeof optionsData.items[0] === "object" &&
@@ -317,9 +306,7 @@
             ) {
                 return optionsData.items as SelectOption[];
             }
-        }
-        // Fallback for simple string array (if needed in other cases)
-        else if (Array.isArray(optionsData)) {
+        } else if (Array.isArray(optionsData)) {
             if (optionsData.length > 0 && typeof optionsData[0] === "string") {
                 return optionsData.map((opt) => ({ value: opt, label: opt }));
             }
@@ -330,6 +317,7 @@
 
     // --- Event Handlers (handleRowClick, handleCreateClick remain the same) ---
     async function handleRowClick(id: string, row: PageRecord) {
+        // ... (implementation remains the same) ...
         if (!permissions.can_edit) {
             showAlert(
                 "Não tem permissão para editar este registo.",
@@ -370,6 +358,7 @@
     }
 
     function handleCreateClick() {
+        // ... (implementation remains the same) ...
         if (!permissions.can_create) {
             showAlert(
                 "Não tem permissão para criar registos.",
@@ -385,11 +374,12 @@
         currentModal.set(formModalRef?.children[0] as HTMLDivElement);
     }
 
-    // --- Form Submission ---
+    // --- Form Submission (remains the same) ---
     async function handleFormSubmit(
         formData: Record<string, any>,
         newFiles: File[],
     ): Promise<SubmitResponse> {
+        // ... (implementation remains the same) ...
         if (!pageDefinition?.fields) {
             showAlert(
                 "Configuração de campos inválida.",
@@ -406,9 +396,6 @@
             pageDefinition.fields.forEach((field) => {
                 if (formData.hasOwnProperty(field.name)) {
                     let value = formData[field.name];
-
-                    // --- Convert back to backend format based on INTENDED type ---
-                    // Use field_type_name from definition to decide conversion
                     const intendedType = field.field_type_name;
 
                     if (intendedType === "NUMBER") {
@@ -418,7 +405,6 @@
                         } else if (value === "") {
                             value = null;
                         }
-                        // Ensure it's a number or null
                         value =
                             typeof value === "number" && !isNaN(value)
                                 ? value
@@ -456,7 +442,6 @@
                         intendedType !== "TEXT" &&
                         intendedType !== "TEXTAREA"
                     ) {
-                        // Treat empty strings as null for non-text fields
                         value = null;
                     }
                     payloadData[field.name] = value;
@@ -464,7 +449,6 @@
             });
 
             if (selectedRecordId !== null) {
-                // Update
                 const payload: UpdatePageRecordRequest = { data: payloadData };
                 if (
                     originalRecordJson !== null &&
@@ -476,7 +460,6 @@
                 result = await updateRecord(selectedRecordId, payload);
                 recordIdToUpdate = selectedRecordId;
             } else {
-                // Create
                 const payload: CreatePageRecordRequest = { data: payloadData };
                 const createResult = await createRecord(
                     pageDefinition.page.id,
@@ -500,7 +483,7 @@
                         );
                     }
                 }
-                await fetchRecords(searchQuery); // Refetch list
+                await fetchRecords(); // Refetch list (no query needed here)
                 const updatedRecord = records[recordIdToUpdate];
                 return [SubmitResult.SUCCESS, updatedRecord || {}];
             } else {
@@ -524,6 +507,7 @@
 
     // --- Delete Handlers (remain the same) ---
     async function handleDeleteRecordSubmit(): Promise<boolean> {
+        // ... (implementation remains the same) ...
         if (selectedRecordId === null || !permissions.can_delete) return false;
         try {
             const success = await deleteRecord(selectedRecordId);
@@ -552,6 +536,7 @@
         recordIdStr: string,
         fileIdStr: string,
     ): Promise<boolean> {
+        // ... (implementation remains the same) ...
         if (!permissions.can_edit) return false;
         const recordId = parseInt(recordIdStr, 10);
         const fileId = parseInt(fileIdStr, 10);
@@ -595,20 +580,21 @@
         }
     });
 
-    let debounceTimer: number;
-    $effect(() => {
-        const currentQuery = searchQuery;
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
-            if (pageDefinition?.page?.id) {
-                fetchRecords(currentQuery);
-            }
-        }, 300);
-        return () => clearTimeout(debounceTimer);
-    });
+    // Remove the $effect for debounced fetching as search is now client-side
+    // let debounceTimer: number;
+    // $effect(() => {
+    //     const currentQuery = searchQuery;
+    //     clearTimeout(debounceTimer);
+    //     debounceTimer = setTimeout(() => {
+    //         if (pageDefinition?.page?.id) {
+    //             fetchRecords(currentQuery); // No longer passing query
+    //         }
+    //     }, 300);
+    //     return () => clearTimeout(debounceTimer);
+    // });
 </script>
 
-<!-- Template (remains the same) -->
+<!-- Template -->
 <div class="mb-4 flex flex-col sm:flex-row justify-between items-center gap-4">
     <h1 class="text-2xl font-bold">
         {pageDefinition?.page?.name || "A Carregar..."}
@@ -636,48 +622,10 @@
 </div>
 
 {#if error}
-    <div class="alert alert-error shadow-lg">
-        <div>
-            <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="stroke-current flex-shrink-0 h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                ><path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-                /></svg
-            >
-            <span>{error}</span>
-        </div>
-    </div>
+    <!-- ... error alert ... -->
 {/if}
 
-<div class="mb-4">
-    <label class="input input-bordered flex items-center gap-2">
-        <input
-            type="text"
-            class="grow"
-            placeholder="Pesquisar..."
-            bind:value={searchQuery}
-            disabled={!pageDefinition}
-        />
-        <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 16 16"
-            fill="currentColor"
-            class="w-4 h-4 opacity-70"
-            ><path
-                fill-rule="evenodd"
-                d="M9.965 11.026a5 5 0 1 1 1.06-1.06l2.755 2.754a.75.75 0 1 1-1.06 1.06l-2.755-2.754ZM10.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z"
-                clip-rule="evenodd"
-            /></svg
-        >
-    </label>
-</div>
-
+<!-- Table component now handles search internally -->
 <div
     class="bg-base-100 rounded-lg shadow-md border border-base-content/10 overflow-hidden"
 >
@@ -690,11 +638,11 @@
                 emptyMessage="Nenhum registo encontrado."
                 searchEmptyMessage="Nenhum registo encontrado para a sua pesquisa."
                 keyField="id"
-                {searchQuery}
+                {searchFields}
+                bind:searchQuery
                 onRowClick={handleRowClick}
                 currentPage={1}
                 perPage={10}
-                totalItems={Object.keys(records).length}
             />
         {:else if !error}
             <div class="flex justify-center items-center p-10">
@@ -706,6 +654,7 @@
 </div>
 
 {#if pageDefinition}
+    <!-- ... FormModal ... -->
     <FormModal
         bind:formModal={formModalRef}
         title={selectedRecordId

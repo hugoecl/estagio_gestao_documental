@@ -1,34 +1,34 @@
 <script lang="ts">
     import type { TableColumn } from "@lib/types/table";
+    import { toSearchString } from "@utils/search-utils"; // Import for searching
 
     // Props
     let {
         data, // Expects Record<string, any>
         columns,
         keyField, // Field name containing the unique ID (e.g., 'id')
+        searchFields, // Fields to use for client-side search
         loading = false,
         emptyMessage,
         searchEmptyMessage = "Nenhum resultado encontrado",
         rowClassName = "hover:bg-base-300 cursor-pointer",
         onRowClick,
-        searchQuery = $bindable(""), // Bindable search query
-        totalItems = 0,
-        currentPage = $bindable(1),
-        perPage = $bindable(10),
     }: {
         data: Record<string, any>;
         columns: TableColumn[];
         keyField: string;
+        searchFields: string[];
         loading?: boolean;
         emptyMessage: string;
         searchEmptyMessage?: string;
         rowClassName?: string;
         onRowClick: (id: string, row: any) => void;
-        searchQuery?: string;
-        totalItems?: number;
-        currentPage?: number;
-        perPage?: number;
     } = $props();
+
+    // Internal State for Search, Sort, Pagination
+    let searchQuery = $state("");
+    let currentPage = $state(1);
+    let perPage = $state(10);
 
     // Sorting State
     const enum SortDirection {
@@ -39,48 +39,73 @@
     let sortColumn = $state<string | null>(null);
     let sortDirection = $state<SortDirection>(SortDirection.NONE);
 
-    // Derived Data
-    // Convert the input data (Record<string, any>) into an array of [id, rowObject] pairs
-    const displayedEntries = $derived.by(() => {
-        console.log("Table Data Prop:", data); // Log input data
-        const entries = Object.entries(data || {}); // Ensure data is not null/undefined
-        console.log("Displayed Entries (derived):", entries); // Log the derived array
-        return entries;
+    // --- Client-side Filtering ---
+    const filteredEntries = $derived.by(() => {
+        const entries = Object.entries(data || {});
+        const query = searchQuery.trim(); // Use internal state
+        if (!query) {
+            return entries; // No filter applied
+        }
+        const lowerCaseQuery = toSearchString(query);
+
+        return entries.filter(([id, row]) => {
+            // Check ID first
+            if (id.toLowerCase().includes(lowerCaseQuery)) {
+                return true;
+            }
+            // Check against specified search fields
+            for (const fieldPath of searchFields) {
+                const value = getCellValue(row, fieldPath); // Use existing helper
+                if (
+                    value &&
+                    toSearchString(value.toString()).includes(lowerCaseQuery)
+                ) {
+                    return true;
+                }
+            }
+            return false;
+        });
     });
 
-    // --- Sorting ---
-    // Apply sorting to the displayedEntries array
+    // Reset to first page when search changes
+    $effect(() => {
+        if (searchQuery !== undefined) {
+            currentPage = 1;
+        }
+    });
+
+    // --- Sorting (Applied to filtered data) ---
     const sortedEntries = $derived.by(() => {
-        // Log the value *before* sorting
-        console.log("Entries before sorting:", displayedEntries);
+        const entriesToUse = filteredEntries;
 
         if (sortColumn === null || sortDirection === SortDirection.NONE) {
-            return displayedEntries; // Return the unsorted array
+            return entriesToUse;
         }
         const column = columns.find((col) => col.header === sortColumn);
-        if (!column) return displayedEntries;
+        if (!column) return entriesToUse;
 
         const fieldPath = column.field.split(".");
 
-        // Create a new sorted array
-        const sorted = [...displayedEntries].sort(([, rowA], [, rowB]) => {
+        const sorted = [...entriesToUse].sort(([, rowA], [, rowB]) => {
             const getValue = (row: any, path: string[]) =>
                 path.reduce((obj, key) => obj?.[key], row);
 
             const valueA = getValue(rowA, fieldPath);
             const valueB = getValue(rowB, fieldPath);
 
-            // Use keyField prop for ID sorting
             if (column.field === keyField) {
-                // Access the ID using the keyField prop
-                const idA = parseInt(rowA[keyField], 10);
-                const idB = parseInt(rowB[keyField], 10);
-                // Handle potential NaN if keyField value isn't a number string
-                if (!isNaN(idA) && !isNaN(idB)) {
+                const numA = parseFloat(rowA[keyField]);
+                const numB = parseFloat(rowB[keyField]);
+                if (!isNaN(numA) && !isNaN(numB)) {
                     return sortDirection === SortDirection.ASC
-                        ? idA - idB
-                        : idB - idA;
+                        ? numA - numB
+                        : numB - numA;
                 }
+                const strA = rowA[keyField]?.toString() ?? "";
+                const strB = rowB[keyField]?.toString() ?? "";
+                return sortDirection === SortDirection.ASC
+                    ? strA.localeCompare(strB, "pt-PT")
+                    : strB.localeCompare(strA, "pt-PT");
             }
 
             if (column.dateValueField) {
@@ -106,10 +131,27 @@
                 ? strA.localeCompare(strB, "pt-PT")
                 : strB.localeCompare(strA, "pt-PT");
         });
-        console.log("Sorted Entries (derived):", sorted); // Log the sorted array
         return sorted;
     });
 
+    // --- Pagination (Applied to filtered and sorted data) ---
+    const totalItems = $derived(sortedEntries.length);
+    const totalPages = $derived(Math.max(1, Math.ceil(totalItems / perPage)));
+
+    $effect(() => {
+        // Ensure currentPage is valid after filtering/sorting changes totalPages
+        if (currentPage > totalPages) {
+            currentPage = totalPages;
+        }
+    });
+
+    const paginatedEntries = $derived.by(() => {
+        const start = (currentPage - 1) * perPage;
+        const end = start + perPage;
+        return sortedEntries.slice(start, end);
+    });
+
+    // --- Other Functions ---
     function getSortIndicator(columnHeader: string): string {
         if (sortColumn !== columnHeader) return "";
         return sortDirection === SortDirection.ASC ? "↑" : "↓";
@@ -125,18 +167,18 @@
             sortColumn = column.header;
             sortDirection = SortDirection.ASC;
         }
+        currentPage = 1;
     }
-
-    // --- Pagination ---
-    const totalPages = $derived(Math.max(1, Math.ceil(totalItems / perPage)));
 
     function generatePageNumbers(
         current: number,
         total: number,
     ): (number | null)[] {
         if (total <= 7) {
+            // Show all pages if 7 or less
             return Array.from({ length: total }, (_, i) => i + 1);
         }
+        // Logic for more than 7 pages (ellipsis)
         if (current < 4) {
             return [1, 2, 3, 4, 5, null, total];
         } else if (current > total - 3) {
@@ -161,15 +203,12 @@
         }
     }
 
-    // Helper to get cell value
     function getCellValue(row: any, fieldPath: string): any {
         if (typeof row !== "object" || row === null) return "";
         try {
-            // Special case for 'id' field - use the keyField prop
             if (fieldPath === keyField) {
                 return row[keyField] ?? "";
             }
-            // Otherwise, use the reduce method
             return (
                 fieldPath.split(".").reduce((obj, key) => obj?.[key], row) ?? ""
             );
@@ -187,7 +226,45 @@
 <div
     class="overflow-x-auto rounded-box border border-base-content/10 bg-base-100 shadow"
 >
-    <!--  Search bar removed - handled externally -->
+    <!-- Search bar -->
+    <div class="p-2 flex justify-center border-b border-base-content/10">
+        <div class="join w-full max-w-md mx-auto">
+            <div
+                class="join-item flex items-center px-3 bg-base-200 rounded-l-lg"
+            >
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 16 16"
+                    fill="currentColor"
+                    class="w-4 h-4 opacity-70"
+                    ><path
+                        fill-rule="evenodd"
+                        d="M9.965 11.026a5 5 0 1 1 1.06-1.06l2.755 2.754a.75.75 0 1 1-1.06 1.06l-2.755-2.754ZM10.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z"
+                        clip-rule="evenodd"
+                    /></svg
+                >
+            </div>
+            <input
+                type="text"
+                placeholder="Pesquisar..."
+                class="input input-bordered join-item w-full focus:outline-none focus:border-primary"
+                bind:value={searchQuery}
+                disabled={loading}
+            />
+            {#if searchQuery}
+                <button
+                    class="btn join-item bg-base-200 rounded-r-lg"
+                    onclick={() => {
+                        searchQuery = "";
+                    }}
+                    title="Limpar pesquisa"
+                    disabled={loading}
+                >
+                    ×
+                </button>
+            {/if}
+        </div>
+    </div>
 
     <div class="overflow-x-auto">
         <table class="table table-pin-rows table-sm md:table-md">
@@ -218,7 +295,7 @@
                             {/each}
                         </tr>
                     {/each}
-                {:else if displayedEntries.length === 0}
+                {:else if filteredEntries.length === 0}
                     <tr>
                         <td
                             colspan={columns.length}
@@ -228,8 +305,7 @@
                         </td>
                     </tr>
                 {:else}
-                    <!-- Iterate over the derived sortedEntries array -->
-                    {#each sortedEntries as [id, row] (id)}
+                    {#each paginatedEntries as [id, row] (id)}
                         <tr
                             class={rowClassName}
                             onclick={() => onRowClick(id, row)}
@@ -243,10 +319,12 @@
                     {/each}
                 {/if}
             </tbody>
+            <!-- tfoot removed -->
         </table>
     </div>
 
-    {#if !loading && totalItems > 0 && totalPages > 1}
+    <!-- Pagination - Always show if not loading and there are items -->
+    {#if !loading && totalItems > 0}
         <div
             class="flex flex-col md:flex-row justify-between items-center gap-2 p-2 bg-base-200 border-t border-base-content/10"
         >
@@ -254,7 +332,7 @@
                 <span>Mostrar</span>
                 <select
                     class="select select-bordered select-xs"
-                    value={perPage}
+                    bind:value={perPage}
                     onchange={handlePerPageChange}
                 >
                     <option value={10}>10</option>
@@ -266,7 +344,7 @@
             </div>
 
             <span class="text-sm text-center md:text-right">
-                A mostrar {displayedEntries.length > 0
+                A mostrar {filteredEntries.length > 0
                     ? (currentPage - 1) * perPage + 1
                     : 0}
                 a {Math.min(currentPage * perPage, totalItems)} de {totalItems} resultados
