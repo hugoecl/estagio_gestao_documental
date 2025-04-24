@@ -510,7 +510,7 @@
                     {#if field.isDeleted}
                         <button
                             type="button"
-                            class="btn btn-xs btn-circle btn-ghost absolute top-2 right-2"
+                            class="btn btn-xs btn-ghost absolute top-2 right-2"
                             title="Restaurar Campo"
                             onclick={() => undeleteField(index)}
                         >
@@ -519,7 +519,7 @@
                     {:else}
                         <button
                             type="button"
-                            class="btn btn-xs btn-circle btn-error absolute top-2 right-2"
+                            class="btn btn-xs btn-error absolute top-2 right-2"
                             title="Remover Campo"
                             onclick={() => removeField(index)}>✕</button
                         >

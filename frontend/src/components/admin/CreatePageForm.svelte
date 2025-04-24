@@ -341,7 +341,7 @@
                 <div class="border p-3 rounded bg-base-200 relative">
                     <button
                         type="button"
-                        class="btn btn-xs btn-circle btn-error absolute top-2 right-2"
+                        class="btn btn-xs btn-error absolute top-2 right-2"
                         title="Remover Campo"
                         onclick={() => removeField(index)}>✕</button
                     >

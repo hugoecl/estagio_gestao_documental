@@ -224,7 +224,7 @@
 </script>
 
 <div
-    class="overflow-x-auto rounded-box border border-base-content/10 bg-base-100 shadow"
+    class="overflow-x-auto rounded-box border border-base-content/10 bg-base-200 shadow"
 >
     <!-- Search bar -->
     <div class="p-2 flex justify-center border-b border-base-content/10">
