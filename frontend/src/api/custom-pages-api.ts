@@ -115,12 +115,17 @@ export async function getCustomPages(cookie?: string): Promise<CustomPage[]> {
 export async function createCustomPage(
   data: CreateCustomPageRequest,
 ): Promise<{ success: boolean; pageId?: number }> {
+  if (data.path.length > 1 && data.path.endsWith("/")) {
+    data.path = data.path.slice(0, -1);
+  }
+
   const response = await handleFetch(`${API_BASE_URL}/custom_pages`, {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
+
   if (response.ok) {
     const pageIdText = await response.text();
     return { success: true, pageId: parseInt(pageIdText, 10) };
