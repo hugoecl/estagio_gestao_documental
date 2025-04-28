@@ -81,13 +81,9 @@
 
 <style>
     .settings-icon {
-        transition: transform 0.3s ease-in-out; /* Use ease for smoother effect */
+        transition: transform 0.3s;
     }
     .rotate {
         transform: rotate(90deg);
-    }
-    /* Ensure dropdown content has higher z-index */
-    .dropdown-content {
-        z-index: 100; /* Or higher if needed */
     }
 </style>
