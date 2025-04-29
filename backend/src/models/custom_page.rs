@@ -1,8 +1,10 @@
-use ahash::{HashMap, HashMapExt};
+use ahash::{HashMap, HashMapExt, HashSet};
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
+
+use crate::auth;
 
 use super::field::PageField;
 
@@ -12,7 +14,7 @@ pub struct CustomPage {
     pub name: String,
     pub path: String,
     pub parent_path: Option<String>,
-    pub is_group: bool, // Added field
+    pub is_group: bool,
     pub description: Option<String>,
     pub icon: Option<String>,
     pub created_at: DateTime<Utc>,
@@ -100,13 +102,15 @@ pub struct PagePermission {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct NavigationItem {
     pub title: String,
-    // Path is None for groups, Some(path) for actual pages
-    pub path: Option<String>,
-    // parent_db_path stores the path used for linking children, even for groups
-    #[serde(skip_serializing)] // Don't send this internal field to frontend
+    pub path: Option<String>, // Null for groups
+    #[serde(skip_serializing)]
+    pub id: u32, // Keep track of the original ID for permission checks
+    #[serde(skip_serializing)]
+    pub is_group: bool, // Keep track if it's a group
+    #[serde(skip_serializing)]
     pub parent_db_path: Option<String>,
-    #[serde(skip_serializing)] // Don't send this internal field to frontend
-    pub db_path: String, // Store the actual path from DB for tree building
+    #[serde(skip_serializing)]
+    pub db_path: String,
     pub icon: Option<String>,
     pub children: Vec<NavigationItem>,
 }
@@ -222,7 +226,7 @@ impl CustomPage {
     pub async fn get_by_id(
         pool: &sqlx::MySqlPool,
         page_id: u32,
-        // user_id: i32, // Pass user_id to check permissions
+        user_id: i32, // Pass user_id to check permissions
     ) -> Result<CustomPageWithFields, sqlx::Error> {
         let page = sqlx::query_as!(
             CustomPage,
@@ -240,9 +244,13 @@ impl CustomPage {
 
         let mut fields = Vec::new();
         let mut permissions = Vec::new();
-        // let mut current_user_permissions = None; // Initialize
+        let mut current_user_permissions = None; // Initialize
 
-        // Only fetch fields and permissions if it's not a group
+        let can_view_this = auth::user_can_view_page(pool, user_id, page_id).await?;
+        if !can_view_this {
+            return Err(sqlx::Error::RowNotFound);
+        }
+
         if !page.is_group {
             fields = PageField::get_by_page_id(pool, page_id).await?;
 
@@ -263,50 +271,68 @@ impl CustomPage {
             .fetch_all(pool)
             .await?;
 
-            // Fetch current user's permissions for this specific page
-            // This requires the user_id. You'll need to pass it into this function.
-            // current_user_permissions = Some(Self::get_user_permissions_for_page(pool, user_id, page_id).await?);
+            // Fetch current user's specific permissions for this page
+            current_user_permissions =
+                Some(Self::get_user_permissions_for_page(pool, user_id, page_id).await?);
+        } else {
+            // For groups, check if the user is admin (admins can see everything)
+            // Non-admins might see groups if they have children they can view (handled in menu)
+            // For the get_by_id endpoint, maybe just return basic admin status for groups?
+            let is_admin = sqlx::query_scalar!(
+                 "SELECT EXISTS(SELECT 1 FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = ? AND r.is_admin = 1)",
+                 user_id
+             ).fetch_one(pool).await? == 1;
+            current_user_permissions = Some(UserPagePermissions {
+                is_admin,
+                ..Default::default()
+            });
         }
 
         Ok(CustomPageWithFields {
             page,
             fields,
             permissions,
-            current_user_permissions: None, // TODO: Populate this based on user_id
+            current_user_permissions,
         })
     }
 
-    // TODO: Add a function like this and call it from get_by_id and get_navigation_menu
-    // pub async fn get_user_permissions_for_page(pool: &sqlx::MySqlPool, user_id: i32, page_id: u32) -> Result<UserPagePermissions, sqlx::Error> {
-    //     let perms = sqlx::query!(
-    //         r#"
-    //         SELECT
-    //             MAX(r.is_admin) as is_admin,
-    //             MAX(pp.can_view) as can_view,
-    //             MAX(pp.can_create) as can_create,
-    //             MAX(pp.can_edit) as can_edit,
-    //             MAX(pp.can_delete) as can_delete,
-    //             MAX(pp.can_manage_fields) as can_manage_fields
-    //         FROM user_roles ur
-    //         LEFT JOIN roles r ON r.id = ur.role_id
-    //         LEFT JOIN page_permissions pp ON pp.role_id = ur.role_id AND pp.page_id = ?
-    //         WHERE ur.user_id = ?
-    //         "#,
-    //         page_id,
-    //         user_id
-    //     )
-    //     .fetch_one(pool)
-    //     .await?;
+    pub async fn get_user_permissions_for_page(
+        pool: &sqlx::MySqlPool,
+        user_id: i32,
+        page_id: u32,
+    ) -> Result<UserPagePermissions, sqlx::Error> {
+        let perms = sqlx::query!(
+            r#"
+            SELECT
+                MAX(CASE WHEN r.is_admin = 1 THEN 1 ELSE 0 END) as is_admin,
+                MAX(CASE WHEN pp.can_view = 1 THEN 1 ELSE 0 END) as can_view,
+                MAX(CASE WHEN pp.can_create = 1 THEN 1 ELSE 0 END) as can_create,
+                MAX(CASE WHEN pp.can_edit = 1 THEN 1 ELSE 0 END) as can_edit,
+                MAX(CASE WHEN pp.can_delete = 1 THEN 1 ELSE 0 END) as can_delete,
+                MAX(CASE WHEN pp.can_manage_fields = 1 THEN 1 ELSE 0 END) as can_manage_fields
+            FROM user_roles ur
+            LEFT JOIN roles r ON r.id = ur.role_id
+            LEFT JOIN page_permissions pp ON pp.role_id = ur.role_id AND pp.page_id = ?
+            WHERE ur.user_id = ?
+            "#,
+            page_id,
+            user_id
+        )
+        .fetch_one(pool)
+        .await?;
 
-    //     Ok(UserPagePermissions {
-    //         is_admin: perms.is_admin.unwrap_or(0) == 1,
-    //         can_view: perms.can_view.unwrap_or(0) == 1,
-    //         can_create: perms.can_create.unwrap_or(0) == 1,
-    //         can_edit: perms.can_edit.unwrap_or(0) == 1,
-    //         can_delete: perms.can_delete.unwrap_or(0) == 1,
-    //         can_manage_fields: perms.can_manage_fields.unwrap_or(0) == 1,
-    //     })
-    // }
+        // Combine role-based permission with admin override
+        let is_admin = perms.is_admin.unwrap_or(0) == 1;
+
+        Ok(UserPagePermissions {
+            is_admin,
+            can_view: is_admin || perms.can_view.unwrap_or(0) == 1,
+            can_create: is_admin || perms.can_create.unwrap_or(0) == 1,
+            can_edit: is_admin || perms.can_edit.unwrap_or(0) == 1,
+            can_delete: is_admin || perms.can_delete.unwrap_or(0) == 1,
+            can_manage_fields: is_admin || perms.can_manage_fields.unwrap_or(0) == 1,
+        })
+    }
 
     pub async fn update(
         pool: &sqlx::MySqlPool,
@@ -325,10 +351,10 @@ impl CustomPage {
 
         sqlx::query!(
             r#"
-            UPDATE custom_pages
-            SET name = ?, description = ?, icon = ?, parent_path = ?
-            WHERE id = ?
-            "#,
+                UPDATE custom_pages
+                SET name = ?, description = ?, icon = ?, parent_path = ?
+                WHERE id = ?
+                "#,
             request.name,
             request.description,
             request.icon,
@@ -354,68 +380,122 @@ impl CustomPage {
     // Updated get_navigation_menu
     pub async fn get_navigation_menu(
         pool: &sqlx::MySqlPool,
-        // user_id: i32, // Pass user_id to filter based on view permissions
+        user_id: i32, // Pass user_id
     ) -> Result<Vec<NavigationItem>, sqlx::Error> {
-        // Fetch all pages and groups the user can potentially see
-        // TODO: Filter this initial query based on user_id and page_permissions.can_view = true OR roles.is_admin = true
+        // 1. Fetch ALL pages/groups initially
         let all_items_raw = sqlx::query_as!(
             CustomPage,
             r#"
-            SELECT
-                id, name, path, parent_path, is_group as "is_group: bool", description,
-                icon, created_at as "created_at!", updated_at as "updated_at!"
-            FROM custom_pages
-            ORDER BY parent_path, name
-            "# // Add WHERE clause here to filter by user permissions
+                SELECT
+                    id, name, path, parent_path, is_group as "is_group: bool", description,
+                    icon, created_at as "created_at!", updated_at as "updated_at!"
+                FROM custom_pages
+                ORDER BY parent_path, name
+                "#
         )
         .fetch_all(pool)
         .await?;
 
-        // Use HashMap to group items by their parent_path (String key)
-        let mut items_by_parent: HashMap<Option<String>, Vec<NavigationItem>> = HashMap::new();
+        // 2. Fetch IDs of pages the user CAN view
+        let viewable_page_ids: HashSet<u32> = sqlx::query_scalar!(
+            r#"
+                SELECT DISTINCT cp.id
+                FROM custom_pages cp
+                JOIN page_permissions pp ON cp.id = pp.page_id
+                JOIN user_roles ur ON pp.role_id = ur.role_id
+                WHERE ur.user_id = ? AND pp.can_view = 1 AND cp.is_group = 0
+                "#,
+            user_id
+        )
+        .fetch_all(pool)
+        .await?
+        .into_iter()
+        .collect();
+
+        // 3. Check if user is admin
+        let is_admin = sqlx::query_scalar!(
+                "SELECT EXISTS(SELECT 1 FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = ? AND r.is_admin = 1)",
+                user_id
+            ).fetch_one(pool).await? == 1;
+
+        // 4. Build initial map of all potential navigation items
+        let mut items_map: HashMap<u32, NavigationItem> = HashMap::new();
+        let mut children_map: HashMap<Option<String>, Vec<u32>> = HashMap::new(); // Map parent_path -> Vec<child_id>
 
         for item_raw in all_items_raw {
+            let item_id = item_raw.id;
             let nav_item = NavigationItem {
+                id: item_id,                 // Store ID
+                is_group: item_raw.is_group, // Store is_group
                 title: item_raw.name.clone(),
-                // Path is Some only if it's NOT a group
                 path: if item_raw.is_group {
                     None
                 } else {
                     Some(item_raw.path.clone())
                 },
-                parent_db_path: item_raw.parent_path.clone(), // Store parent path from DB
-                db_path: item_raw.path.clone(),               // Store actual path from DB
+                parent_db_path: item_raw.parent_path.clone(),
+                db_path: item_raw.path.clone(),
                 icon: item_raw.icon.clone(),
                 children: Vec::new(),
             };
-
-            // Group by parent_path. Use None key for root items.
-            items_by_parent
-                .entry(item_raw.parent_path) // Key is Option<String>
+            items_map.insert(item_id, nav_item);
+            children_map
+                .entry(item_raw.parent_path)
                 .or_default()
-                .push(nav_item);
+                .push(item_id);
         }
 
-        // Recursive function to build the tree
-        fn build_tree(
-            parent_db_path: Option<&str>, // Use Option<&str> for keying into HashMap
-            items_by_parent: &mut HashMap<Option<String>, Vec<NavigationItem>>,
+        // 5. Recursive function to build the filtered tree
+        fn build_filtered_tree(
+            parent_db_path: Option<&str>, // The DB path of the parent
+            items_map: &HashMap<u32, NavigationItem>,
+            children_map: &HashMap<Option<String>, Vec<u32>>,
+            viewable_page_ids: &HashSet<u32>,
+            is_admin: bool,
         ) -> Vec<NavigationItem> {
-            // Get children for the current parent path (key needs to be Option<String>)
-            let parent_key = parent_db_path.map(String::from);
-            if let Some(mut children) = items_by_parent.remove(&parent_key) {
-                for child in &mut children {
-                    // Recursively find children for this child, using its db_path
-                    child.children = build_tree(Some(&child.db_path), items_by_parent);
+            let parent_key = parent_db_path.map(String::from); // Key for children_map
+            let mut visible_children: Vec<NavigationItem> = Vec::new();
+
+            if let Some(child_ids) = children_map.get(&parent_key) {
+                for child_id in child_ids {
+                    if let Some(child_item_template) = items_map.get(child_id) {
+                        let mut current_child = child_item_template.clone(); // Clone to modify children
+
+                        if current_child.is_group {
+                            // It's a group: Recursively build its children
+                            let grandchildren = build_filtered_tree(
+                                Some(&current_child.db_path), // Use group's db_path as parent for next level
+                                items_map,
+                                children_map,
+                                viewable_page_ids,
+                                is_admin,
+                            );
+
+                            // Only include the group if it has visible children OR if the user is admin
+                            if !grandchildren.is_empty() || is_admin {
+                                current_child.children = grandchildren;
+                                visible_children.push(current_child);
+                            }
+                        } else {
+                            // It's a page: Check view permission
+                            if is_admin || viewable_page_ids.contains(&current_child.id) {
+                                visible_children.push(current_child); // Add the page
+                            }
+                        }
+                    }
                 }
-                children // Return the processed children
-            } else {
-                Vec::new() // No children found for this parent
             }
+            visible_children // Return the filtered children for this level
         }
 
-        // Start building the tree from the root (parent_path is None)
-        let root_items = build_tree(None, &mut items_by_parent);
+        // Start building the filtered tree from the root (parent_path is None)
+        let root_items = build_filtered_tree(
+            None,
+            &items_map,
+            &children_map,
+            &viewable_page_ids,
+            is_admin,
+        );
 
         Ok(root_items)
     }

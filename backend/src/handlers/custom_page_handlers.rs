@@ -38,14 +38,26 @@ pub async fn get_custom_page(
     session: Session,
     req: HttpRequest,
 ) -> impl Responder {
-    if let Err(resp) = validate_session(&session) {
-        return resp;
-    }
+    let user_id = match validate_session(&session) {
+        Ok(id) => id,
+        Err(resp) => return resp,
+    };
+    let page_id = path.into_inner();
 
-    match CustomPage::get_by_id(&state.db.pool, path.into_inner()).await {
-        Ok(page) => json_response_with_etag(&page, &req),
+    // Pass user_id to check permissions within get_by_id
+    match CustomPage::get_by_id(&state.db.pool, page_id, user_id).await {
+        Ok(page_with_details) => json_response_with_etag(&page_with_details, &req),
+        Err(sqlx::Error::RowNotFound) => {
+            // This error now also means "permission denied" or "not found"
+            log::warn!(
+                "User {} attempted to access non-existent or forbidden page {}",
+                user_id,
+                page_id
+            );
+            HttpResponse::NotFound().finish()
+        }
         Err(e) => {
-            log::error!("Error fetching custom page: {}", e);
+            log::error!("Error fetching custom page {}: {}", page_id, e);
             HttpResponse::InternalServerError().finish()
         }
     }
@@ -151,11 +163,12 @@ pub async fn get_navigation_menu(
     session: Session,
     req: HttpRequest,
 ) -> impl Responder {
-    if let Err(resp) = validate_session(&session) {
-        return resp;
-    }
+    let user_id = match validate_session(&session) {
+        Ok(id) => id,
+        Err(resp) => return resp,
+    };
 
-    match CustomPage::get_navigation_menu(&state.db.pool).await {
+    match CustomPage::get_navigation_menu(&state.db.pool, user_id).await {
         Ok(menu) => json_response_with_etag(&menu, &req),
         Err(e) => {
             log::error!("Error fetching navigation menu: {}", e);
@@ -233,7 +246,7 @@ pub async fn get_custom_page_by_path(
     let page_id = page_info.id;
 
     // 2. Get full page details (including all role permissions)
-    let mut page_with_fields = match CustomPage::get_by_id(&state.db.pool, page_id).await {
+    let mut page_with_fields = match CustomPage::get_by_id(&state.db.pool, page_id, user_id).await {
         Ok(page_data) => page_data,
         Err(sqlx::Error::RowNotFound) => return HttpResponse::NotFound().finish(), // Should not happen if ID was found, but good practice
         Err(e) => {
