@@ -18,10 +18,13 @@ impl Db {
         sqlx::raw_sql(SCHEMA).execute(&pool).await?;
 
         sqlx::query!(
-            "INSERT IGNORE INTO roles (name, description, is_admin) VALUES (?, ?, ?)",
+            "INSERT IGNORE INTO roles (name, description, is_admin) VALUES (?, ?, ?), (?, ?, ?)",
             "Admin",
             "Administrador com acesso completo",
-            true
+            true,
+            "Colaborador",
+            "Função padrão para novos utilizadores",
+            false
         )
         .execute(&pool)
         .await?;

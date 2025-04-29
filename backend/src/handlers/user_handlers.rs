@@ -29,46 +29,95 @@ pub async fn register(state: web::Data<State>, request_data: web::Bytes) -> impl
         }
     };
 
-    // Check if user already exists
+    // --- Transaction Start ---
+    let mut tx = match state.db.pool.begin().await {
+        Ok(tx) => tx,
+        Err(e) => {
+            error!("Database error starting transaction: {}", e);
+            return HttpResponse::InternalServerError().body("Database error");
+        }
+    };
+
+    // Check if user already exists within the transaction
     let existing_user = sqlx::query!(
         "SELECT id FROM users WHERE username = ? OR email = ?",
         user.username,
         user.email
     )
-    .fetch_optional(&state.db.pool)
+    .fetch_optional(&mut *tx) // Use transaction
     .await;
 
     match existing_user {
-        Ok(Some(_)) => return HttpResponse::Conflict().body("Username or email already exists"),
+        Ok(Some(_)) => {
+            // No need to rollback explicitly here, transaction will drop if we return
+            return HttpResponse::Conflict().body("Username or email already exists");
+        }
         Ok(None) => {} // Continue with registration
         Err(e) => {
             error!("Database error checking existing user: {}", e);
+            // No need to rollback explicitly here
             return HttpResponse::InternalServerError().body("Error checking existing user");
         }
     }
 
+    // Hash password
     let password_bytes = hash(&user.password);
 
-    let result = sqlx::query!(
+    // Insert user within the transaction
+    let insert_result = sqlx::query!(
         "INSERT INTO users (username, email, password) VALUES (?, ?, ?)",
         user.username,
         user.email,
         &password_bytes[..]
     )
-    .execute(&state.db.pool)
+    .execute(&mut *tx) // Use transaction
     .await;
 
-    match result {
-        Ok(r) => {
-            let user_id = r.last_insert_id() as u32;
-            // Assign default role if needed
-            HttpResponse::Ok().body(format!("User registered successfully with ID {}", user_id))
-        }
+    let user_id = match insert_result {
+        Ok(r) => r.last_insert_id() as u32,
         Err(e) => {
             error!("Database error during user registration: {}", e);
-            HttpResponse::InternalServerError().body("Error registering user")
+            // No need to rollback explicitly here
+            return HttpResponse::InternalServerError().body("Error registering user");
         }
+    };
+
+    // Fetch the default "Colaborador" role ID within the transaction
+    let default_role = sqlx::query!("SELECT id FROM roles WHERE name = 'Colaborador' LIMIT 1")
+        .fetch_one(&mut *tx) // Use transaction
+        .await;
+
+    let default_role_id = match default_role {
+        Ok(role) => role.id,
+        Err(e) => {
+            error!("Database error fetching default role: {}", e);
+            // No need to rollback explicitly here
+            return HttpResponse::InternalServerError().body("Error assigning default role");
+        }
+    };
+
+    // Assign the default role to the new user within the transaction
+    let assign_result = sqlx::query!(
+        "INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)",
+        user_id,
+        default_role_id
+    )
+    .execute(&mut *tx) // Use transaction
+    .await;
+
+    if let Err(e) = assign_result {
+        error!("Database error assigning default role: {}", e);
+        // No need to rollback explicitly here
+        return HttpResponse::InternalServerError().body("Error assigning default role");
     }
+
+    // --- Commit Transaction ---
+    if let Err(e) = tx.commit().await {
+        error!("Database error committing transaction: {}", e);
+        return HttpResponse::InternalServerError().body("Error finalizing registration");
+    }
+
+    HttpResponse::Ok().body(format!("User registered successfully with ID {}", user_id))
 }
 
 #[derive(Deserialize)]
