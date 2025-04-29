@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "\n            INSERT INTO page_records (page_id, data, created_by, updated_by)\n            VALUES (?, ?, ?, ?)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "dafdcb2fbdcc0a2887c6594ee53c8cf6f2135551f2749835965138280be33524"
+}

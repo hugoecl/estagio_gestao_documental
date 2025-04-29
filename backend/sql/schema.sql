@@ -20,15 +20,17 @@ CREATE TABLE IF NOT EXISTS user_page_analytics (
 -- Custom Pages Table
 CREATE TABLE IF NOT EXISTS custom_pages (
     id INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL,
-    name VARCHAR(255) NOT NULL COMMENT 'Display name of the page',
-    path VARCHAR(255) NOT NULL UNIQUE COMMENT 'URL path for the page',
+    name VARCHAR(255) NOT NULL COMMENT 'Display name of the page or group',
+    path VARCHAR(255) NOT NULL UNIQUE COMMENT 'URL path for the page, or base path for group children',
     parent_path VARCHAR(255) COMMENT 'Parent path for nested navigation',
+    is_group BOOLEAN NOT NULL DEFAULT false COMMENT 'True if this entry is just a menu group/folder/submenu',
     description TEXT,
     icon VARCHAR(20) COMMENT 'FontAwesome icon name',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id)
 );
+
 
 -- Field Types Table
 CREATE TABLE IF NOT EXISTS field_types (

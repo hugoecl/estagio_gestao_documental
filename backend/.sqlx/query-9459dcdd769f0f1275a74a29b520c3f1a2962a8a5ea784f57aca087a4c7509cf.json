@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "\n            INSERT INTO page_record_files (record_id, file_name, file_path, uploaded_by)\n            VALUES (?, ?, ?, ?)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "9459dcdd769f0f1275a74a29b520c3f1a2962a8a5ea784f57aca087a4c7509cf"
+}

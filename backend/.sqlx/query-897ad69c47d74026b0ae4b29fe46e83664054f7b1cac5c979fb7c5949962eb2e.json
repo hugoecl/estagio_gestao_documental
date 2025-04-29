@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "DELETE FROM page_records WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "897ad69c47d74026b0ae4b29fe46e83664054f7b1cac5c979fb7c5949962eb2e"
+}

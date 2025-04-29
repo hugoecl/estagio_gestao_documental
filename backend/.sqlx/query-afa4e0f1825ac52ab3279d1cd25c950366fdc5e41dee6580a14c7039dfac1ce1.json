@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "\n                    UPDATE user_page_analytics\n                    SET visit_count = ?, last_visited_at = ?\n                    WHERE user_id = ? AND page_path = ?\n                    ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "afa4e0f1825ac52ab3279d1cd25c950366fdc5e41dee6580a14c7039dfac1ce1"
+}

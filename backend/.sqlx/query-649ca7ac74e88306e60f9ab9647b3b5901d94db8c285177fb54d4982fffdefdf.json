@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "DELETE FROM page_permissions WHERE page_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "649ca7ac74e88306e60f9ab9647b3b5901d94db8c285177fb54d4982fffdefdf"
+}

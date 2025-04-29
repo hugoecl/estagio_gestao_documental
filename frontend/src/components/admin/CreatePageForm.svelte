@@ -22,6 +22,7 @@
         name: "",
         path: "",
         parent_path: null,
+        is_group: false, // Added: Default to creating a page
         description: null,
         icon: null,
         fields: [],
@@ -57,7 +58,7 @@
             roles.forEach((role) => {
                 initialPermissions[role.id] = {
                     role_id: role.id,
-                    can_view: false,
+                    can_view: false, // Default permissions
                     can_create: false,
                     can_edit: false,
                     can_delete: false,
@@ -144,26 +145,35 @@
 
         // Basic Validation
         if (!pageData.name)
-            errors["page_name"] = "Nome da página é obrigatório.";
+            errors["page_name"] = "Nome da página/grupo é obrigatório.";
         if (!pageData.path)
-            errors["page_path"] = "Caminho da página é obrigatório.";
+            errors["page_path"] = "Caminho da página/grupo é obrigatório.";
+        // Allow more flexible paths for groups, but still basic validation
         else if (!/^[a-z0-9\/-]+$/.test(pageData.path))
             errors["page_path"] =
                 "Caminho inválido (use letras minúsculas, números, / e -).";
 
-        fields.forEach((field, index) => {
-            if (!field.display_name)
-                errors[`field_${index}_display_name`] =
-                    "Nome de exibição é obrigatório.";
-            if (!field.name)
-                errors[`field_${index}_name`] = "Nome interno é obrigatório.";
-            else if (!/^[a-z0-9_]+$/.test(field.name))
-                errors[`field_${index}_name`] =
-                    "Nome interno inválido (use letras minúsculas, números e _).";
-            if (isOptionsVisible(field.field_type_id) && !field.options)
-                errors[`field_${index}_options`] =
-                    "Opções são obrigatórias para o tipo SELECT (use formato JSON).";
-        });
+        // Only validate fields if it's not a group
+        if (!pageData.is_group) {
+            fields.forEach((field, index) => {
+                if (!field.display_name)
+                    errors[`field_${index}_display_name`] =
+                        "Nome de exibição é obrigatório.";
+                if (!field.name)
+                    errors[`field_${index}_name`] =
+                        "Nome interno é obrigatório.";
+                else if (!/^[a-z0-9_]+$/.test(field.name))
+                    errors[`field_${index}_name`] =
+                        "Nome interno inválido (use letras minúsculas, números e _).";
+                if (isOptionsVisible(field.field_type_id) && !field.options)
+                    errors[`field_${index}_options`] =
+                        "Opções são obrigatórias para o tipo SELECT (use formato JSON).";
+            });
+            if (fields.length === 0) {
+                errors["fields_general"] =
+                    "Páginas devem ter pelo menos um campo.";
+            }
+        }
 
         if (Object.keys(errors).length > 0) {
             showAlert(
@@ -176,34 +186,45 @@
             return;
         }
 
-        // Format path
+        // Format path (remove trailing slash unless it's just "/")
         let formattedPath = pageData.path!.trim().toLowerCase();
         if (!formattedPath.startsWith("/")) formattedPath = "/" + formattedPath;
-        if (!formattedPath.endsWith("/")) formattedPath += "/";
+        // Keep trailing slash for parent path consistency, but remove for final path if not root
+        if (formattedPath.length > 1 && formattedPath.endsWith("/")) {
+            formattedPath = formattedPath.slice(0, -1);
+        }
 
         let formattedParentPath =
             pageData.parent_path?.trim().toLowerCase() || null;
         if (formattedParentPath) {
             if (!formattedParentPath.startsWith("/"))
                 formattedParentPath = "/" + formattedParentPath;
-            if (!formattedParentPath.endsWith("/")) formattedParentPath += "/";
+            // Remove trailing slash from parent path if not root
+            if (
+                formattedParentPath.length > 1 &&
+                formattedParentPath.endsWith("/")
+            ) {
+                formattedParentPath = formattedParentPath.slice(0, -1);
+            }
         }
 
         const finalData: CreateCustomPageRequest = {
             name: pageData.name!,
             path: formattedPath,
             parent_path: formattedParentPath,
+            is_group: pageData.is_group!, // Include is_group
             description: pageData.description || null,
             icon: pageData.icon || null,
-            fields: fields,
-            permissions: Object.values(permissions), // Convert permission record to array
+            // Send empty arrays if it's a group
+            fields: pageData.is_group ? [] : fields,
+            permissions: pageData.is_group ? [] : Object.values(permissions),
         };
 
         try {
             const result = await createCustomPage(finalData);
             if (result.success) {
                 showAlert(
-                    "Página criada com sucesso!",
+                    `${pageData.is_group ? "Grupo" : "Página"} criado com sucesso!`,
                     AlertType.SUCCESS,
                     AlertPosition.TOP,
                 );
@@ -212,11 +233,12 @@
                     window.location.href = "/admin/pages/"; // Redirect to list
                 }
             } else {
-                throw new Error("Falha ao criar página no backend.");
+                // TODO: Handle specific backend errors (e.g., path already exists)
+                throw new Error("Falha ao criar página/grupo no backend.");
             }
         } catch (e: any) {
             showAlert(
-                `Erro ao criar página: ${e.message}`,
+                `Erro ao criar ${pageData.is_group ? "grupo" : "página"}: ${e.message}`,
                 AlertType.ERROR,
                 AlertPosition.TOP,
             );
@@ -235,21 +257,23 @@
         onsubmit={handleSubmit}
         class="space-y-6 p-4 bg-base-100 rounded-lg shadow border border-base-content/10"
     >
-        <!-- Page Details -->
+        <!-- Page/Group Details -->
         <fieldset
             class="grid grid-cols-1 md:grid-cols-2 gap-4 border p-4 rounded-md border-base-content/20"
         >
-            <legend class="text-lg font-semibold px-2"
-                >Detalhes da Página</legend
-            >
+            <legend class="text-lg font-semibold px-2">
+                Detalhes {pageData.is_group ? "do Grupo" : "da Página"}
+            </legend>
 
             <label class="form-control w-full">
                 <div class="label">
-                    <span class="label-text">Nome da Página*</span>
+                    <span class="label-text">Nome*</span>
                 </div>
                 <input
                     type="text"
-                    placeholder="Ex: Licenças de Software"
+                    placeholder={pageData.is_group
+                        ? "Ex: Gestão Interna"
+                        : "Ex: Licenças de Software"}
                     class="input input-bordered w-full"
                     bind:value={pageData.name}
                     required
@@ -261,11 +285,13 @@
 
             <label class="form-control w-full">
                 <div class="label">
-                    <span class="label-text">Caminho (URL)*</span>
+                    <span class="label-text">Caminho (URL/Base)*</span>
                 </div>
                 <input
                     type="text"
-                    placeholder="Ex: /gestao/licencas-software"
+                    placeholder={pageData.is_group
+                        ? "Ex: /gestao"
+                        : "Ex: /gestao/licencas-software"}
                     class="input input-bordered w-full"
                     bind:value={pageData.path}
                     required
@@ -275,7 +301,7 @@
                     >{/if}
                 <div class="label">
                     <span class="label-text-alt"
-                        >Será formatado para /caminho/ (minúsculas, -, /)</span
+                        >Será formatado (minúsculas, -, /). Sem / no final.</span
                     >
                 </div>
             </label>
@@ -286,7 +312,7 @@
                 </div>
                 <input
                     type="text"
-                    placeholder="Ex: /gestao/ ou deixe em branco"
+                    placeholder="Ex: /gestao ou deixe em branco"
                     class="input input-bordered w-full"
                     bind:value={pageData.parent_path}
                 />
@@ -324,265 +350,313 @@
                     <span class="label-text">Descrição (Opcional)</span>
                 </div>
                 <textarea
-                    placeholder="Breve descrição da finalidade da página"
+                    placeholder="Breve descrição da finalidade"
                     class="textarea textarea-bordered w-full"
                     bind:value={pageData.description}
                 ></textarea>
             </label>
+
+            <!-- Is Group Checkbox -->
+            <div class="form-control md:col-span-2">
+                <label class="label cursor-pointer justify-start gap-2">
+                    <input
+                        type="checkbox"
+                        class="toggle toggle-primary"
+                        bind:checked={pageData.is_group}
+                    />
+                    <span class="label-text font-medium"
+                        >É um Grupo/Pasta (sem registos)?</span
+                    >
+                </label>
+                <div class="label">
+                    <span class="label-text-alt"
+                        >Marque se isto for apenas uma pasta no menu para
+                        organizar outras páginas.</span
+                    >
+                </div>
+            </div>
         </fieldset>
 
-        <!--- Fields -->
-        <fieldset
-            class="border p-4 rounded-md border-base-content/20 space-y-4"
-        >
-            <legend class="text-lg font-semibold px-2">Campos do Registo</legend
+        {#if !pageData.is_group}
+            <!-- Conditionally show Fields and Permissions -->
+            <!--- Fields -->
+            <fieldset
+                class="border p-4 rounded-md border-base-content/20 space-y-4"
             >
-            {#each fields as field, index (index)}
-                <div class="border p-3 rounded bg-base-200 relative">
-                    <button
-                        type="button"
-                        class="btn btn-xs btn-error absolute top-2 right-2"
-                        title="Remover Campo"
-                        onclick={() => removeField(index)}>✕</button
+                <legend class="text-lg font-semibold px-2"
+                    >Campos do Registo</legend
+                >
+                {#if errors.fields_general}<p
+                        class="text-error text-sm text-center -mt-2 mb-2"
                     >
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        <!-- Field Config -->
-                        <label class="form-control w-full">
-                            <div class="label">
-                                <span class="label-text">Nome Exibição*</span>
-                            </div>
-                            <input
-                                type="text"
-                                placeholder="Ex: Nome da Licença"
-                                class="input input-sm input-bordered w-full"
-                                bind:value={field.display_name}
-                                required
-                                oninput={(e) => handleFieldNameChange(index, e)}
-                            />
-                            {#if errors[`field_${index}_display_name`]}<span
-                                    class="text-error text-xs mt-1"
-                                    >{errors[
-                                        `field_${index}_display_name`
-                                    ]}</span
-                                >{/if}
-                        </label>
-                        <label class="form-control w-full">
-                            <div class="label">
-                                <span class="label-text">Nome Interno*</span>
-                            </div>
-                            <input
-                                type="text"
-                                placeholder="Ex: nome_licenca"
-                                class="input input-sm input-bordered w-full"
-                                bind:value={field.name}
-                                required
-                                readonly
-                            />
-                            {#if errors[`field_${index}_name`]}<span
-                                    class="text-error text-xs mt-1"
-                                    >{errors[`field_${index}_name`]}</span
-                                >{/if}
-                            <div class="label">
-                                <span class="label-text-alt"
-                                    >Gerado automaticamente (minúsculas, _)</span
-                                >
-                            </div>
-                        </label>
-                        <label class="form-control w-full">
-                            <div class="label">
-                                <span class="label-text">Tipo*</span>
-                            </div>
-                            <select
-                                class="select select-sm select-bordered w-full"
-                                bind:value={field.field_type_id}
-                                required
-                            >
-                                {#each fieldTypes as ft}
-                                    <option value={ft.id}>{ft.name}</option>
-                                {/each}
-                            </select>
-                        </label>
-
-                        {#if isOptionsVisible(field.field_type_id)}
-                            <label class="form-control w-full md:col-span-3">
+                        {errors.fields_general}
+                    </p>{/if}
+                {#each fields as field, index (index)}
+                    <div class="border p-3 rounded bg-base-200 relative">
+                        <button
+                            type="button"
+                            class="btn btn-xs btn-error absolute top-2 right-2"
+                            title="Remover Campo"
+                            onclick={() => removeField(index)}>✕</button
+                        >
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <!-- Field Config -->
+                            <label class="form-control w-full">
                                 <div class="label">
                                     <span class="label-text"
-                                        >Opções (JSON Array)*</span
+                                        >Nome Exibição*</span
                                     >
                                 </div>
-                                <textarea
-                                    placeholder="['Opção A', 'Opção B', 'Opção C']"
-                                    class="textarea textarea-sm textarea-bordered w-full font-mono"
-                                    rows="2"
-                                    value={JSON.stringify(field.options) ?? ""}
-                                    oninput={(e) =>
-                                        parseOptions(
-                                            index,
-                                            (e.target as HTMLTextAreaElement)
-                                                .value,
-                                        )}
+                                <input
+                                    type="text"
+                                    placeholder="Ex: Nome da Licença"
+                                    class="input input-sm input-bordered w-full"
+                                    bind:value={field.display_name}
                                     required
-                                ></textarea>
-                                {#if errors[`field_${index}_options`]}<span
+                                    oninput={(e) =>
+                                        handleFieldNameChange(index, e)}
+                                />
+                                {#if errors[`field_${index}_display_name`]}<span
                                         class="text-error text-xs mt-1"
                                         >{errors[
-                                            `field_${index}_options`
+                                            `field_${index}_display_name`
                                         ]}</span
                                     >{/if}
                             </label>
-                        {/if}
-
-                        <label class="form-control w-full">
-                            <div class="label">
-                                <span class="label-text"
-                                    >Validação (Opcional)</span
-                                >
-                            </div>
-                            <select
-                                class="select select-sm select-bordered w-full"
-                                bind:value={field.validation_name}
-                            >
-                                <option value={null}>Nenhuma</option>
-                                {#each validations as v}
-                                    <option value={v.name}
-                                        >{v.name} ({v.description})</option
+                            <label class="form-control w-full">
+                                <div class="label">
+                                    <span class="label-text">Nome Interno*</span
                                     >
-                                {/each}
-                            </select>
-                        </label>
-
-                        <div class="form-control">
-                            <label
-                                class="label cursor-pointer justify-start gap-2"
-                            >
+                                </div>
                                 <input
-                                    type="checkbox"
-                                    class="checkbox checkbox-sm"
-                                    bind:checked={field.required}
+                                    type="text"
+                                    placeholder="Ex: nome_licenca"
+                                    class="input input-sm input-bordered w-full"
+                                    bind:value={field.name}
+                                    required
+                                    readonly
                                 />
-                                <span class="label-text">Obrigatório</span>
+                                {#if errors[`field_${index}_name`]}<span
+                                        class="text-error text-xs mt-1"
+                                        >{errors[`field_${index}_name`]}</span
+                                    >{/if}
+                                <div class="label">
+                                    <span class="label-text-alt"
+                                        >Gerado automaticamente (minúsculas, _)</span
+                                    >
+                                </div>
                             </label>
-                        </div>
-                        <div class="form-control">
-                            <label
-                                class="label cursor-pointer justify-start gap-2"
-                            >
-                                <input
-                                    type="checkbox"
-                                    class="checkbox checkbox-sm"
-                                    bind:checked={field.is_searchable}
-                                />
-                                <span class="label-text">Pesquisável</span>
-                            </label>
-                        </div>
-                        <div class="form-control">
-                            <label
-                                class="label cursor-pointer justify-start gap-2"
-                            >
-                                <input
-                                    type="checkbox"
-                                    class="checkbox checkbox-sm"
-                                    bind:checked={field.is_displayed_in_table}
-                                />
-                                <span class="label-text">Mostrar na Tabela</span
+                            <label class="form-control w-full">
+                                <div class="label">
+                                    <span class="label-text">Tipo*</span>
+                                </div>
+                                <select
+                                    class="select select-sm select-bordered w-full"
+                                    bind:value={field.field_type_id}
+                                    required
                                 >
+                                    {#each fieldTypes as ft}
+                                        <option value={ft.id}>{ft.name}</option>
+                                    {/each}
+                                </select>
                             </label>
+
+                            {#if isOptionsVisible(field.field_type_id)}
+                                <label
+                                    class="form-control w-full md:col-span-3"
+                                >
+                                    <div class="label">
+                                        <span class="label-text"
+                                            >Opções (JSON Array)*</span
+                                        >
+                                    </div>
+                                    <textarea
+                                        placeholder="['Opção A', 'Opção B', 'Opção C']"
+                                        class="textarea textarea-sm textarea-bordered w-full font-mono"
+                                        rows="2"
+                                        value={JSON.stringify(field.options) ??
+                                            ""}
+                                        oninput={(e) =>
+                                            parseOptions(
+                                                index,
+                                                (
+                                                    e.target as HTMLTextAreaElement
+                                                ).value,
+                                            )}
+                                        required
+                                    ></textarea>
+                                    {#if errors[`field_${index}_options`]}<span
+                                            class="text-error text-xs mt-1"
+                                            >{errors[
+                                                `field_${index}_options`
+                                            ]}</span
+                                        >{/if}
+                                </label>
+                            {/if}
+
+                            <label class="form-control w-full">
+                                <div class="label">
+                                    <span class="label-text"
+                                        >Validação (Opcional)</span
+                                    >
+                                </div>
+                                <select
+                                    class="select select-sm select-bordered w-full"
+                                    bind:value={field.validation_name}
+                                >
+                                    <option value={null}>Nenhuma</option>
+                                    {#each validations as v}
+                                        <option value={v.name}
+                                            >{v.name} ({v.description})</option
+                                        >
+                                    {/each}
+                                </select>
+                            </label>
+
+                            <div class="form-control">
+                                <label
+                                    class="label cursor-pointer justify-start gap-2"
+                                >
+                                    <input
+                                        type="checkbox"
+                                        class="checkbox checkbox-sm"
+                                        bind:checked={field.required}
+                                    />
+                                    <span class="label-text">Obrigatório</span>
+                                </label>
+                            </div>
+                            <div class="form-control">
+                                <label
+                                    class="label cursor-pointer justify-start gap-2"
+                                >
+                                    <input
+                                        type="checkbox"
+                                        class="checkbox checkbox-sm"
+                                        bind:checked={field.is_searchable}
+                                    />
+                                    <span class="label-text">Pesquisável</span>
+                                </label>
+                            </div>
+                            <div class="form-control">
+                                <label
+                                    class="label cursor-pointer justify-start gap-2"
+                                >
+                                    <input
+                                        type="checkbox"
+                                        class="checkbox checkbox-sm"
+                                        bind:checked={
+                                            field.is_displayed_in_table
+                                        }
+                                    />
+                                    <span class="label-text"
+                                        >Mostrar na Tabela</span
+                                    >
+                                </label>
+                            </div>
+                            <input
+                                type="hidden"
+                                bind:value={field.order_index}
+                            />
+                            <!-- Store order -->
                         </div>
-                        <input type="hidden" bind:value={field.order_index} />
-                        <!-- Store order -->
                     </div>
-                </div>
-            {/each}
-            <button
-                type="button"
-                class="btn btn-sm btn-outline btn-accent"
-                onclick={addField}
-            >
-                <i class="fa-solid fa-plus mr-1"></i> Adicionar Campo
-            </button>
-            {#if fields.length === 0}
-                <p class="text-center text-base-content/70">
-                    Adicione pelo menos um campo.
-                </p>
-            {/if}
-        </fieldset>
+                {/each}
+                <button
+                    type="button"
+                    class="btn btn-sm btn-outline btn-accent"
+                    onclick={addField}
+                >
+                    <i class="fa-solid fa-plus mr-1"></i> Adicionar Campo
+                </button>
+                {#if fields.length === 0}
+                    <p class="text-center text-base-content/70">
+                        Adicione pelo menos um campo para uma página.
+                    </p>
+                {/if}
+            </fieldset>
 
-        <!-- Permissions -->
-        <fieldset class="border p-4 rounded-md border-base-content/20">
-            <legend class="text-lg font-semibold px-2"
-                >Permissões por Função</legend
-            >
-            <div class="overflow-x-auto">
-                <table class="table table-sm w-full">
-                    <thead>
-                        <tr>
-                            <th>Função</th>
-                            <th class="text-center">Ver</th>
-                            <th class="text-center">Criar</th>
-                            <th class="text-center">Editar</th>
-                            <th class="text-center">Eliminar</th>
-                            <th class="text-center">Gerir Campos</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {#each roles as role (role.id)}
-                            {@const perm = permissions[role.id]}
+            <!-- Permissions -->
+            <fieldset class="border p-4 rounded-md border-base-content/20">
+                <legend class="text-lg font-semibold px-2"
+                    >Permissões por Função</legend
+                >
+                <div class="overflow-x-auto">
+                    <table class="table table-sm w-full">
+                        <thead>
                             <tr>
-                                <td class="font-medium"
-                                    >{role.name}
-                                    {#if role.is_admin}(Admin){/if}</td
-                                >
-                                <td class="text-center"
-                                    ><input
-                                        type="checkbox"
-                                        class="checkbox checkbox-xs"
-                                        bind:checked={perm.can_view}
-                                        disabled={role.is_admin}
-                                    /></td
-                                >
-                                <td class="text-center"
-                                    ><input
-                                        type="checkbox"
-                                        class="checkbox checkbox-xs"
-                                        bind:checked={perm.can_create}
-                                        disabled={role.is_admin}
-                                    /></td
-                                >
-                                <td class="text-center"
-                                    ><input
-                                        type="checkbox"
-                                        class="checkbox checkbox-xs"
-                                        bind:checked={perm.can_edit}
-                                        disabled={role.is_admin}
-                                    /></td
-                                >
-                                <td class="text-center"
-                                    ><input
-                                        type="checkbox"
-                                        class="checkbox checkbox-xs"
-                                        bind:checked={perm.can_delete}
-                                        disabled={role.is_admin}
-                                    /></td
-                                >
-                                <td class="text-center"
-                                    ><input
-                                        type="checkbox"
-                                        class="checkbox checkbox-xs"
-                                        bind:checked={perm.can_manage_fields}
-                                        disabled={role.is_admin}
-                                    /></td
-                                >
+                                <th>Função</th>
+                                <th class="text-center">Ver</th>
+                                <th class="text-center">Criar</th>
+                                <th class="text-center">Editar</th>
+                                <th class="text-center">Eliminar</th>
+                                <th class="text-center">Gerir Campos</th>
                             </tr>
-                        {/each}
-                    </tbody>
-                </table>
-            </div>
-            {#if roles.length === 0}
-                <p class="text-center text-base-content/70">
-                    Nenhuma função encontrada. Crie funções primeiro.
-                </p>
-            {/if}
-        </fieldset>
+                        </thead>
+                        <tbody>
+                            {#each roles as role (role.id)}
+                                {@const perm = permissions[role.id]}
+                                {#if perm}
+                                    <tr>
+                                        <td class="font-medium"
+                                            >{role.name}
+                                            {#if role.is_admin}(Admin){/if}</td
+                                        >
+                                        <td class="text-center"
+                                            ><input
+                                                type="checkbox"
+                                                class="checkbox checkbox-xs"
+                                                bind:checked={perm.can_view}
+                                                disabled={role.is_admin}
+                                            /></td
+                                        >
+                                        <td class="text-center"
+                                            ><input
+                                                type="checkbox"
+                                                class="checkbox checkbox-xs"
+                                                bind:checked={perm.can_create}
+                                                disabled={role.is_admin}
+                                            /></td
+                                        >
+                                        <td class="text-center"
+                                            ><input
+                                                type="checkbox"
+                                                class="checkbox checkbox-xs"
+                                                bind:checked={perm.can_edit}
+                                                disabled={role.is_admin}
+                                            /></td
+                                        >
+                                        <td class="text-center"
+                                            ><input
+                                                type="checkbox"
+                                                class="checkbox checkbox-xs"
+                                                bind:checked={perm.can_delete}
+                                                disabled={role.is_admin}
+                                            /></td
+                                        >
+                                        <td class="text-center"
+                                            ><input
+                                                type="checkbox"
+                                                class="checkbox checkbox-xs"
+                                                bind:checked={
+                                                    perm.can_manage_fields
+                                                }
+                                                disabled={role.is_admin}
+                                            /></td
+                                        >
+                                    </tr>
+                                {/if}
+                            {/each}
+                        </tbody>
+                    </table>
+                </div>
+                {#if roles.length === 0}
+                    <p class="text-center text-base-content/70">
+                        Nenhuma função encontrada. Crie funções primeiro.
+                    </p>
+                {/if}
+            </fieldset>
+        {/if}
+        <!-- End conditional rendering -->
 
         <!-- Actions -->
         <div class="flex justify-end gap-4">
@@ -595,7 +669,7 @@
                 {#if isSubmitting}
                     <span class="loading loading-spinner loading-sm"></span> Guardando...
                 {:else}
-                    Criar Página
+                    Criar {pageData.is_group ? "Grupo" : "Página"}
                 {/if}
             </button>
         </div>

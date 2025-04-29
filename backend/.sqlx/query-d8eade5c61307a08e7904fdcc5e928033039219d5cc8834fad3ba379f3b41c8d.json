@@ -1,6 +1,6 @@
 {
   "db_name": "MySQL",
-  "query": "SELECT * FROM user_page_analytics",
+  "query": "\n            SELECT id, record_id, file_name, file_path, uploaded_at as \"uploaded_at!\", uploaded_by\n            FROM page_record_files\n            WHERE record_id = ?\n            ",
   "describe": {
     "columns": [
       {
@@ -14,7 +14,7 @@
       },
       {
         "ordinal": 1,
-        "name": "user_id",
+        "name": "record_id",
         "type_info": {
           "type": "Long",
           "flags": "NOT_NULL | MULTIPLE_KEY | UNSIGNED | NO_DEFAULT_VALUE",
@@ -23,7 +23,7 @@
       },
       {
         "ordinal": 2,
-        "name": "page_path",
+        "name": "file_name",
         "type_info": {
           "type": "VarString",
           "flags": "NOT_NULL | NO_DEFAULT_VALUE",
@@ -32,33 +32,43 @@
       },
       {
         "ordinal": 3,
-        "name": "visit_count",
+        "name": "file_path",
         "type_info": {
-          "type": "Long",
-          "flags": "NOT_NULL | UNSIGNED",
-          "max_size": 10
+          "type": "VarString",
+          "flags": "NOT_NULL | NO_DEFAULT_VALUE",
+          "max_size": 1020
         }
       },
       {
         "ordinal": 4,
-        "name": "last_visited_at",
+        "name": "uploaded_at!",
         "type_info": {
           "type": "Timestamp",
           "flags": "UNSIGNED | BINARY | TIMESTAMP",
           "max_size": 19
         }
+      },
+      {
+        "ordinal": 5,
+        "name": "uploaded_by",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | MULTIPLE_KEY | UNSIGNED | NO_DEFAULT_VALUE",
+          "max_size": 10
+        }
       }
     ],
     "parameters": {
-      "Right": 0
+      "Right": 1
     },
     "nullable": [
       false,
       false,
       false,
       false,
-      true
+      true,
+      false
     ]
   },
-  "hash": "133da430017daab59d5129275dc3fec5d3d91ee94e1aa963426868061d9fb094"
+  "hash": "d8eade5c61307a08e7904fdcc5e928033039219d5cc8834fad3ba379f3b41c8d"
 }

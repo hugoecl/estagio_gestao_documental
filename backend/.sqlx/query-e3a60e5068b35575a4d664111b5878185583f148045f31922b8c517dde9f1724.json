@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "\n            UPDATE page_records\n            SET data = ?, updated_by = ?\n            WHERE id = ?\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "e3a60e5068b35575a4d664111b5878185583f148045f31922b8c517dde9f1724"
+}

@@ -1,0 +1,24 @@
+{
+  "db_name": "MySQL",
+  "query": "\n        SELECT COUNT(*) as count\n        FROM user_roles ur\n        JOIN roles r ON ur.role_id = r.id\n        WHERE ur.user_id = ? AND r.is_admin = 1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count",
+        "type_info": {
+          "type": "LongLong",
+          "flags": "NOT_NULL | BINARY",
+          "max_size": 21
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "06d3fd1c4ecf7adec879f01356dcda704aa21fdb0972e790b5c1aac8ca9da07c"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "\n                INSERT INTO page_permissions (\n                    page_id, role_id, can_view, can_create, can_edit, \n                    can_delete, can_manage_fields\n                )\n                VALUES (?, ?, ?, ?, ?, ?, ?)\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 7
+    },
+    "nullable": []
+  },
+  "hash": "12719720e3f31fc91582e726851a8f27ee5333db42c5d970cf27314d01ce2a7f"
+}

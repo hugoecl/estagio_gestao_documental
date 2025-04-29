@@ -68,6 +68,15 @@ pub async fn create_custom_page(
         }
     };
 
+    if !custom_page_req.is_group && (custom_page_req.path.is_empty() || custom_page_req.path == "/")
+    {
+        log::error!(
+            "Attempted to create a page with an invalid path: {}",
+            custom_page_req.path
+        );
+        return HttpResponse::BadRequest().finish();
+    }
+
     match CustomPage::create(&state.db.pool, &custom_page_req).await {
         Ok(page_id) => HttpResponse::Created().body(page_id.to_string()),
         Err(e) => {

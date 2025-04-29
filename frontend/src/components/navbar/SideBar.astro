@@ -24,7 +24,7 @@ try {
 ---
 
 <main class="">
-  <aside class="sidebar bg-base-200" transition:persist="sidebar">
+  <aside class="sidebar bg-base-200" transition:persist="true">
     <a href="/" class="sidebar__header">
       <Image height="100" src={jccBigLogo} alt="JCC" />
       <h1 class="sidebar__title font-bold">Gestão Documental</h1>
@@ -52,10 +52,9 @@ try {
 <style>
   .sidebar {
     height: 100vh;
-    /* position: absolute; Remove absolute positioning if using drawer */
     padding: 16px;
     overflow-y: auto;
-    z-index: 40; /* Ensure it's above content if overlapping */
+    z-index: 400; /* Ensure it's above content if overlapping */
     width: 100%; /* Ensure it takes full width in drawer */
   }
 
@@ -75,6 +74,6 @@ try {
   }
 
   .sidebar__title {
-    font-size: 24px;
+    font-size: 20px;
   }
 </style>

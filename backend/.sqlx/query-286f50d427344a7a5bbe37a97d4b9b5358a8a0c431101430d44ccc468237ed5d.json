@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "\n            UPDATE roles \n            SET name = ?, description = ?, is_admin = ?\n            WHERE id = ?\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "286f50d427344a7a5bbe37a97d4b9b5358a8a0c431101430d44ccc468237ed5d"
+}

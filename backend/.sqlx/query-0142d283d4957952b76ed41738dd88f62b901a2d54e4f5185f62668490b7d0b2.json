@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "\n            UPDATE page_fields \n            SET \n                display_name = ?, \n                field_type_id = ?, \n                required = ?,\n                options = ?, \n                validation_name = ?, \n                is_searchable = ?,\n                is_displayed_in_table = ?, \n                order_index = ?\n            WHERE id = ?\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 9
+    },
+    "nullable": []
+  },
+  "hash": "0142d283d4957952b76ed41738dd88f62b901a2d54e4f5185f62668490b7d0b2"
+}
