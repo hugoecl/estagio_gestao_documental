@@ -823,31 +823,13 @@
                                             ><input
                                                 type="checkbox"
                                                 class="checkbox checkbox-xs"
-                                                bind:checked={perm.can_view}
-                                                disabled={role.is_admin}
-                                            /></td
-                                        >
-                                        <td class="text-center"
-                                            ><input
-                                                type="checkbox"
-                                                class="checkbox checkbox-xs"
-                                                bind:checked={perm.can_create}
-                                                disabled={role.is_admin}
-                                            /></td
-                                        >
-                                        <td class="text-center"
-                                            ><input
-                                                type="checkbox"
-                                                class="checkbox checkbox-xs"
-                                                bind:checked={perm.can_edit}
-                                                disabled={role.is_admin}
-                                            /></td
-                                        >
-                                        <td class="text-center"
-                                            ><input
-                                                type="checkbox"
-                                                class="checkbox checkbox-xs"
-                                                bind:checked={perm.can_delete}
+                                                bind:checked={
+                                                    () =>
+                                                        perm.can_view ||
+                                                        role.is_admin,
+                                                    (value) =>
+                                                        (perm.can_view = value)
+                                                }
                                                 disabled={role.is_admin}
                                             /></td
                                         >
@@ -856,7 +838,56 @@
                                                 type="checkbox"
                                                 class="checkbox checkbox-xs"
                                                 bind:checked={
-                                                    perm.can_manage_fields
+                                                    () =>
+                                                        perm.can_create ||
+                                                        role.is_admin,
+                                                    (value) =>
+                                                        (perm.can_create =
+                                                            value)
+                                                }
+                                                disabled={role.is_admin}
+                                            /></td
+                                        >
+                                        <td class="text-center"
+                                            ><input
+                                                type="checkbox"
+                                                class="checkbox checkbox-xs"
+                                                bind:checked={
+                                                    () =>
+                                                        perm.can_edit ||
+                                                        role.is_admin,
+                                                    (value) =>
+                                                        (perm.can_edit = value)
+                                                }
+                                                disabled={role.is_admin}
+                                            /></td
+                                        >
+                                        <td class="text-center"
+                                            ><input
+                                                type="checkbox"
+                                                class="checkbox checkbox-xs"
+                                                bind:checked={
+                                                    () =>
+                                                        perm.can_delete ||
+                                                        role.is_admin,
+                                                    (value) =>
+                                                        (perm.can_delete =
+                                                            value)
+                                                }
+                                                disabled={role.is_admin}
+                                            /></td
+                                        >
+                                        <td class="text-center"
+                                            ><input
+                                                type="checkbox"
+                                                class="checkbox checkbox-xs"
+                                                bind:checked={
+                                                    () =>
+                                                        perm.can_manage_fields ||
+                                                        role.is_admin,
+                                                    (value) =>
+                                                        (perm.can_manage_fields =
+                                                            value)
                                                 }
                                                 disabled={role.is_admin}
                                             /></td
