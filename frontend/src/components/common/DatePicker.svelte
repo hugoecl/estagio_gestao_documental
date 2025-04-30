@@ -1,7 +1,7 @@
 <script lang="ts">
     import calendarIcon from "@assets/calendar_icon.svg?raw";
-    import previousIcon from "@assets/next_icon.svg?raw";
-    import nextIcon from "@assets/previous_icon.svg?raw";
+    import previousIcon from "@assets/next_icon.svg?raw"; // Check if these are correct icons
+    import nextIcon from "@assets/previous_icon.svg?raw"; // Check if these are correct icons
     import { currentModal } from "@stores/modal-store";
     import {
         getFirstDateFromCallyRange,
@@ -15,52 +15,83 @@
     let {
         range,
         formName,
-        value = $bindable(),
+        value = $bindable(), // Use bindable for two-way binding
         required = true,
+        inputClass = "",
+        disabled = false,
+        onchange, // Prop for change event
+        onblur, // Prop for blur event
     }: {
         range: boolean;
         formName?: string;
-        value?: string;
+        value?: string | [string, string] | null;
         required?: boolean;
+        inputClass?: string;
+        disabled?: boolean;
+        onchange?: (event: Event) => void;
+        onblur?: (event: FocusEvent) => void;
     } = $props();
 
     let dropdownPosition = $state("dropdown-center");
     let yearSelectElement: HTMLSelectElement;
+    let calendar: any; // Instance of the cally component
+    let oldValue: string | undefined; // Store previous cally value (YYYY/MM/DD or YYYY/MM/DD-YYYY/MM/DD)
 
-    // svelte throws this warning because we are binding an element that is inside a if statement but in this case since the if statement is controlled by a prop it is safe to ignore this warning
-    // svelte-ignore non_reactive_update
-    let calendar: any;
-
-    // for checking if the value has really changed or if the user just chenged week/month/date on the calendar
-    let oldValue: string;
-    const callyValue = $derived.by(() => {
-        if (value) {
-            // callyValue comes in the format dd/mm/yyyy - dd/mm/yyyy
-            const [first, year] = getFirstDateFromRangeToYMD(value, "-");
-            if (yearSelectElement) {
-                yearSelectElement.value = year;
-            }
-
-            if (range) {
-                const second = getSecondDateFromRangeToYMD(value, "-");
-
-                const result = `${first}/${second}`;
-
-                oldValue = result;
-                if (calendar) {
-                    calendar.focusedDate = result;
-                }
-                return result;
-            }
-            // callyValue comes in the format dd/mm/yyyy
-            else {
-                oldValue = first;
-                if (calendar) {
-                    calendar.focusedDate = first;
-                }
-                return oldValue;
-            }
+    // Format the value for display (dd/mm/yyyy or dd/mm/yyyy - dd/mm/yyyy)
+    const displayValue = $derived.by(() => {
+        if (
+            Array.isArray(value) &&
+            value.length === 2 &&
+            value[0] &&
+            value[1]
+        ) {
+            return `${value[0]} - ${value[1]}`;
+        } else if (typeof value === "string") {
+            return value;
         }
+        return "";
+    });
+
+    // Format the value for Cally (YYYY/MM/DD or YYYY/MM/DD-YYYY/MM/DD)
+    const callyValue = $derived.by(() => {
+        try {
+            if (
+                Array.isArray(value) &&
+                value.length === 2 &&
+                value[0] &&
+                value[1]
+            ) {
+                // Range: value is ["dd/mm/yyyy", "dd/mm/yyyy"]
+                const [firstYMD, year] = getFirstDateFromRangeToYMD(
+                    value[0],
+                    "/",
+                );
+                const secondYMD = getSecondDateFromRangeToYMD(value[1], "/");
+                if (yearSelectElement) yearSelectElement.value = year;
+                const result = `${firstYMD}/${secondYMD}`;
+                // Don't update oldValue here, let the event listener do it
+                if (calendar && calendar.value !== result)
+                    calendar.focusedDate = result;
+                return result;
+            } else if (
+                typeof value === "string" &&
+                value &&
+                /^\d{2}\/\d{2}\/\d{4}$/.test(value)
+            ) {
+                // Single date: value is "dd/mm/yyyy"
+                const [firstYMD, year] = getFirstDateFromRangeToYMD(value, "/");
+                if (yearSelectElement) yearSelectElement.value = year;
+                // Don't update oldValue here
+                if (calendar && calendar.value !== firstYMD)
+                    calendar.focusedDate = firstYMD;
+                return firstYMD;
+            }
+        } catch (e) {
+            console.error("Error processing date value for cally:", value, e);
+        }
+        // Handle null, undefined, or invalid initial value
+        if (calendar) calendar.focusedDate = undefined;
+        return undefined; // Cally expects undefined for empty
     });
 
     interface ExtendedHTMLDivElement extends HTMLDivElement {
@@ -68,16 +99,15 @@
         _resizeHandler?: (event: Event) => void;
     }
 
-    let cally: HTMLDivElement;
-    let dateValue: HTMLInputElement;
+    let callyContainer: HTMLDivElement; // The div acting as the input
+    let dateValueInput: HTMLInputElement; // The hidden input holding the display value
     let detailsDropdown: HTMLDetailsElement;
     let dropdownContent: ExtendedHTMLDivElement;
 
     const dates: number[] = [];
     const now: Date = new Date();
-    const nowISOString = now.toISOString().substring(0, 10);
+    const nowISOString = now.toISOString().substring(0, 10).replace(/-/g, "/"); // Use / for cally
     const currentYear = now.getFullYear();
-    const currentYearString = currentYear.toString();
     for (let i = -10; i <= 10; i++) {
         dates.push(currentYear + i);
     }
@@ -85,84 +115,100 @@
     onMount(() => {
         import("cally");
 
-        function handleToggle(e: MouseEvent) {
+        function handleDocumentClick(e: MouseEvent) {
+            if (disabled) return;
             if (
                 detailsDropdown.open &&
                 !detailsDropdown.contains(e.target as Node) &&
-                !cally.contains(e.target as Node) &&
-                // check if click is inside dropdown portal content
+                !callyContainer.contains(e.target as Node) &&
                 !dropdownContent.contains(e.target as Node)
             ) {
                 detailsDropdown.open = false;
-                handleDropdownToggle(false);
+                // handleDropdownToggle(false); // Let the ontoggle event handle this
             }
         }
 
-        document.addEventListener("mousedown", handleToggle);
+        document.addEventListener("mousedown", handleDocumentClick);
 
         const rem = parseFloat(
             getComputedStyle(document.documentElement).fontSize,
         );
-
         let windowSize = window.innerWidth / rem;
 
         function setDropdownPosition() {
-            windowSize = window.innerWidth / rem;
+            // Simplified position logic, adjust if needed
+            dropdownPosition = "dropdown-end"; // Default to end, better for forms
+        }
 
-            if (windowSize < 40) {
-                dropdownPosition = "dropdown-center";
-            } else if (windowSize < 48) {
-                dropdownPosition = "dropdown-end";
-            } else if (windowSize < 80) {
-                dropdownPosition = "dropdown-end";
-            } else {
-                dropdownPosition = "dropdown-center";
+        setDropdownPosition(); // Initial position
+        window.addEventListener("resize", setDropdownPosition);
+
+        // --- Cally Event Listener ---
+        const handleCallyFocusDay = (e: any) => {
+            if (disabled) return;
+
+            const targetCalendar = e.currentTarget; // Get the specific calendar instance
+            const callyCurrentValue = targetCalendar.value; // YYYY/MM/DD or YYYY/MM/DD-YYYY/MM/DD
+
+            if (yearSelectElement) {
+                yearSelectElement.value = e.detail.getUTCFullYear().toString();
             }
-        }
 
-        if (range) {
-            setDropdownPosition();
-            window.addEventListener("resize", setDropdownPosition);
-        }
+            // Check if the value actually changed from the *last selected* value
+            if (callyCurrentValue && oldValue !== callyCurrentValue) {
+                oldValue = callyCurrentValue; // Update internal tracking
 
-        calendar?.addEventListener("focusday", (e: any) => {
-            yearSelectElement.value = e.detail.getUTCFullYear();
-
-            if (
-                e.currentTarget.value.length !== 0 &&
-                oldValue !== e.currentTarget.value
-            ) {
-                oldValue = e.currentTarget.value;
-
-                // e.currentTarget.value is something like 2012/12/24-2012/12/25
-                const firstDate = getFirstDateFromCallyRange(
-                    e.currentTarget.value,
-                    "/",
-                );
+                let newValue: string | [string, string] | null;
                 if (range) {
-                    const secondDate = getSecondDateFromCallyRange(
-                        e.currentTarget.value,
+                    const firstDate = getFirstDateFromCallyRange(
+                        callyCurrentValue,
                         "/",
                     );
-
-                    dateValue.value = `${firstDate} - ${secondDate}`;
-                    value = dateValue.value;
+                    const secondDate = getSecondDateFromCallyRange(
+                        callyCurrentValue,
+                        "/",
+                    );
+                    newValue = [firstDate, secondDate];
                 } else {
-                    dateValue.value = firstDate;
-                    value = dateValue.value;
+                    newValue = getFirstDateFromCallyRange(
+                        callyCurrentValue,
+                        "/",
+                    );
                 }
 
-                // @ts-ignore
+                // Update the bound value prop
+                value = newValue;
+
+                // Manually trigger the onchange event passed as prop
+                if (onchange) {
+                    // Simulate event target for parent component
+                    const syntheticEvent = {
+                        target: { value: displayValue }, // Pass the display value
+                        currentTarget: dateValueInput, // Reference the hidden input
+                        // Add other event properties if needed
+                    } as unknown as Event;
+                    onchange(syntheticEvent);
+                }
+
+                // Close dropdown after selection
                 detailsDropdown.open = false;
-                handleDropdownToggle(false);
-                cally.style.opacity = "1";
+                // handleDropdownToggle(false); // Let ontoggle handle visual hiding
             }
-        });
+        };
+
+        if (calendar) {
+            calendar.removeEventListener("focusday", handleCallyFocusDay); // Clean up just in case
+            calendar.addEventListener("focusday", handleCallyFocusDay);
+            calendar._hasListenerAttached = true; // Mark as attached
+        }
+
         return () => {
-            document.removeEventListener("mousedown", handleToggle);
-            if (range) {
-                // @ts-ignore typescript thinks the setDropdownPosition function is not defined but int his condition it is
-                window.removeEventListener("resize", setDropdownPosition);
+            document.removeEventListener("mousedown", handleDocumentClick);
+            window.removeEventListener("resize", setDropdownPosition);
+            if (calendar)
+                calendar.removeEventListener("focusday", handleCallyFocusDay);
+            if (dropdownContainer && dropdownContainer.parentNode) {
+                dropdownContainer.parentNode.removeChild(dropdownContainer);
             }
         };
     });
@@ -172,117 +218,136 @@
 
     async function handleDropdownToggle(open: boolean) {
         await tick();
+        if (disabled) {
+            detailsDropdown.open = false; // Ensure it stays closed if disabled
+            return;
+        }
 
         if (open) {
-            // Save original parent
             originalParent = dropdownContent.parentElement;
+            const modalParent = findModalParent(callyContainer);
 
-            const modalParent = findModalParent(cally);
-
-            // Create container if it doesn't exist
             if (!dropdownContainer) {
                 dropdownContainer = document.createElement("div");
-                dropdownContainer.className = "datepicker-portal";
-                if (modalParent) {
-                    modalParent.appendChild(dropdownContainer);
-                } else {
-                    document.body.appendChild(dropdownContainer);
-                }
+                dropdownContainer.className = "datepicker-portal z-[10001]";
+                if (modalParent) modalParent.appendChild(dropdownContainer);
+                else document.body.appendChild(dropdownContainer);
             }
 
-            // Position function that can be reused
             const positionDropdown = () => {
-                const inputRect = cally.getBoundingClientRect();
+                if (!detailsDropdown.open) return;
+                const inputRect = callyContainer.getBoundingClientRect();
                 const dropdownRect = dropdownContent.getBoundingClientRect();
 
-                // If we're in a modal, get the modal boundaries
+                let top = inputRect.bottom + 5;
+                let left =
+                    inputRect.left +
+                    inputRect.width / 2 -
+                    dropdownRect.width / 2;
+                let position: "fixed" | "absolute" = "fixed";
+
                 if (modalParent) {
                     const modalBounds = modalParent.getBoundingClientRect();
-
-                    // Calculate initial centered position
-                    let left =
+                    position = "absolute";
+                    top = inputRect.bottom - modalBounds.top + 5;
+                    left =
                         inputRect.left -
                         modalBounds.left +
                         inputRect.width / 2 -
                         dropdownRect.width / 2;
-                    const top = inputRect.bottom - modalBounds.top + 5;
 
-                    // Ensure dropdown stays within modal boundaries
-                    // Check if it would overflow right edge
-                    if (left + dropdownRect.width > modalBounds.width - 20) {
-                        // Right-align with 20px padding from modal edge
-                        left = modalBounds.width - dropdownRect.width - 20;
-                    }
-
-                    // Check if it would overflow left edge
-                    if (left < 20) {
-                        // Left-align with 20px padding from modal edge
-                        left = 20;
-                    }
-
-                    // Apply positions within modal context
-                    dropdownContent.style.position = "absolute";
-                    dropdownContent.style.top = `${top}px`;
-                    dropdownContent.style.left = `${Math.max(5, left)}px`;
+                    if (left + dropdownRect.width > modalBounds.width - 10)
+                        left = modalBounds.width - dropdownRect.width - 10;
+                    if (left < 10) left = 10;
+                    if (top + dropdownRect.height > modalBounds.height - 10)
+                        top =
+                            inputRect.top -
+                            modalBounds.top -
+                            dropdownRect.height -
+                            5;
                 } else {
-                    // Regular viewport positioning
                     const viewportWidth = document.documentElement.clientWidth;
-                    let left =
-                        inputRect.left +
-                        inputRect.width / 2 -
-                        dropdownRect.width / 2;
-
-                    // Ensure dropdown stays in viewport
-                    if (left + dropdownRect.width > viewportWidth - 20) {
-                        left = viewportWidth - dropdownRect.width - 20;
-                    }
-                    if (left < 20) {
-                        left = 20;
-                    }
-
-                    dropdownContent.style.position = "fixed";
-                    dropdownContent.style.top = `${inputRect.bottom + 5}px`;
-                    dropdownContent.style.left = `${left}px`;
+                    const viewportHeight =
+                        document.documentElement.clientHeight;
+                    if (left + dropdownRect.width > viewportWidth - 10)
+                        left = viewportWidth - dropdownRect.width - 10;
+                    if (left < 10) left = 10;
+                    if (top + dropdownRect.height > viewportHeight - 10)
+                        top = inputRect.top - dropdownRect.height - 5;
                 }
+
+                dropdownContent.style.position = position;
+                dropdownContent.style.top = `${Math.max(5, top)}px`;
+                dropdownContent.style.left = `${Math.max(5, left)}px`;
+                dropdownContent.style.opacity = "1";
             };
 
-            // Move to container and position
             dropdownContainer.appendChild(dropdownContent);
             positionDropdown();
 
-            // Add scroll listener to update position
             const scrollHandler = () => positionDropdown();
             window.addEventListener("scroll", scrollHandler, true);
-
             const resizeHandler = () => positionDropdown();
             window.addEventListener("resize", resizeHandler);
 
-            // Store handler reference to remove later
             dropdownContent._scrollHandler = scrollHandler;
             dropdownContent._resizeHandler = resizeHandler;
         } else if (
             originalParent &&
             dropdownContent.parentElement !== originalParent
         ) {
-            // Remove scroll handler
-            if (dropdownContent._scrollHandler) {
+            if (dropdownContent._scrollHandler)
                 window.removeEventListener(
                     "scroll",
                     dropdownContent._scrollHandler,
                     true,
                 );
-                delete dropdownContent._scrollHandler;
-            }
+            if (dropdownContent._resizeHandler)
+                window.removeEventListener(
+                    "resize",
+                    dropdownContent._resizeHandler,
+                );
+            delete dropdownContent._scrollHandler;
+            delete dropdownContent._resizeHandler;
 
-            // Restore to original position
             originalParent.appendChild(dropdownContent);
             dropdownContent.style.position = "absolute";
             dropdownContent.style.top = "";
             dropdownContent.style.left = "";
+            dropdownContent.style.opacity = "0";
+        } else {
+            dropdownContent.style.opacity = "0";
         }
     }
+
     function findModalParent(element: HTMLElement): HTMLElement | null {
         return get(currentModal);
+    }
+
+    function handleYearChange(e: Event) {
+        if (disabled || !calendar) return;
+        const newYear = (e.target as HTMLSelectElement).value;
+        let focusDateStr = nowISOString; // Default to today if no focus date
+
+        if (calendar.focusedDate) {
+            // Cally's focusedDate might be YYYY/MM/DD or YYYY/MM/DD-YYYY/MM/DD
+            focusDateStr =
+                calendar.focusedDate.length > 10
+                    ? calendar.focusedDate.substring(0, 10) // Use start date of range
+                    : calendar.focusedDate;
+        }
+
+        // Ensure focusDateStr is in YYYY/MM/DD format before replacing year
+        if (focusDateStr && focusDateStr.includes("/")) {
+            const currentYearInFocus = focusDateStr.substring(0, 4);
+            calendar.focusedDate = focusDateStr.replace(
+                currentYearInFocus,
+                newYear,
+            );
+        } else {
+            // Fallback if format is unexpected, focus on Jan 1st of new year
+            calendar.focusedDate = `${newYear}/01/01`;
+        }
     }
 </script>
 
@@ -290,71 +355,66 @@
     <div slot="heading">
         <select
             bind:this={yearSelectElement}
-            class="select select-secondary"
-            onchange={(e) => {
-                if (calendar.focusedDate === undefined) {
-                    calendar.focusedDate = nowISOString.replace(
-                        currentYearString,
-                        e.currentTarget.value,
-                    );
-                } else {
-                    const focusedYear = calendar.focusedDate.substring(0, 4);
-                    calendar.focusedDate = calendar.focusedDate
-                        .substring(0, 10)
-                        .replace(focusedYear, e.currentTarget.value);
-                }
-            }}
+            class="select select-sm select-bordered"
+            {disabled}
+            onchange={handleYearChange}
         >
             {#each dates as year}
-                {#if year === currentYear}
-                    <option value={year} selected>{year}</option>
-                {:else}
-                    <option value={year}>{year}</option>
-                {/if}
+                <option value={year} selected={year === currentYear}
+                    >{year}</option
+                >
             {/each}
         </select>
     </div>
 {/snippet}
 
 <details
-    class={[
-        "dropdown select-none max-sm:w-[90%]",
-        // positionEnd ? "dropdown-end" : range ? dropdownPosition : "dropdown-center",
-    ]}
+    class="dropdown w-full"
     bind:this={detailsDropdown}
+    ontoggle={(e) =>
+        handleDropdownToggle((e.target as HTMLDetailsElement).open)}
 >
     <summary
-        class="list-none"
-        onclick={() => {
-            detailsDropdown.open = !detailsDropdown.open;
-            dropdownContent.style.opacity = detailsDropdown.open ? "1" : "0";
-            handleDropdownToggle(detailsDropdown.open);
+        class="list-none marker:hidden"
+        role="button"
+        aria-haspopup="dialog"
+        aria-expanded={detailsDropdown?.open ?? false}
+        onclick={(e) => {
+            if (disabled) e.preventDefault();
         }}
+        {onblur}
     >
         <div
-            tabindex="0"
-            role="button"
-            class="input cursor-pointer caret-transparent"
-            bind:this={cally}
+            tabindex={disabled ? -1 : 0}
+            class="input input-bordered w-full cursor-pointer caret-transparent flex items-center {inputClass}"
+            class:input-disabled={disabled}
+            class:input-error={inputClass.includes("input-error")}
+            bind:this={callyContainer}
+            aria-label="Select date"
         >
             {@html calendarIcon}
+            <span
+                class="flex-grow ml-2 truncate"
+                class:opacity-50={!displayValue && !disabled}
+            >
+                {displayValue ||
+                    (range ? "dd/mm/aaaa - dd/mm/aaaa" : "dd/mm/aaaa")}
+            </span>
             <input
-                class="cursor-pointer"
-                bind:this={dateValue}
-                bind:value
-                placeholder={range ? "dd/mm/aaaa - dd/mm/aaaa" : "dd/mm/aaaa"}
+                type="hidden"
+                bind:this={dateValueInput}
+                value={displayValue}
                 name={formName}
-                onkeydown={(e) => e.preventDefault()}
-                oninput={(e) => e.preventDefault()}
                 {required}
+                {disabled}
             />
         </div>
     </summary>
-    <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
     <div
-        tabindex="0"
-        class="dropdown-content rounded-box border border-zinc-200 bg-base-200 card-sm shadow mt-1 w-max"
+        tabindex="-1"
+        class="dropdown-content rounded-box border border-base-content/10 bg-base-100 shadow-lg mt-1 w-max p-2 opacity-0 transition-opacity duration-100"
         bind:this={dropdownContent}
+        aria-hidden={!(detailsDropdown?.open ?? false)}
     >
         {#if range}
             <calendar-range
@@ -363,11 +423,12 @@
                 bind:this={calendar}
                 value={callyValue}
                 locale="pt-PT"
+                {disabled}
             >
                 {@render yearSelect()}
                 {@html previousIcon}
                 {@html nextIcon}
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <calendar-month></calendar-month>
                     <calendar-month offset={1}></calendar-month>
                 </div>
@@ -378,6 +439,7 @@
                 bind:this={calendar}
                 value={callyValue}
                 locale="pt-PT"
+                {disabled}
             >
                 {@render yearSelect()}
                 {@html previousIcon}
@@ -394,27 +456,53 @@
     }
     calendar-month::part(range-start),
     calendar-month::part(range-end) {
-        background-color: var(--color-secondary);
+        background-color: var(--fallback-p, oklch(var(--p) / 1));
+        color: var(--fallback-pc, oklch(var(--pc) / 1));
+    }
+    calendar-month::part(selected) {
+        background-color: var(--fallback-p, oklch(var(--p) / 1));
+        color: var(--fallback-pc, oklch(var(--pc) / 1));
+    }
+    calendar-month::part(in-range) {
+        background-color: var(--fallback-p, oklch(var(--p) / 0.2));
     }
 
+    /* Ensure the input div looks like other inputs */
     .input {
-        width: 100%;
+        min-height: 3rem; /* Match default input height */
+        height: auto; /* Allow height to adjust slightly if needed */
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+        color: black;
     }
-    input::placeholder {
-        color: var(--color-base);
+
+    .input:hover:not(.input-disabled),
+    .input:focus:not(.input-disabled),
+    .input:focus-within:not(.input-disabled) {
+        /* Add focus-within */
+        border-color: var(--fallback-a, oklch(var(--a) / 1));
+        outline: 2px solid transparent; /* Standard focus outline */
+        outline-offset: 2px;
+        opacity: 1;
+    }
+    .input-disabled {
+        cursor: not-allowed;
+        background-color: var(--fallback-b2, oklch(var(--b2) / 1));
+        border-color: var(--fallback-b2, oklch(var(--b2) / 1));
+        opacity: 0.5;
+    }
+    .input-disabled span,
+    .input-disabled svg {
+        cursor: not-allowed;
         opacity: 0.5;
     }
 
-    input:hover::placeholder {
-        opacity: 1;
+    /* Portal styling */
+    .datepicker-portal {
+        position: absolute;
+        z-index: 10001 !important;
     }
-
-    .input:hover,
-    .input:focus {
-        border-color: var(--color-secondary);
-        box-shadow:
-            0 4px 6px -1px rgb(0 0 0 / 0.1),
-            0 2px 4px -2px rgb(0 0 0 / 0.1);
-        opacity: 1;
+    .dropdown-content {
+        z-index: 10002 !important;
     }
 </style>

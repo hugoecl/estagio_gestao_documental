@@ -9,24 +9,25 @@
         type SubmitResponse,
         type SelectOption,
     } from "@lib/types/form-modal";
-    import type { PageRecordFile } from "@lib/types/page-record"; // Import PageRecordFile type
+    import type { PageRecordFile } from "@lib/types/page-record";
 
     // --- Props ---
     let {
         formModal = $bindable(),
         title,
-        fields, // Array of field definitions
-        recordId = $bindable(null), // ID of the record being edited, null for create
-        recordData = null, // Initial data for editing { fieldName: value, ... }
-        files = null, // Existing files { fileId: fileData, ... }
+        fields,
+        recordId = $bindable(null),
+        recordData = null,
+        files = null,
         showFiles = true,
-        onSubmit, // (formData, newFiles) => Promise<SubmitResponse>
-        onDelete = null, // () => Promise<boolean>
-        onFileDeleted = null, // (recordId, fileId) => Promise<boolean>
+        onSubmit,
+        onDelete = null,
+        onFileDeleted = null,
         showDeleteButton = false,
         deleteButtonText = "Eliminar",
         submitButtonText = "Guardar",
         apiBaseUrl,
+        readOnly = false, // Added readOnly prop
     }: {
         formModal: HTMLDialogElement;
         title: string;
@@ -47,6 +48,7 @@
         deleteButtonText?: string;
         submitButtonText?: string;
         apiBaseUrl: string;
+        readOnly?: boolean; // Added readOnly prop
     } = $props();
 
     // --- Internal State ---
@@ -65,47 +67,44 @@
     let showValidationErrors = $state(false);
 
     // --- Effects ---
-    // Initialize form values when recordData or fields change
     $effect(() => {
         const initialValues: Record<string, any> = {};
         if (fields && Array.isArray(fields)) {
             fields.forEach((field) => {
-                // Prioritize recordData if editing, otherwise use default based on type
                 if (recordData && recordData.hasOwnProperty(field.id)) {
                     let value = recordData[field.id];
-                    // Handle specific type formatting for display if needed
-                    if (field.type === FieldType.DATE && value) {
-                        // Assuming recordData has 'YYYY-MM-DD'
+                    if (
+                        field.type === FieldType.DATE &&
+                        value &&
+                        typeof value === "string"
+                    ) {
                         try {
                             const [y, m, d] = value.split("-");
                             value = `${d}/${m}/${y}`;
                         } catch {
                             value = null;
-                        } // Handle invalid format
+                        }
                     } else if (
                         field.type === FieldType.DATE_RANGE &&
                         value &&
                         value.start &&
                         value.end
                     ) {
-                        // Assuming recordData has { start: 'YYYY-MM-DD', end: 'YYYY-MM-DD' }
                         try {
                             const [sy, sm, sd] = value.start.split("-");
                             const [ey, em, ed] = value.end.split("-");
-                            value = [`${sd}/${sm}/${sy}`, `${ed}/${em}/${ey}`]; // Array for DatePicker binding
+                            value = [`${sd}/${sm}/${sy}`, `${ed}/${em}/${ey}`];
                         } catch {
                             value = [];
                         }
                     }
                     initialValues[field.id] = value;
                 } else {
-                    // Set default values for creation or if field missing in recordData
                     initialValues[field.id] = getDefaultFieldValue(field);
                 }
             });
         }
         formValues = initialValues;
-        // Reset validation errors when data changes
         validationErrors = {};
         showValidationErrors = false;
     });
@@ -114,11 +113,13 @@
     const existingFilesArray = $derived(
         showFiles && files
             ? Object.entries(files).map(([id, file]) => ({ id, ...file }))
-            : [], // Always return an array
+            : [],
     );
 
     // --- Validation ---
     function validateField(field: FormField, value: any): string | null {
+        if (readOnly) return null; // Skip validation if read-only
+
         if (
             field.required &&
             (value === null ||
@@ -128,24 +129,17 @@
         ) {
             return `${field.label} é obrigatório.`;
         }
-
-        // Add specific field type validations if needed (e.g., number format, email format via field.validate)
         if (field.validate) {
             return field.validate(value);
         }
-
-        // NIF validation example (if you add a 'nif' validation name)
-        // if (field.validationName === 'nif' && value && !validateNIF(value.toString())) {
-        //     return 'NIF inválido.';
-        // }
-
         return null;
     }
 
     function validateForm(): boolean {
+        if (readOnly) return true; // Always valid if read-only
+
         const errors: Record<string, string> = {};
         let isValid = true;
-
         if (fields && Array.isArray(fields)) {
             fields.forEach((field) => {
                 const value = formValues[field.id];
@@ -156,20 +150,19 @@
                 }
             });
         } else {
-            console.error("Form fields are not iterable.");
-            isValid = false; // Cannot validate if fields are missing
+            isValid = false;
         }
-
         validationErrors = errors;
         return isValid;
     }
 
     function handleFieldBlur(field: FormField) {
+        if (readOnly) return; // Don't validate on blur if read-only
         if (!showValidationErrors) return;
         const value = formValues[field.id];
         const error = validateField(field, value);
-        validationErrors[field.id] = error || ""; // Set error or clear it
-        validationErrors = { ...validationErrors }; // Trigger reactivity
+        validationErrors[field.id] = error || "";
+        validationErrors = { ...validationErrors };
     }
 
     // --- Default Values ---
@@ -178,11 +171,11 @@
             case FieldType.NUMBER:
                 return null;
             case FieldType.SELECT:
-                return ""; // Default empty selection
+                return "";
             case FieldType.DATE:
                 return null;
             case FieldType.DATE_RANGE:
-                return []; // DatePicker expects array
+                return [];
             case FieldType.TEXTAREA:
             case FieldType.TEXT:
             default:
@@ -193,12 +186,13 @@
     // --- Event Handlers ---
     async function handleSubmitInternal(e: SubmitEvent) {
         e.preventDefault();
+        if (readOnly) return; // Prevent submission if read-only
+
         const { showAlert, AlertType, AlertPosition } = await import(
             "@components/alert/alert"
         );
-
         const isValid = validateForm();
-        showValidationErrors = true; // Show errors after first submit attempt
+        showValidationErrors = true;
 
         if (!isValid) {
             showAlert(
@@ -209,25 +203,9 @@
             return;
         }
 
-        // Check for required files on create
-        if (
-            recordId === null &&
-            showFiles &&
-            newFiles.length === 0 &&
-            existingFilesArray.length === 0
-        ) {
-            // Modify this logic if files are not always required on create
-            // showAlert("Por favor, submeta pelo menos um ficheiro.", AlertType.ERROR, AlertPosition.TOP);
-            // return;
-        }
-
         isSubmitting = true;
-
-        // Pass a copy of formValues and newFiles to the onSubmit prop
         const formDataCopy = { ...formValues };
         const newFilesCopy = [...newFiles];
-
-        // Call the onSubmit function provided by the parent
         const [result, updatedData] = await onSubmit(
             formDataCopy,
             newFilesCopy,
@@ -241,7 +219,6 @@
                     AlertType.SUCCESS,
                     AlertPosition.TOP,
                 );
-                // Parent component (DynamicRecordPage) handles updating its state
                 break;
             case SubmitResult.ERROR:
                 showAlert(
@@ -259,38 +236,39 @@
                 );
                 break;
         }
-
         isSubmitting = false;
     }
 
     function handleFileSelection(e: Event) {
+        if (readOnly) return;
         const input = e.target as HTMLInputElement;
         if (input.files) {
             newFiles = [...newFiles, ...Array.from(input.files)];
-            input.value = ""; // Clear input to allow selecting the same file again
+            input.value = "";
         }
     }
 
     function removeNewFile(index: number) {
+        if (readOnly) return;
         newFiles.splice(index, 1);
-        newFiles = [...newFiles]; // Trigger reactivity
+        newFiles = [...newFiles];
     }
 
     function showDeleteFileConfirmation(fileId: string) {
-        if (!onFileDeleted) return;
+        if (readOnly || !onFileDeleted) return; // Prevent if read-only
         fileToDeleteId = fileId;
         confirmationAction = "DELETE_FILE";
         confirmModal?.showModal();
     }
 
     function showDeleteRecordConfirmation() {
-        if (!onDelete) return;
+        if (readOnly || !onDelete) return; // Prevent if read-only
         confirmationAction = "DELETE_RECORD";
         confirmModal?.showModal();
     }
 
     async function handleDeleteConfirmed() {
-        if (isDeleteSubmitting) return;
+        if (isDeleteSubmitting || readOnly) return; // Prevent if read-only
         isDeleteSubmitting = true;
         const { showAlert, AlertType, AlertPosition } = await import(
             "@components/alert/alert"
@@ -310,17 +288,10 @@
                     recordId.toString(),
                     fileToDeleteId,
                 );
-                if (success) {
-                    // Optimistically remove from local state if parent doesn't handle it fully
-                    // This depends on how files prop is managed. Assuming parent refetches/updates.
-                    // delete files?.[fileToDeleteId]; // This won't work directly on prop
-                }
             } else if (confirmationAction === "DELETE_RECORD" && onDelete) {
                 actionText = "registo";
                 success = await onDelete();
-                if (success) {
-                    closeModal(); // Close main modal on successful record deletion
-                }
+                if (success) closeModal();
             }
         } catch (e: any) {
             console.error(`Error deleting ${actionText}:`, e);
@@ -329,7 +300,7 @@
                 AlertType.ERROR,
                 AlertPosition.TOP,
             );
-            success = false; // Ensure success is false on error
+            success = false;
         } finally {
             if (success) {
                 showAlert(
@@ -338,7 +309,6 @@
                     AlertPosition.TOP,
                 );
             } else if (actionText) {
-                // Only show error if an action was attempted
                 showAlert(
                     `Erro ao eliminar ${actionText}`,
                     AlertType.ERROR,
@@ -359,37 +329,32 @@
     function closeModal() {
         modal?.close();
         currentModal.set(null);
-        newFiles = []; // Clear new files on close
-        // Form values are reset by the $effect when props change
+        newFiles = [];
         validationErrors = {};
         showValidationErrors = false;
-        // Reset recordId in parent? No, parent controls it.
     }
 
-    // Helper to get DatePicker value binding
+    // --- DatePicker Helpers ---
     function getDateRangeValue(fieldId: string): [string, string] | [] {
         const val = formValues[fieldId];
         return Array.isArray(val) && val.length === 2 ? val : [];
     }
     function setDateRangeValue(fieldId: string, value: string) {
-        // DatePicker range binding gives "dd/mm/yyyy - dd/mm/yyyy"
+        if (readOnly) return;
         const parts = value.split(" - ");
-        if (parts.length === 2) {
-            formValues[fieldId] = [parts[0], parts[1]];
-        } else {
-            formValues[fieldId] = []; // Or null, depending on validation
-        }
-        formValues = { ...formValues }; // Trigger reactivity
-        handleFieldBlur(fields.find((f) => f.id === fieldId)!); // Validate on change
+        formValues[fieldId] = parts.length === 2 ? [parts[0], parts[1]] : [];
+        formValues = { ...formValues };
+        handleFieldBlur(fields.find((f) => f.id === fieldId)!);
     }
     function getDateValue(fieldId: string): string | null {
         const val = formValues[fieldId];
         return typeof val === "string" ? val : null;
     }
     function setDateValue(fieldId: string, value: string | null) {
+        if (readOnly) return;
         formValues[fieldId] = value;
-        formValues = { ...formValues }; // Trigger reactivity
-        handleFieldBlur(fields.find((f) => f.id === fieldId)!); // Validate on change
+        formValues = { ...formValues };
+        handleFieldBlur(fields.find((f) => f.id === fieldId)!);
     }
 </script>
 
@@ -400,8 +365,10 @@
             <button
                 class="btn btn-sm btn-ghost absolute right-2 top-2"
                 onclick={closeModal}
-                disabled={isSubmitting}>✕</button
+                disabled={isSubmitting}
             >
+                ✕
+            </button>
         </div>
 
         <form onsubmit={handleSubmitInternal} class="space-y-4">
@@ -415,53 +382,54 @@
                         <div class:md:col-span-2={field.colSpan === 2}>
                             <label class="form-control w-full">
                                 <div class="label">
-                                    <span class="label-text"
-                                        >{field.label}{field.required
+                                    <span class="label-text">
+                                        {field.label}{field.required &&
+                                        !readOnly
                                             ? "*"
-                                            : ""}</span
-                                    >
+                                            : ""}
+                                    </span>
                                 </div>
 
                                 {#if field.type === FieldType.TEXT}
                                     <input
                                         type="text"
                                         class="input input-bordered w-full"
-                                        class:input-error={validationErrors[
-                                            field.id
-                                        ]}
+                                        class:input-error={!readOnly &&
+                                            validationErrors[field.id]}
                                         placeholder={field.placeholder || ""}
                                         bind:value={formValues[field.id]}
                                         required={field.required}
                                         onblur={() => handleFieldBlur(field)}
+                                        disabled={readOnly}
                                     />
                                 {:else if field.type === FieldType.NUMBER}
                                     <input
                                         type="number"
                                         step="any"
                                         class="input input-bordered w-full"
-                                        class:input-error={validationErrors[
-                                            field.id
-                                        ]}
+                                        class:input-error={!readOnly &&
+                                            validationErrors[field.id]}
                                         placeholder={field.placeholder || ""}
                                         bind:value={formValues[field.id]}
                                         required={field.required}
                                         onblur={() => handleFieldBlur(field)}
+                                        disabled={readOnly}
                                     />
                                 {:else if field.type === FieldType.SELECT}
                                     <select
                                         class="select select-bordered w-full"
-                                        class:select-error={validationErrors[
-                                            field.id
-                                        ]}
+                                        class:select-error={!readOnly &&
+                                            validationErrors[field.id]}
                                         bind:value={formValues[field.id]}
                                         required={field.required}
                                         onblur={() => handleFieldBlur(field)}
                                         onchange={() => handleFieldBlur(field)}
+                                        disabled={readOnly}
                                     >
-                                        <option disabled value=""
-                                            >{field.placeholder ||
-                                                `Selecione ${field.label}`}</option
-                                        >
+                                        <option disabled value="">
+                                            {field.placeholder ||
+                                                `Selecione ${field.label}`}
+                                        </option>
                                         {#if field.options}
                                             {#each field.options as option}
                                                 <option value={option.value}
@@ -473,51 +441,45 @@
                                 {:else if field.type === FieldType.DATE}
                                     <DatePicker
                                         range={false}
-                                        value={getDateValue(field.id)}
-                                        onchange={(e) =>
-                                            setDateValue(
-                                                field.id,
-                                                (e.target as HTMLInputElement)
-                                                    .value,
-                                            )}
+                                        bind:value={formValues[field.id]}
                                         required={field.required}
-                                        inputClass={validationErrors[field.id]
+                                        inputClass={!readOnly &&
+                                        validationErrors[field.id]
                                             ? "input-error"
                                             : ""}
                                         onblur={() => handleFieldBlur(field)}
+                                        onchange={() => handleFieldBlur(field)}
+                                        disabled={readOnly}
+                                        formName={field.id}
                                     />
                                 {:else if field.type === FieldType.DATE_RANGE}
                                     <DatePicker
                                         range={true}
-                                        value={getDateRangeValue(field.id).join(
-                                            " - ",
-                                        )}
-                                        onchange={(e) =>
-                                            setDateRangeValue(
-                                                field.id,
-                                                (e.target as HTMLInputElement)
-                                                    .value,
-                                            )}
+                                        bind:value={formValues[field.id]}
                                         required={field.required}
-                                        inputClass={validationErrors[field.id]
+                                        inputClass={!readOnly &&
+                                        validationErrors[field.id]
                                             ? "input-error"
                                             : ""}
                                         onblur={() => handleFieldBlur(field)}
+                                        onchange={() => handleFieldBlur(field)}
+                                        disabled={readOnly}
+                                        formName={field.id}
                                     />
                                 {:else if field.type === FieldType.TEXTAREA}
                                     <textarea
                                         class="textarea textarea-bordered w-full min-h-24"
-                                        class:textarea-error={validationErrors[
-                                            field.id
-                                        ]}
+                                        class:textarea-error={!readOnly &&
+                                            validationErrors[field.id]}
                                         placeholder={field.placeholder || ""}
                                         bind:value={formValues[field.id]}
                                         required={field.required}
                                         onblur={() => handleFieldBlur(field)}
+                                        disabled={readOnly}
                                     ></textarea>
                                 {/if}
 
-                                {#if validationErrors[field.id]}
+                                {#if !readOnly && validationErrors[field.id]}
                                     <div class="label">
                                         <span class="label-text-alt text-error"
                                             >{validationErrors[field.id]}</span
@@ -569,7 +531,7 @@
                                                     <i class="fa-solid fa-eye"
                                                     ></i>
                                                 </a>
-                                                {#if onFileDeleted && recordId !== null}
+                                                {#if onFileDeleted && recordId !== null && !readOnly}
                                                     <button
                                                         type="button"
                                                         class="btn btn-xs btn-ghost btn-square text-error"
@@ -599,61 +561,65 @@
                     </div>
                 {/if}
 
-                <div class="mt-4">
-                    <div class="flex items-center justify-between">
-                        <h4 class="font-semibold text-sm">
-                            Adicionar Ficheiros
-                        </h4>
-                        <button
-                            type="button"
-                            class="btn btn-sm btn-outline btn-secondary"
-                            disabled={isSubmitting}
-                            onclick={() => fileInput?.click()}
-                        >
-                            <i class="fa-solid fa-upload mr-1"></i> Selecionar
-                        </button>
-                        <input
-                            type="file"
-                            bind:this={fileInput}
-                            onchange={handleFileSelection}
-                            class="hidden"
-                            multiple
-                            accept="image/*,.doc,.docx,.xls,.xlsx,.pdf,.txt,.csv,.zip,.rar"
-                        />
-                    </div>
-
-                    {#if newFiles.length > 0}
-                        <div
-                            class="mt-2 space-y-1 max-h-40 overflow-y-auto border rounded-md p-2 bg-base-200"
-                        >
-                            {#each newFiles as file, i (file.name + file.lastModified)}
-                                <div
-                                    class="flex items-center justify-between p-1 bg-base-100 rounded text-xs"
-                                >
-                                    <span
-                                        class="truncate max-w-[85%]"
-                                        title={file.name}>{file.name}</span
-                                    >
-                                    <button
-                                        type="button"
-                                        class="btn btn-xs btn-ghost btn-square text-error"
-                                        title="Remover"
-                                        onclick={() => removeNewFile(i)}
-                                    >
-                                        ✕
-                                    </button>
-                                </div>
-                            {/each}
+                {#if !readOnly}
+                    <div class="mt-4">
+                        <div class="flex items-center justify-between">
+                            <h4 class="font-semibold text-sm">
+                                Adicionar Ficheiros
+                            </h4>
+                            <button
+                                type="button"
+                                class="btn btn-sm btn-outline btn-secondary"
+                                disabled={isSubmitting}
+                                onclick={() => fileInput?.click()}
+                            >
+                                <i class="fa-solid fa-upload mr-1"></i> Selecionar
+                            </button>
+                            <input
+                                type="file"
+                                bind:this={fileInput}
+                                onchange={handleFileSelection}
+                                class="hidden"
+                                multiple
+                                accept="image/*,.doc,.docx,.xls,.xlsx,.pdf,.txt,.csv,.zip,.rar"
+                                disabled={readOnly}
+                            />
                         </div>
-                    {/if}
-                </div>
+
+                        {#if newFiles.length > 0}
+                            <div
+                                class="mt-2 space-y-1 max-h-40 overflow-y-auto border rounded-md p-2 bg-base-200"
+                            >
+                                {#each newFiles as file, i (file.name + file.lastModified)}
+                                    <div
+                                        class="flex items-center justify-between p-1 bg-base-100 rounded text-xs"
+                                    >
+                                        <span
+                                            class="truncate max-w-[85%]"
+                                            title={file.name}>{file.name}</span
+                                        >
+                                        <button
+                                            type="button"
+                                            class="btn btn-xs btn-ghost btn-square text-error"
+                                            title="Remover"
+                                            onclick={() => removeNewFile(i)}
+                                            disabled={readOnly}
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                {/each}
+                            </div>
+                        {/if}
+                    </div>
+                {/if}
             {/if}
 
             <div
                 class="modal-action flex flex-col-reverse sm:flex-row justify-between pt-4 mt-4 border-t"
             >
                 <div>
-                    {#if showDeleteButton && onDelete && recordId !== null}
+                    {#if showDeleteButton && onDelete && recordId !== null && !readOnly}
                         <button
                             type="button"
                             class="btn btn-error w-full sm:w-auto"
@@ -664,7 +630,6 @@
                         </button>
                     {/if}
                 </div>
-
                 <div
                     class="flex flex-col-reverse sm:flex-row gap-2 w-full sm:w-auto"
                 >
@@ -674,22 +639,24 @@
                         onclick={closeModal}
                         disabled={isSubmitting}
                     >
-                        Cancelar
+                        {readOnly ? "Fechar" : "Cancelar"}
                     </button>
-                    <button
-                        type="submit"
-                        class="btn btn-primary w-full sm:w-auto"
-                        disabled={isSubmitting ||
-                            !fields ||
-                            fields.length === 0}
-                    >
-                        {#if isSubmitting}
-                            <span class="loading loading-spinner loading-sm"
-                            ></span> Guardando...
-                        {:else}
-                            {submitButtonText}
-                        {/if}
-                    </button>
+                    {#if !readOnly}
+                        <button
+                            type="submit"
+                            class="btn btn-primary w-full sm:w-auto"
+                            disabled={isSubmitting ||
+                                !fields ||
+                                fields.length === 0}
+                        >
+                            {#if isSubmitting}
+                                <span class="loading loading-spinner loading-sm"
+                                ></span> Guardando...
+                            {:else}
+                                {submitButtonText}
+                            {/if}
+                        </button>
+                    {/if}
                 </div>
             </div>
         </form>
