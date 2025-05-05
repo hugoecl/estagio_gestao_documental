@@ -1,9 +1,12 @@
 <script lang="ts">
     import { logoutUser } from "@api/auth-api";
     import { tick } from "svelte";
+    import { checkAuthStatus, isAdmin } from "@stores/auth-store";
 
     let isFocused = $state(false);
     let dropdownElement: HTMLDivElement | null = $state(null); // Ref to the main dropdown div
+
+    checkAuthStatus();
 
     async function handleLogout() {
         const success = await logoutUser();
@@ -72,6 +75,9 @@
         class="dropdown-content menu bg-base-200 rounded-box z-[100] w-52 p-2 shadow-lg border border-base-content/10"
         onblur={handleBlur}
     >
+        {#if $isAdmin}
+            <li><a href="/admin/">Painel de Administração</a></li>
+        {/if}
         <li><a href="/settings/">Definições</a></li>
         <li>
             <button onclick={handleLogout}>Terminar Sessão</button>
