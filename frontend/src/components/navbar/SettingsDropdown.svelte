@@ -13,8 +13,6 @@
         if (success) {
             window.location.href = "/iniciar-sessao/";
         } else {
-            // Optional: Show an error alert if logout fails
-            console.error("Logout failed");
             const { showAlert, AlertType, AlertPosition } = await import(
                 "@components/alert/alert"
             );
