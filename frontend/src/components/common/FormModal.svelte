@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { tick, onMount } from "svelte";
+    import { tick, onMount } from "svelte"; // Add $effect
     import DatePicker from "@components/common/DatePicker.svelte";
     import { currentModal } from "@stores/modal-store";
     import {
@@ -10,11 +10,12 @@
         type SelectOption,
     } from "@lib/types/form-modal";
     import type { PageRecordFile } from "@lib/types/page-record";
-    import { validateNIF } from "@utils/nif";
+    import { validateNIF } from "@utils/nif"; // Import NIF validator
 
     // --- Email Validation (Simple Regex Example) ---
     function validateEmail(email: string): string | null {
-        if (!email) return null; // Don't validate empty optional fields here
+        // ... (validation function remains)
+        if (!email) return null;
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
             return "Formato de e-mail inválido.";
@@ -24,11 +25,10 @@
 
     // --- Validation Function Map ---
     const validationFunctions: Record<string, (value: any) => string | null> = {
+        // ... (validation map remains) ...
         nif: (value) =>
             validateNIF(String(value ?? "")) ? null : "NIF inválido.",
         email: (value) => validateEmail(String(value ?? "")),
-        // Add more validation functions here as needed
-        // 'required_non_empty': (value) => (value ? null : 'Campo obrigatório.'),
     };
 
     // --- Props ---
@@ -37,7 +37,7 @@
         title,
         fields,
         recordId = $bindable(null),
-        recordData = null,
+        recordData = null, // This prop changing triggers the $effect
         files = null,
         showFiles = true,
         onSubmit,
@@ -47,13 +47,13 @@
         deleteButtonText = "Eliminar",
         submitButtonText = "Guardar",
         apiBaseUrl,
-        readOnly = false, // Added readOnly prop
+        readOnly = false,
     }: {
         formModal: HTMLDialogElement;
         title: string;
         fields: FormField[];
         recordId?: number | null;
-        recordData?: Record<string, any> | null;
+        recordData?: Record<string, any> | null; // Watch this prop
         files?: Record<string, PageRecordFile> | null;
         showFiles?: boolean;
         onSubmit: (
@@ -68,13 +68,13 @@
         deleteButtonText?: string;
         submitButtonText?: string;
         apiBaseUrl: string;
-        readOnly?: boolean; // Added readOnly prop
+        readOnly?: boolean;
     } = $props();
 
     // --- Internal State ---
     let modal = $state<HTMLDialogElement | null>(null);
     let confirmModal = $state<HTMLDialogElement | null>(null);
-    let formValues = $state<Record<string, any>>({});
+    let formValues = $state<Record<string, any>>({}); // This will be set by the effect
     let newFiles = $state<File[]>([]);
     let fileInput = $state<HTMLInputElement | null>(null);
     let isSubmitting = $state(false);
@@ -86,48 +86,68 @@
     let validationErrors = $state<Record<string, string>>({});
     let showValidationErrors = $state(false);
 
-    // --- Effects ---
+    // --- **UPDATED Effect to Initialize/Reset Form Values** ---
     $effect(() => {
+        // console.log("FormModal $effect running, recordData:", recordData); // Debugging
         const initialValues: Record<string, any> = {};
         if (fields && Array.isArray(fields)) {
             fields.forEach((field) => {
+                let valueToSet: any = null; // Default to null (important for reset)
+
                 if (recordData && recordData.hasOwnProperty(field.id)) {
-                    let value = recordData[field.id];
+                    // If editing, try to get the value
+                    const rawValue = recordData[field.id];
                     if (
                         field.type === FieldType.DATE &&
-                        value &&
-                        typeof value === "string"
+                        rawValue &&
+                        typeof rawValue === "string"
                     ) {
+                        // Format DATE from YYYY-MM-DD to DD/MM/YYYY
                         try {
-                            const [y, m, d] = value.split("-");
-                            value = `${d}/${m}/${y}`;
+                            const [y, m, d] = rawValue.split("-");
+                            if (y && m && d) valueToSet = `${d}/${m}/${y}`;
+                            else valueToSet = null; // Invalid format from backend
                         } catch {
-                            value = null;
+                            valueToSet = null;
                         }
                     } else if (
                         field.type === FieldType.DATE_RANGE &&
-                        value &&
-                        value.start &&
-                        value.end
+                        rawValue &&
+                        rawValue.start &&
+                        rawValue.end
                     ) {
+                        // Format DATE_RANGE from {start: YYYY-MM-DD, end: YYYY-MM-DD} to [DD/MM/YYYY, DD/MM/YYYY]
                         try {
-                            const [sy, sm, sd] = value.start.split("-");
-                            const [ey, em, ed] = value.end.split("-");
-                            value = [`${sd}/${sm}/${sy}`, `${ed}/${em}/${ey}`];
+                            const [sy, sm, sd] = rawValue.start.split("-");
+                            const [ey, em, ed] = rawValue.end.split("-");
+                            if (sy && sm && sd && ey && em && ed) {
+                                valueToSet = [
+                                    `${sd}/${sm}/${sy}`,
+                                    `${ed}/${em}/${ey}`,
+                                ];
+                            } else {
+                                valueToSet = [];
+                            } // Invalid format
                         } catch {
-                            value = [];
+                            valueToSet = [];
                         }
+                    } else {
+                        // For other types, use the raw value (or null if it's undefined/null)
+                        valueToSet = rawValue ?? null;
                     }
-                    initialValues[field.id] = value;
                 } else {
-                    initialValues[field.id] = getDefaultFieldValue(field);
+                    // If creating (recordData is null) or field doesn't exist in data, use default
+                    valueToSet = getDefaultFieldValue(field);
                 }
+                initialValues[field.id] = valueToSet;
             });
         }
-        formValues = initialValues;
-        validationErrors = {};
+        // console.log("Setting formValues to:", initialValues); // Debugging
+        formValues = initialValues; // Set the state *once* after processing all fields
+        validationErrors = {}; // Reset errors when data changes
         showValidationErrors = false;
     });
+    // --- **End UPDATED Effect** ---
 
     // --- Computed ---
     const existingFilesArray = $derived(
@@ -136,11 +156,10 @@
             : [],
     );
 
-    // --- UPDATED Validation Logic ---
+    // --- Validation ---
     function validateField(field: FormField, value: any): string | null {
+        // ... (validateField logic remains the same) ...
         if (readOnly) return null;
-
-        // 1. Check required first
         if (
             field.required &&
             (value === null ||
@@ -150,8 +169,6 @@
         ) {
             return `${field.label} é obrigatório.`;
         }
-
-        // 2. Check specific validation if name provided and value is not empty
         if (
             field.validation_name &&
             value !== null &&
@@ -162,7 +179,7 @@
             if (validator) {
                 const errorMsg = validator(value);
                 if (errorMsg) {
-                    return errorMsg; // Return specific error from validator
+                    return errorMsg;
                 }
             } else {
                 console.warn(
@@ -170,18 +187,15 @@
                 );
             }
         }
-
-        // 3. Check internal 'validate' function if provided (less likely now)
         if (field.validate) {
             return field.validate(value);
         }
-
-        return null; // No errors found
+        return null;
     }
 
     function validateForm(): boolean {
-        if (readOnly) return true; // Always valid if read-only
-
+        // ... (validateForm logic remains the same) ...
+        if (readOnly) return true;
         const errors: Record<string, string> = {};
         let isValid = true;
         if (fields && Array.isArray(fields)) {
@@ -201,8 +215,8 @@
     }
 
     function handleFieldBlur(field: FormField) {
-        if (readOnly) return; // Don't validate on blur if read-only
-        if (!showValidationErrors) return;
+        // ... (handleFieldBlur logic remains the same) ...
+        if (readOnly) return;
         const value = formValues[field.id];
         const error = validateField(field, value);
         validationErrors[field.id] = error || "";
@@ -211,6 +225,7 @@
 
     // --- Default Values ---
     function getDefaultFieldValue(field: FormField): any {
+        // ... (getDefaultFieldValue remains the same) ...
         switch (field.type) {
             case FieldType.NUMBER:
                 return null;
@@ -219,7 +234,7 @@
             case FieldType.DATE:
                 return null;
             case FieldType.DATE_RANGE:
-                return [];
+                return null;
             case FieldType.TEXTAREA:
             case FieldType.TEXT:
             default:
@@ -228,16 +243,15 @@
     }
 
     // --- Event Handlers ---
+    // ... (handleSubmitInternal, handleFileSelection, removeNewFile, delete confirmations, closeModal remain the same) ...
     async function handleSubmitInternal(e: SubmitEvent) {
         e.preventDefault();
-        if (readOnly) return; // Prevent submission if read-only
-
+        if (readOnly) return;
         const { showAlert, AlertType, AlertPosition } = await import(
             "@components/alert/alert"
         );
         const isValid = validateForm();
         showValidationErrors = true;
-
         if (!isValid) {
             showAlert(
                 "Por favor, corrija os erros no formulário.",
@@ -246,7 +260,6 @@
             );
             return;
         }
-
         isSubmitting = true;
         const formDataCopy = { ...formValues };
         const newFilesCopy = [...newFiles];
@@ -254,7 +267,6 @@
             formDataCopy,
             newFilesCopy,
         );
-
         switch (result) {
             case SubmitResult.SUCCESS:
                 closeModal();
@@ -282,7 +294,6 @@
         }
         isSubmitting = false;
     }
-
     function handleFileSelection(e: Event) {
         if (readOnly) return;
         const input = e.target as HTMLInputElement;
@@ -291,35 +302,30 @@
             input.value = "";
         }
     }
-
     function removeNewFile(index: number) {
         if (readOnly) return;
         newFiles.splice(index, 1);
         newFiles = [...newFiles];
     }
-
     function showDeleteFileConfirmation(fileId: string) {
-        if (readOnly || !onFileDeleted) return; // Prevent if read-only
+        if (readOnly || !onFileDeleted) return;
         fileToDeleteId = fileId;
         confirmationAction = "DELETE_FILE";
         confirmModal?.showModal();
     }
-
     function showDeleteRecordConfirmation() {
-        if (readOnly || !onDelete) return; // Prevent if read-only
+        if (readOnly || !onDelete) return;
         confirmationAction = "DELETE_RECORD";
         confirmModal?.showModal();
     }
-
     async function handleDeleteConfirmed() {
-        if (isDeleteSubmitting || readOnly) return; // Prevent if read-only
+        /* ... remains same ... */ if (isDeleteSubmitting || readOnly) return;
         isDeleteSubmitting = true;
         const { showAlert, AlertType, AlertPosition } = await import(
             "@components/alert/alert"
         );
         let success = false;
         let actionText = "";
-
         try {
             if (
                 confirmationAction === "DELETE_FILE" &&
@@ -363,45 +369,21 @@
             closeConfirmationModal();
         }
     }
-
     function closeConfirmationModal() {
         confirmModal?.close();
         confirmationAction = null;
         fileToDeleteId = null;
     }
-
     function closeModal() {
         modal?.close();
         currentModal.set(null);
         newFiles = [];
         validationErrors = {};
-        showValidationErrors = false;
-    }
-
-    // --- DatePicker Helpers ---
-    function getDateRangeValue(fieldId: string): [string, string] | [] {
-        const val = formValues[fieldId];
-        return Array.isArray(val) && val.length === 2 ? val : [];
-    }
-    function setDateRangeValue(fieldId: string, value: string) {
-        if (readOnly) return;
-        const parts = value.split(" - ");
-        formValues[fieldId] = parts.length === 2 ? [parts[0], parts[1]] : [];
-        formValues = { ...formValues };
-        handleFieldBlur(fields.find((f) => f.id === fieldId)!);
-    }
-    function getDateValue(fieldId: string): string | null {
-        const val = formValues[fieldId];
-        return typeof val === "string" ? val : null;
-    }
-    function setDateValue(fieldId: string, value: string | null) {
-        if (readOnly) return;
-        formValues[fieldId] = value;
-        formValues = { ...formValues };
-        handleFieldBlur(fields.find((f) => f.id === fieldId)!);
+        showValidationErrors = false; /* Reset formValues on close? Maybe not necessary if $effect handles it well */ /* formValues = {}; */
     }
 </script>
 
+<!-- Template -->
 <dialog class="modal z-[9999]" bind:this={modal} bind:this={formModal}>
     <div class="modal-box w-11/12 max-w-5xl">
         <div class="flex justify-between items-center mb-4">
@@ -409,10 +391,8 @@
             <button
                 class="btn btn-sm btn-ghost absolute right-2 top-2"
                 onclick={closeModal}
-                disabled={isSubmitting}
+                disabled={isSubmitting}>✕</button
             >
-                ✕
-            </button>
         </div>
 
         <form onsubmit={handleSubmitInternal} class="space-y-4">
@@ -426,12 +406,12 @@
                         <div class:md:col-span-2={field.colSpan === 2}>
                             <label class="form-control w-full">
                                 <div class="label">
-                                    <span class="label-text">
-                                        {field.label}{field.required &&
+                                    <span class="label-text"
+                                        >{field.label}{field.required &&
                                         !readOnly
                                             ? "*"
-                                            : ""}
-                                    </span>
+                                            : ""}</span
+                                    >
                                 </div>
 
                                 {#if field.type === FieldType.TEXT}
@@ -470,17 +450,14 @@
                                         onchange={() => handleFieldBlur(field)}
                                         disabled={readOnly}
                                     >
-                                        <option disabled value="">
-                                            {field.placeholder ||
-                                                `Selecione ${field.label}`}
-                                        </option>
-                                        {#if field.options}
-                                            {#each field.options as option}
-                                                <option value={option.value}
+                                        <option disabled value=""
+                                            >{field.placeholder ||
+                                                `Selecione ${field.label}`}</option
+                                        >
+                                        {#if field.options}{#each field.options as option}<option
+                                                    value={option.value}
                                                     >{option.label}</option
-                                                >
-                                            {/each}
-                                        {/if}
+                                                >{/each}{/if}
                                     </select>
                                 {:else if field.type === FieldType.DATE}
                                     <DatePicker
@@ -536,16 +513,15 @@
                 </div>
             {/if}
 
+            <!-- Files Section -->
             {#if showFiles}
                 <div class="divider mt-6 mb-2">Ficheiros</div>
-
                 {#if existingFilesArray.length > 0}
                     <div class="overflow-x-auto max-h-60 border rounded-md">
                         <table class="table table-pin-rows table-xs w-full">
                             <thead>
                                 <tr>
-                                    <th>Nome</th>
-                                    <th>Data Upload</th>
+                                    <th>Nome</th> <th>Data Upload</th>
                                     <th class="w-24 text-right">Ações</th>
                                 </tr>
                             </thead>
@@ -604,7 +580,6 @@
                         Nenhum ficheiro associado a este registo.
                     </div>
                 {/if}
-
                 {#if !readOnly}
                     <div class="mt-4">
                         <div class="flex items-center justify-between">
@@ -629,7 +604,6 @@
                                 disabled={readOnly}
                             />
                         </div>
-
                         {#if newFiles.length > 0}
                             <div
                                 class="mt-2 space-y-1 max-h-40 overflow-y-auto border rounded-md p-2 bg-base-200"
@@ -659,6 +633,7 @@
                 {/if}
             {/if}
 
+            <!-- Actions -->
             <div
                 class="modal-action flex flex-col-reverse sm:flex-row justify-between pt-4 mt-4 border-t"
             >
