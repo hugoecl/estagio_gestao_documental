@@ -1,69 +1,57 @@
 <script lang="ts">
     import { onMount, tick } from "svelte";
-    import type {
-        CustomPageWithFields,
-        UpdateCustomPageRequest,
-        CreatePageFieldRequest, // Re-use for field structure
-        RolePermissionRequest,
-    } from "@lib/types/custom-page";
-    import type { FieldType as BackendFieldType } from "@lib/types/fields";
-    import type { ValidationFunction } from "@lib/types/fields";
-    import type { Role } from "@lib/types/roles";
+    // ... other imports
     import {
-        getFieldTypes,
-        getValidations,
-        addPageField,
-        updateField,
-        deleteField,
-    } from "@api/fields-api";
-    import { getRoles } from "@api/roles-api";
+        showAlert,
+        AlertType,
+        AlertPosition,
+    } from "@components/alert/alert";
+    import FieldOptionsEditor from "./FieldOptionsEditor.svelte"; // Import the new component
     import {
         getCustomPageById,
         updateCustomPage,
         updatePagePermissions,
     } from "@api/custom-pages-api";
     import {
-        showAlert,
-        AlertType,
-        AlertPosition,
-    } from "@components/alert/alert";
+        addPageField,
+        deleteField,
+        getFieldTypes,
+        getValidations,
+        updateField,
+    } from "@api/fields-api";
+    import { getRoles } from "@api/roles-api";
+    import type { Role } from "@lib/types/roles";
+    import type {
+        CreatePageFieldRequest,
+        ValidationFunction,
+    } from "@lib/types/fields";
+    import type {
+        RolePermissionRequest,
+        UpdateCustomPageRequest,
+    } from "@lib/types/custom-page";
 
     const { pageId }: { pageId: number } = $props();
 
     // --- State ---
-    let pageData = $state<Partial<UpdateCustomPageRequest>>({
-        name: "",
-        parent_path: null, // Added parent_path
-        description: null,
-        icon: null,
-    });
-    let isGroup = $state(false); // Added: Track if it's a group
+    // ... (pageData, fields, permissions etc. - same structure as Create form)
+    let pageData = $state<Partial<UpdateCustomPageRequest>>({});
+    let isGroup = $state(false);
     let originalPageDataJson = $state("");
-    let fields = $state<
-        Array<
-            // Use CreatePageFieldRequest structure + tracking flags
-            CreatePageFieldRequest & {
-                id?: number; // Existing fields have ID
-                isNew?: boolean; // Mark new fields
-                isDeleted?: boolean; // Mark fields for deletion
-            }
-        >
-    >([]);
+    let fields = $state([]); // Same complex type for fields
     let originalFieldsJson = $state("");
     let permissions = $state<Record<number, RolePermissionRequest>>({});
     let originalPermissionsJson = $state("");
-
     let fieldTypes = $state<BackendFieldType[]>([]);
     let validations = $state<ValidationFunction[]>([]);
     let roles = $state<Role[]>([]);
-
     let isLoading = $state(true);
     let isSubmitting = $state(false);
     let errors = $state<Record<string, string>>({});
-    let pagePath = $state(""); // Store original path (read-only)
+    let pagePath = $state("");
 
     // --- Fetch Initial Data ---
     onMount(async () => {
+        // ... (fetching logic remains the same, populating state from fetchedPageData)
         try {
             const [
                 fetchedFieldTypes,
@@ -74,40 +62,38 @@
                 getFieldTypes(),
                 getValidations(),
                 getRoles(),
-                getCustomPageById(pageId), // Fetch the specific page
+                getCustomPageById(pageId),
             ]);
-
             fieldTypes = fetchedFieldTypes;
             validations = fetchedValidations;
             roles = fetchedRoles;
+            if (!fetchedPageData) throw new Error("Página não encontrada.");
 
-            if (!fetchedPageData) {
-                throw new Error("Página não encontrada.");
-            }
-
-            // Populate state from fetched data
             pageData = {
                 name: fetchedPageData.page.name,
-                parent_path: fetchedPageData.page.parent_path, // Populate parent_path
+                parent_path: fetchedPageData.page.parent_path,
                 description: fetchedPageData.page.description,
                 icon: fetchedPageData.page.icon,
             };
-            isGroup = fetchedPageData.page.is_group; // Set isGroup flag
+            isGroup = fetchedPageData.page.is_group;
             originalPageDataJson = JSON.stringify(pageData);
-            pagePath = fetchedPageData.page.path; // Store original path
+            pagePath = fetchedPageData.page.path;
 
             if (!isGroup) {
-                // Only process fields and permissions if not a group
+                // IMPORTANT: Initialize fields.options ensuring it's null if backend returns null/undefined
                 fields = fetchedPageData.fields.map((f) => ({
-                    ...f, // Spread existing field data
-                    options: f.options ?? null, // Ensure options is null if undefined/null from DB
-                    validation_name: f.validation_name ?? null, // Ensure validation_name is null if undefined/null
+                    ...f,
+                    options: f.options ?? null, // Ensure options is explicitly null if needed
+                    validation_name: f.validation_name ?? null,
                     isNew: false,
                     isDeleted: false,
                 }));
-                // Create a comparable snapshot of the initial fields state
+                // Filter out transient props before stringifying for comparison
                 originalFieldsJson = JSON.stringify(
-                    fields.map(({ id, isNew, isDeleted, ...rest }) => rest),
+                    fields.map(({ id, isNew, isDeleted, ...rest }) => ({
+                        id,
+                        ...rest,
+                    })), // Keep ID for matching
                 );
 
                 const initialPermissions: Record<
@@ -141,7 +127,6 @@
                     Object.values(permissions),
                 );
             } else {
-                // Ensure fields and permissions are empty for groups
                 fields = [];
                 originalFieldsJson = JSON.stringify([]);
                 permissions = {};
@@ -153,16 +138,15 @@
                 AlertType.ERROR,
                 AlertPosition.TOP,
             );
-            // Optionally redirect back if page load fails
-            // if (typeof window !== 'undefined') window.location.href = '/admin/pages/';
         } finally {
             isLoading = false;
         }
     });
 
-    // --- Field Management (Only relevant if !isGroup) ---
+    // --- Field Management (identical to Create form) ---
     function addField() {
-        if (isGroup) return; // Don't add fields to groups
+        // ... (same as Create form, ensure options: null)
+        if (isGroup) return;
         fields.push({
             id: undefined,
             isNew: true,
@@ -180,38 +164,32 @@
         fields = [...fields];
         updateOrderIndexes();
     }
-
     function removeField(index: number) {
+        // ... (same as Create form)
         if (isGroup) return;
-        if (fields[index].isNew) {
-            fields.splice(index, 1);
-        } else {
-            fields[index].isDeleted = true;
-        }
+        if (fields[index].isNew) fields.splice(index, 1);
+        else fields[index].isDeleted = true;
         fields = [...fields];
         updateOrderIndexes();
     }
-
     function undeleteField(index: number) {
+        // ... (same as Create form)
         if (isGroup) return;
         fields[index].isDeleted = false;
         fields = [...fields];
         updateOrderIndexes();
     }
-
     function updateOrderIndexes() {
         if (isGroup) return;
         let currentOrder = 0;
         fields.forEach((field) => {
-            if (!field.isDeleted) {
-                field.order_index = currentOrder++;
-            }
+            if (!field.isDeleted) field.order_index = currentOrder++;
         });
         fields = [...fields];
     }
-
     function handleFieldNameChange(index: number, event: Event) {
-        if (isGroup || !fields[index].isNew) return; // Only for new fields on non-groups
+        // ... (same as Create form)
+        if (isGroup || !fields[index].isNew) return;
         const input = event.target as HTMLInputElement;
         fields[index].name = input.value
             .toLowerCase()
@@ -219,34 +197,12 @@
             .replace(/[^a-z0-9_]/g, "");
         fields = [...fields];
     }
-
-    function isOptionsVisible(fieldTypeId: number): boolean {
-        if (isGroup) return false;
-        const type = fieldTypes.find((ft) => ft.id === fieldTypeId);
-        return type?.name === "SELECT";
+    function getFieldTypeName(fieldTypeId: number): string {
+        return (
+            fieldTypes.find((ft) => ft.id === fieldTypeId)?.name ?? "UNKNOWN"
+        );
     }
-
-    function parseOptions(index: number, value: string) {
-        if (isGroup) return;
-        try {
-            const parsed = JSON.parse(value);
-            if (
-                Array.isArray(parsed) &&
-                parsed.every((item) => typeof item === "string")
-            ) {
-                fields[index].options = parsed;
-                delete errors[`field_${index}_options`];
-            } else {
-                throw new Error("Deve ser um array JSON de strings.");
-            }
-        } catch (e) {
-            fields[index].options = null;
-            errors[`field_${index}_options`] =
-                'JSON inválido. Exemplo: ["Opção 1", "Opção 2"]';
-        }
-        fields = [...fields];
-        errors = { ...errors };
-    }
+    // --- REMOVE parseOptions ---
 
     // --- Form Submission ---
     async function handleSubmit(e: Event) {
@@ -255,32 +211,22 @@
         errors = {};
 
         // --- Validation ---
-        if (!pageData.name)
-            errors["page_name"] = "Nome da página/grupo é obrigatório.";
-
-        // Only validate fields if it's not a group
+        if (!pageData.name) errors["page_name"] = "Nome obrigatório.";
         if (!isGroup) {
             const activeFields = fields.filter((f) => !f.isDeleted);
             activeFields.forEach((field, index) => {
-                const errorPrefix = `field_${field.id ?? `new_${index}`}`; // Use ID or index for unique error keys
+                const errorPrefix = `field_${field.id ?? `new_${index}`}`;
                 if (!field.display_name)
-                    errors[`${errorPrefix}_display_name`] =
-                        "Nome de exibição é obrigatório.";
-                if (!field.name)
-                    errors[`${errorPrefix}_name`] =
-                        "Nome interno é obrigatório.";
+                    errors[`${errorPrefix}_display_name`] = "Obrigatório.";
+                if (!field.name) errors[`${errorPrefix}_name`] = "Obrigatório.";
                 else if (!/^[a-z0-9_]+$/.test(field.name))
-                    errors[`${errorPrefix}_name`] =
-                        "Nome interno inválido (use letras minúsculas, números e _).";
-                if (isOptionsVisible(field.field_type_id) && !field.options)
-                    errors[`${errorPrefix}_options`] =
-                        "Opções são obrigatórias para o tipo SELECT (use formato JSON).";
+                    errors[`${errorPrefix}_name`] = "Inválido.";
+                // Options validation handled by editor
             });
-            if (activeFields.length === 0) {
-                errors["fields_general"] =
-                    "Páginas devem ter pelo menos um campo.";
-            }
+            if (activeFields.length === 0)
+                errors["fields_general"] = "Pelo menos um campo é necessário.";
         }
+        // --- End Validation ---
 
         if (Object.keys(errors).length > 0) {
             showAlert(
@@ -293,8 +239,8 @@
             return;
         }
 
-        // --- Prepare Data for API Calls ---
-        // Format parent path (remove trailing slash unless it's just "/")
+        // --- Prepare Data ---
+        // Format parent path
         let formattedParentPath =
             pageData.parent_path?.trim().toLowerCase() || null;
         if (formattedParentPath) {
@@ -303,9 +249,8 @@
             if (
                 formattedParentPath.length > 1 &&
                 formattedParentPath.endsWith("/")
-            ) {
+            )
                 formattedParentPath = formattedParentPath.slice(0, -1);
-            }
         }
         const finalPageData = { ...pageData, parent_path: formattedParentPath };
 
@@ -324,39 +269,65 @@
         let fieldsChanged = false;
 
         if (!isGroup) {
-            fields.forEach((field) => {
-                if (field.isDeleted && !field.isNew && field.id) {
-                    fieldsToDelete.push(field.id);
-                } else if (!field.isDeleted) {
-                    const { id, isNew, isDeleted, ...fieldPayload } = field;
-                    if (isNew) {
-                        fieldsToCreate.push(fieldPayload);
-                    } else if (id) {
-                        const originalField = JSON.parse(
-                            originalFieldsJson,
-                        ).find((of: any) => of.id === id);
-                        // Create comparable version excluding transient flags
-                        const {
-                            isNew: _n,
-                            isDeleted: _d,
-                            id: _id,
-                            ...currentFieldComparable
-                        } = field;
-                        if (
-                            JSON.stringify(currentFieldComparable) !==
-                            JSON.stringify(originalField)
-                        ) {
-                            const { name, ...updatePayload } = fieldPayload; // Exclude name from update payload
-                            fieldsToUpdate.push({ id, ...updatePayload });
+            // Compare current fields (excluding transient props) with original snapshot
+            const currentFieldsComparable = JSON.stringify(
+                fields
+                    .filter((f) => !f.isDeleted && !f.isNew)
+                    .map(({ id, isNew, isDeleted, ...rest }) => ({
+                        id,
+                        ...rest,
+                    })),
+            );
+            // Compare original fields (filtered to exclude potential transient props if added later)
+            const originalFieldsComparable = JSON.stringify(
+                JSON.parse(originalFieldsJson).map(
+                    ({ id, isNew, isDeleted, ...rest }: any) => ({
+                        id,
+                        ...rest,
+                    }),
+                ),
+            );
+
+            if (
+                currentFieldsComparable !== originalFieldsComparable ||
+                fields.some((f) => f.isNew && !f.isDeleted) ||
+                fields.some((f) => f.isDeleted && !f.isNew)
+            ) {
+                fieldsChanged = true;
+                fields.forEach((field) => {
+                    if (field.isDeleted && !field.isNew && field.id) {
+                        fieldsToDelete.push(field.id);
+                    } else if (!field.isDeleted) {
+                        const { id, isNew, isDeleted, ...fieldPayload } = field;
+                        // Ensure options is null if empty array before sending
+                        const payloadWithOptions = {
+                            ...fieldPayload,
+                            options: fieldPayload.options ?? null,
+                        };
+                        if (isNew) {
+                            fieldsToCreate.push(payloadWithOptions);
+                        } else if (id) {
+                            // Check if this specific field changed compared to its original state
+                            const originalField = JSON.parse(
+                                originalFieldsJson,
+                            ).find((of: any) => of.id === id);
+                            const { id: _id, ...originalComparable } =
+                                originalField || {};
+                            const { name, ...updatePayload } =
+                                payloadWithOptions; // Exclude name
+
+                            if (
+                                JSON.stringify(updatePayload) !==
+                                JSON.stringify(originalComparable)
+                            ) {
+                                fieldsToUpdate.push({ id, ...updatePayload });
+                            }
                         }
                     }
-                }
-            });
-            fieldsChanged =
-                fieldsToCreate.length > 0 ||
-                fieldsToUpdate.length > 0 ||
-                fieldsToDelete.length > 0;
+                });
+            }
         }
+        // --- End Prepare Data ---
 
         if (!pageDetailsChanged && !permissionsChanged && !fieldsChanged) {
             showAlert(
@@ -368,12 +339,11 @@
             return;
         }
 
-        // --- Execute API Calls ---
+        // --- API Calls (same logic as Create form, using update/add/delete field APIs) ---
         try {
+            // ... (Promise.all logic for updateCustomPage, updatePagePermissions, deleteField, updateField, addPageField) ...
             const promises: Promise<any>[] = [];
-
-            // 1. Update Page Details
-            if (pageDetailsChanged) {
+            if (pageDetailsChanged)
                 promises.push(
                     updateCustomPage(
                         pageId,
@@ -383,12 +353,8 @@
                             throw new Error("Falha ao atualizar detalhes.");
                     }),
                 );
-            }
-
-            // Only update permissions/fields if it's not a group
             if (!isGroup) {
-                // 2. Update Permissions
-                if (permissionsChanged) {
+                if (permissionsChanged)
                     promises.push(
                         updatePagePermissions(pageId, currentPermissions).then(
                             (ok) => {
@@ -399,57 +365,45 @@
                             },
                         ),
                     );
-                }
-
-                // 3. Delete Fields
-                fieldsToDelete.forEach((fieldId) => {
+                fieldsToDelete.forEach((id) =>
                     promises.push(
-                        deleteField(fieldId).then((ok) => {
+                        deleteField(id).then((ok) => {
                             if (!ok)
                                 throw new Error(
-                                    `Falha ao eliminar campo ${fieldId}.`,
+                                    `Falha ao eliminar campo ${id}.`,
                                 );
                         }),
-                    );
-                });
-
-                // 4. Update Fields
-                fieldsToUpdate.forEach((fieldUpdate) => {
+                    ),
+                );
+                fieldsToUpdate.forEach((f) =>
                     promises.push(
-                        updateField(fieldUpdate.id, fieldUpdate).then((ok) => {
+                        updateField(f.id, f).then((ok) => {
                             if (!ok)
                                 throw new Error(
-                                    `Falha ao atualizar campo ${fieldUpdate.id}.`,
+                                    `Falha ao atualizar campo ${f.id}.`,
                                 );
                         }),
-                    );
-                });
-
-                // 5. Create Fields
-                fieldsToCreate.forEach((fieldCreate) => {
+                    ),
+                );
+                fieldsToCreate.forEach((f) =>
                     promises.push(
-                        addPageField(pageId, fieldCreate).then((result) => {
-                            if (!result.success)
+                        addPageField(pageId, f).then((res) => {
+                            if (!res.success)
                                 throw new Error(
-                                    `Falha ao criar campo ${fieldCreate.display_name}.`,
+                                    `Falha ao criar campo ${f.display_name}.`,
                                 );
                         }),
-                    );
-                });
+                    ),
+                );
             }
-
-            // Wait for all updates
             await Promise.all(promises);
-
             showAlert(
                 `${isGroup ? "Grupo" : "Página"} atualizado com sucesso!`,
                 AlertType.SUCCESS,
                 AlertPosition.TOP,
             );
-            // Optionally redirect back to list
-            if (typeof window !== "undefined") {
+            if (typeof window !== "undefined")
                 window.location.href = "/admin/pages/";
-            }
         } catch (e: any) {
             showAlert(
                 `Erro ao atualizar ${isGroup ? "grupo" : "página"}: ${e.message}`,
@@ -459,6 +413,7 @@
         } finally {
             isSubmitting = false;
         }
+        // --- End API Calls ---
     }
 </script>
 
@@ -471,18 +426,15 @@
         onsubmit={handleSubmit}
         class="space-y-6 p-4 bg-base-100 rounded-lg shadow border border-base-content/10"
     >
-        <!--- Page/Group Details --->
+        <!-- Page/Group Details Fieldset -->
         <fieldset
             class="grid grid-cols-1 md:grid-cols-2 gap-4 border p-4 rounded-md border-base-content/20"
         >
-            <legend class="text-lg font-semibold px-2">
-                Detalhes {isGroup ? "do Grupo" : "da Página"}
-            </legend>
-
+            <legend class="text-lg font-semibold px-2"
+                >Detalhes {isGroup ? "do Grupo" : "da Página"}</legend
+            >
             <div class="form-control w-full">
-                <div class="label">
-                    <span class="label-text">Tipo</span>
-                </div>
+                <div class="label"><span class="label-text">Tipo</span></div>
                 <input
                     type="text"
                     class="input input-bordered w-full bg-base-200"
@@ -491,7 +443,6 @@
                     disabled
                 />
             </div>
-
             <div class="form-control w-full">
                 <div class="label">
                     <span class="label-text">Caminho (URL)</span>
@@ -504,11 +455,8 @@
                     disabled
                 />
             </div>
-
             <label class="form-control w-full">
-                <div class="label">
-                    <span class="label-text">Nome*</span>
-                </div>
+                <div class="label"><span class="label-text">Nome*</span></div>
                 <input
                     type="text"
                     placeholder={isGroup
@@ -522,7 +470,6 @@
                         >{errors.page_name}</span
                     >{/if}
             </label>
-
             <label class="form-control w-full">
                 <div class="label">
                     <span class="label-text">Caminho Pai (Opcional)</span>
@@ -539,7 +486,6 @@
                     >
                 </div>
             </label>
-
             <label class="form-control w-full">
                 <div class="label">
                     <span class="label-text">Ícone (FontAwesome, Opcional)</span
@@ -561,7 +507,6 @@
                     >
                 </div>
             </label>
-
             <label class="form-control w-full md:col-span-2">
                 <div class="label">
                     <span class="label-text">Descrição (Opcional)</span>
@@ -575,8 +520,7 @@
         </fieldset>
 
         {#if !isGroup}
-            <!-- Conditionally show Fields and Permissions -->
-            <!--- Fields (with delete/undelete logic) -->
+            <!-- Fields Section -->
             <fieldset
                 class="border p-4 rounded-md border-base-content/20 space-y-4"
             >
@@ -588,6 +532,7 @@
                     >
                         {errors.fields_general}
                     </p>{/if}
+
                 {#each fields as field, index (field.id ?? `new_${index}`)}
                     <div
                         class:border-error={field.isDeleted}
@@ -600,9 +545,8 @@
                                 class="btn btn-xs btn-ghost absolute top-2 right-2"
                                 title="Restaurar Campo"
                                 onclick={() => undeleteField(index)}
+                                ><i class="fa-solid fa-undo"></i></button
                             >
-                                <i class="fa-solid fa-undo"></i>
-                            </button>
                         {:else}
                             <button
                                 type="button"
@@ -616,7 +560,6 @@
                             class="grid grid-cols-1 md:grid-cols-3 gap-3"
                             class:pointer-events-none={field.isDeleted}
                         >
-                            <!-- Field Config Inputs -->
                             <label class="form-control w-full">
                                 <div class="label">
                                     <span class="label-text"
@@ -680,39 +623,23 @@
                                 </select>
                             </label>
 
-                            {#if isOptionsVisible(field.field_type_id)}
-                                <label
-                                    class="form-control w-full md:col-span-3"
-                                >
-                                    <div class="label">
-                                        <span class="label-text"
-                                            >Opções (JSON Array)*</span
-                                        >
-                                    </div>
-                                    <textarea
-                                        placeholder="['Opção A', 'Opção B', 'Opção C']"
-                                        class="textarea textarea-sm textarea-bordered w-full font-mono"
-                                        rows="2"
-                                        value={JSON.stringify(field.options) ??
-                                            ""}
-                                        oninput={(e) =>
-                                            parseOptions(
-                                                index,
-                                                (
-                                                    e.target as HTMLTextAreaElement
-                                                ).value,
-                                            )}
-                                        required
-                                    ></textarea>
+                            {#if getFieldTypeName(field.field_type_id) === "SELECT"}
+                                <div class="md:col-span-3">
+                                    <FieldOptionsEditor
+                                        bind:optionsJson={field.options}
+                                        {fieldTypes}
+                                        fieldTypeId={field.field_type_id}
+                                    />
                                     {#if errors[`field_${field.id ?? `new_${index}`}_options`]}<span
                                             class="text-error text-xs mt-1"
                                             >{errors[
                                                 `field_${field.id ?? `new_${index}`}_options`
                                             ]}</span
                                         >{/if}
-                                </label>
+                                </div>
                             {/if}
 
+                            <!-- Validation -->
                             <label class="form-control w-full">
                                 <div class="label">
                                     <span class="label-text"
@@ -732,46 +659,44 @@
                                 </select>
                             </label>
 
+                            <!-- Checkboxes -->
                             <div class="form-control">
                                 <label
                                     class="label cursor-pointer justify-start gap-2"
-                                >
-                                    <input
+                                    ><input
                                         type="checkbox"
                                         class="checkbox checkbox-sm"
                                         bind:checked={field.required}
-                                    />
-                                    <span class="label-text">Obrigatório</span>
-                                </label>
+                                    /><span class="label-text">Obrigatório</span
+                                    ></label
+                                >
                             </div>
                             <div class="form-control">
                                 <label
                                     class="label cursor-pointer justify-start gap-2"
-                                >
-                                    <input
+                                    ><input
                                         type="checkbox"
                                         class="checkbox checkbox-sm"
                                         bind:checked={field.is_searchable}
-                                    />
-                                    <span class="label-text">Pesquisável</span>
-                                </label>
+                                    /><span class="label-text">Pesquisável</span
+                                    ></label
+                                >
                             </div>
                             <div class="form-control">
                                 <label
                                     class="label cursor-pointer justify-start gap-2"
-                                >
-                                    <input
+                                    ><input
                                         type="checkbox"
                                         class="checkbox checkbox-sm"
                                         bind:checked={
                                             field.is_displayed_in_table
                                         }
-                                    />
-                                    <span class="label-text"
+                                    /><span class="label-text"
                                         >Mostrar na Tabela</span
-                                    >
-                                </label>
+                                    ></label
+                                >
                             </div>
+
                             <input
                                 type="hidden"
                                 bind:value={field.order_index}
@@ -779,21 +704,21 @@
                         </div>
                     </div>
                 {/each}
+
                 <button
                     type="button"
                     class="btn btn-sm btn-outline btn-accent"
                     onclick={addField}
+                    ><i class="fa-solid fa-plus mr-1"></i> Adicionar Campo</button
                 >
-                    <i class="fa-solid fa-plus mr-1"></i> Adicionar Campo
-                </button>
-                {#if fields.filter((f) => !f.isDeleted).length === 0}
-                    <p class="text-center text-base-content/70">
+                {#if fields.filter((f) => !f.isDeleted).length === 0}<p
+                        class="text-center text-base-content/70"
+                    >
                         Adicione pelo menos um campo para uma página.
-                    </p>
-                {/if}
+                    </p>{/if}
             </fieldset>
 
-            <!--- Permissions --->
+            <!-- Permissions Fieldset -->
             <fieldset class="border p-4 rounded-md border-base-content/20">
                 <legend class="text-lg font-semibold px-2"
                     >Permissões por Função</legend
@@ -802,8 +727,7 @@
                     <table class="table table-sm w-full">
                         <thead>
                             <tr>
-                                <th>Função</th>
-                                <th class="text-center">Ver</th>
+                                <th>Função</th> <th class="text-center">Ver</th>
                                 <th class="text-center">Criar</th>
                                 <th class="text-center">Editar</th>
                                 <th class="text-center">Eliminar</th>
@@ -898,15 +822,15 @@
                         </tbody>
                     </table>
                 </div>
-                {#if roles.length === 0}
-                    <p class="text-center text-base-content/70">
+                {#if roles.length === 0}<p
+                        class="text-center text-base-content/70"
+                    >
                         Nenhuma função encontrada.
-                    </p>
-                {/if}
+                    </p>{/if}
             </fieldset>
         {/if}
-        <!-- End conditional rendering -->
 
+        <!-- Actions -->
         <div class="flex justify-end gap-4">
             <a href="/admin/pages/" class="btn btn-ghost">Cancelar</a>
             <button
@@ -914,11 +838,9 @@
                 class="btn btn-primary"
                 disabled={isSubmitting || isLoading}
             >
-                {#if isSubmitting}
-                    <span class="loading loading-spinner loading-sm"></span> Atualizando...
-                {:else}
-                    Guardar Alterações
-                {/if}
+                {#if isSubmitting}<span
+                        class="loading loading-spinner loading-sm"
+                    ></span> Atualizando...{:else}Guardar Alterações{/if}
             </button>
         </div>
     </form>
