@@ -1,140 +1,130 @@
 import { defineMiddleware } from "astro:middleware";
 import API_BASE_URL from "@api/base-url";
 
-export const onRequest = defineMiddleware(async (context, next) => {
-  const pathname = context.url.pathname; // Use context.url.pathname
-  const cookie = context.request.headers.get("cookie") ?? undefined; // Get cookie
+// Response type from backend /users/check
+interface CheckAuthResponse {
+  isAdmin: boolean;
+  canManageThisPage?: boolean;
+}
 
-  // Ignore static assets and internal routes
+export const onRequest = defineMiddleware(async (context, next) => {
+  const pathname = context.url.pathname;
+  const cookie = context.request.headers.get("cookie") ?? undefined;
+
+  // Ignore static assets etc.
   if (
     pathname.startsWith("/_image/") ||
     pathname.startsWith("/_astro/") ||
-    pathname.startsWith("/assets/") || // Add any other asset paths
+    pathname.startsWith("/assets/") ||
     pathname === "/favicon.ico"
   ) {
     return next();
   }
 
-  // --- Define Routes ---
   const isLoginPage = pathname === "/iniciar-sessao/";
   const isRegisterPage = pathname === "/registo/";
   const isAdminRoute = pathname.startsWith("/admin/");
-  const isPublicAsset = pathname.startsWith("/media/"); // Assuming media is public *after* auth check
+  const isAdminEditPageRoute = pathname.startsWith("/admin/pages/edit/");
+  const isPublicAsset = pathname.startsWith("/media/"); // Assume backend handles auth for this too
 
-  // --- Server-Side Rendering (SSR) vs. Client-Side Navigation ---
-  // Astro's `context.request.headers.get('x-astro-request')` might indicate client-side nav,
-  // but a simpler check is often sufficient. If a cookie exists, it *might* be valid.
-  // The crucial part is how we handle the backend response.
-
-  // --- Authentication Check ---
   let isAuthenticated = false;
-  let isAdmin = false;
+  let isSessionAdmin = false;
+  let canManageCurrentPage = false; // Specific permission for edit route
   let checkPerformed = false;
 
-  // Perform check only if necessary:
-  // - Always check on client-side navigation (cookie likely present)
-  // - Only check on server-side for /admin/ routes to enforce immediate security
-  // - Skip server-side check for non-admin routes to avoid 401 noise
+  // Perform check only if necessary
   if (cookie || isAdminRoute) {
-    // Check if cookie exists OR it's an admin route
+    // Check if cookie exists OR it's any admin route
     try {
       const response = await fetch(`${API_BASE_URL}/users/check`, {
         method: "POST",
-        body: pathname, // Send the path for analytics
-        headers: {
-          cookie: cookie, // Pass cookie if available
-          "Content-Type": "text/plain",
-        },
-        // credentials: 'include', // Not needed server-side, header is explicit
+        body: pathname,
+        headers: { cookie: cookie, "Content-Type": "text/plain" },
       });
-      checkPerformed = true; // Mark that we attempted the check
+      checkPerformed = true;
 
       if (response.ok) {
         isAuthenticated = true;
-        const data: { isAdmin: boolean } = await response.json();
-        isAdmin = data.isAdmin;
+        const data: CheckAuthResponse = await response.json();
+        isSessionAdmin = data.isAdmin; // General admin status
+        // If it was the edit page route, check the specific permission
+        if (isAdminEditPageRoute) {
+          canManageCurrentPage = data.canManageThisPage ?? false;
+        }
       } else if (response.status === 401) {
         isAuthenticated = false;
-        isAdmin = false;
-        // Log the 401 only if it's unexpected (e.g., during client nav)
-        // if (context.request.headers.get('x-astro-request')) { // Example check for client nav
-        // console.warn(`Auth check failed (401) for path: ${pathname}`);
-        // }
+        isSessionAdmin = false;
+        canManageCurrentPage = false;
       } else {
-        // Handle other potential errors from the check endpoint
         console.error(
           `Auth check failed with status ${response.status} for path: ${pathname}`,
         );
-        // Decide how to handle - potentially treat as unauthenticated?
         isAuthenticated = false;
-        isAdmin = false;
+        isSessionAdmin = false;
+        canManageCurrentPage = false;
       }
     } catch (error) {
       console.error(`Error during auth check fetch for ${pathname}:`, error);
-      // Treat as unauthenticated on fetch error
       isAuthenticated = false;
-      isAdmin = false;
-      checkPerformed = true; // Mark check as attempted
+      isSessionAdmin = false;
+      canManageCurrentPage = false;
+      checkPerformed = true;
     }
   }
 
   // --- Routing Logic ---
 
-  // 1. Admin Route Protection
+  // 1. Specific Admin Edit Page Route Protection
+  if (isAdminEditPageRoute) {
+    if (!checkPerformed && !cookie) return context.redirect("/iniciar-sessao/"); // SSR check
+    if (!isAuthenticated) return context.redirect("/iniciar-sessao/"); // Must be logged in
+
+    // Allow if EITHER general admin OR has specific page management permission
+    if (!isSessionAdmin && !canManageCurrentPage) {
+      console.warn(`User denied access to specific edit page: ${pathname}`);
+      return context.redirect("/"); // Redirect non-admins/non-managers away
+    }
+    // If admin OR canManageThisPage, proceed
+    return next();
+  }
+
+  // 2. General Admin Route Protection (for anything else under /admin/)
   if (isAdminRoute) {
-    if (!checkPerformed && !cookie) {
-      // SSR, no cookie, trying to access /admin -> redirect to login
-      return context.redirect("/iniciar-sessao/");
-    }
-    if (!isAuthenticated) {
-      // Failed check or 401 -> redirect to login
-      return context.redirect("/iniciar-sessao/");
-    }
-    if (!isAdmin) {
-      // Authenticated but not admin -> redirect to home (or 403 page)
-      console.warn(`Non-admin user denied access to: ${pathname}`);
-      return context.redirect("/"); // Or context.redirect('/403');
+    if (!checkPerformed && !cookie) return context.redirect("/iniciar-sessao/"); // SSR check
+    if (!isAuthenticated) return context.redirect("/iniciar-sessao/");
+    if (!isSessionAdmin) {
+      // STRICTLY check general admin status here
+      console.warn(
+        `Non-admin user denied access to general admin route: ${pathname}`,
+      );
+      return context.redirect("/"); // Redirect non-admins away
     }
     // If authenticated and admin, proceed
     return next();
   }
 
-  // 2. Public Assets (already authenticated users can access)
-  // Note: The backend /media endpoint should also re-validate the session
+  // 3. Public Assets (minimal check, rely mostly on backend)
   if (isPublicAsset) {
-    if (!checkPerformed && !cookie) {
-      // SSR, no cookie, trying to access /media -> redirect to login (or let backend handle 401)
-      return context.redirect("/iniciar-sessao/");
-    }
-    if (!isAuthenticated) {
-      // Failed check or 401 -> redirect to login (or let backend handle 401)
-      return context.redirect("/iniciar-sessao/");
-    }
-    // If authenticated, allow access
+    if (!checkPerformed && !cookie) return context.redirect("/iniciar-sessao/");
+    if (!isAuthenticated) return context.redirect("/iniciar-sessao/");
     return next();
   }
 
-  // 3. Login/Register Page Logic
+  // 4. Login/Register Page Logic
   if (isLoginPage || isRegisterPage) {
-    if (isAuthenticated) {
-      // If already logged in, redirect away from login/register
-      return context.redirect("/");
-    }
-    // If not logged in, allow access
+    if (isAuthenticated) return context.redirect("/");
     return next();
   }
 
-  // 4. Default Protected Routes (all others)
+  // 5. Default Protected Routes
   if (!checkPerformed && !cookie) {
-    // SSR, no cookie, trying to access protected route -> Let client handle redirect
-    return next(); // Render the page, client-side JS will redirect if needed
-    // Alternatively, redirect immediately: return context.redirect('/iniciar-sessao/');
+    // SSR, no cookie -> Let client handle
+    return next();
   }
   if (!isAuthenticated) {
-    // Failed check or 401 -> redirect to login
     return context.redirect("/iniciar-sessao/");
   }
 
-  // If authenticated, allow access to the requested page
+  // If authenticated, allow access
   return next();
 });

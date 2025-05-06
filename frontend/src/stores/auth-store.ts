@@ -5,16 +5,18 @@ import { handleFetch } from "@api/fetch-handler";
 export const isAdmin = writable<boolean | null>(null);
 export const isAuthenticated = writable<boolean | null>(null);
 
+// Response type from backend /users/check
+interface CheckAuthResponse {
+  isAdmin: boolean;
+  canManageThisPage?: boolean; // This is optional
+}
+
 export async function checkAuthStatus(): Promise<void> {
-  // Avoid checking if already definitively known (true/false)
-  // let currentAuth = get(isAuthenticated); // Svelte 5 might have a better way
+  // Avoid checking if already definitively known
+  // let currentAuth = get(isAuthenticated);
   // if (currentAuth !== null) return;
 
-  // Ensure this runs only on the client
-  if (typeof window === "undefined") {
-    // console.log("Skipping checkAuthStatus on server.");
-    return;
-  }
+  if (typeof window === "undefined") return; // Client-side only
 
   try {
     const currentPath = window.location.pathname;
@@ -26,17 +28,14 @@ export async function checkAuthStatus(): Promise<void> {
     });
 
     if (response.ok) {
-      // Status 200-299
-      const data: { isAdmin: boolean } = await response.json();
+      const data: CheckAuthResponse = await response.json();
+      // Store only the general admin status globally
       isAdmin.set(data.isAdmin);
       isAuthenticated.set(true);
     } else if (response.status === 401) {
-      // Unauthorized
       isAdmin.set(false);
       isAuthenticated.set(false);
-      // No redirect here, middleware handles it
     } else {
-      // Other errors (403, 500, etc.)
       console.error(`Auth check failed with status: ${response.status}`);
       isAdmin.set(false);
       isAuthenticated.set(false);
@@ -50,7 +49,6 @@ export async function checkAuthStatus(): Promise<void> {
 
 export function initializeAuthCheck(): void {
   if (typeof window !== "undefined") {
-    // console.log("Initializing auth check..."); // Debugging
     checkAuthStatus();
   }
 }

@@ -613,7 +613,7 @@
                 <i class="fa-solid fa-plus mr-2"></i> Criar Novo
             </button>
         {/if}
-        {#if permissions.can_manage_fields}
+        {#if permissions.can_manage_fields || permissions.is_admin}
             <a
                 href={`/admin/pages/edit/${pageDefinition?.page?.id}/`}
                 class="btn btn-secondary flex-grow sm:flex-grow-0"

@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     State,
-    auth::{is_admin, validate_session},
+    auth::{is_admin, user_can_manage_page, validate_session},
     models::{
         role::{Role, UserRoleAssignment},
         user::{UserRoleRow, UserWithRoles},
@@ -195,12 +195,15 @@ pub async fn login(
 #[derive(Serialize)]
 pub struct CheckResponse {
     #[serde(rename = "isAdmin")]
-    pub is_admin: bool,
+    is_admin: bool,
+    #[serde(rename = "canManageThisPage", skip_serializing_if = "Option::is_none")]
+    // Only include if relevant
+    can_manage_this_page: Option<bool>,
 }
 
-pub async fn check(session: Session, state: web::Data<State>, data: web::Bytes) -> impl Responder {
+pub async fn check(state: web::Data<State>, session: Session, data: web::Bytes) -> impl Responder {
     let user_id = match validate_session(&session) {
-        Ok(id) => id as u32,
+        Ok(id) => id,
         Err(response) => return response,
     };
 
@@ -208,72 +211,84 @@ pub async fn check(session: Session, state: web::Data<State>, data: web::Bytes) 
         return HttpResponse::BadRequest().finish();
     };
 
-    let is_admin = session
+    let is_admin_session = session
         .get::<bool>("is_admin")
         .unwrap_or(Some(false))
         .unwrap_or(false);
 
-    let now = chrono::Utc::now();
+    let mut can_manage_this_page_result: Option<bool> = None;
 
-    // Query current visit count
-    let analytics = sqlx::query!(
-        r#"
-        SELECT visit_count FROM user_page_analytics
-        WHERE user_id = ? AND page_path = ?
-        "#,
-        user_id,
-        &page_path
-    )
-    .fetch_optional(&state.db.pool)
-    .await;
-
-    match analytics {
-        Ok(Some(record)) => {
-            // Record exists, update with increment
-            let new_count = record.visit_count + 1;
-
-            // Run update in background task
-            actix_web::rt::spawn(async move {
-                sqlx::query!(
-                    r#"
-                    UPDATE user_page_analytics
-                    SET visit_count = ?, last_visited_at = ?
-                    WHERE user_id = ? AND page_path = ?
-                    "#,
-                    new_count,
-                    now,
-                    user_id,
-                    page_path
-                )
-                .execute(&state.db.pool)
-                .await
-                .ok();
-            });
-        }
-        Ok(None) => {
-            // No record exists, create new one
-            actix_web::rt::spawn(async move {
-                sqlx::query!(
-                    r#"
-                    INSERT INTO user_page_analytics (user_id, page_path, visit_count, last_visited_at)
-                    VALUES (?, ?, ?, ?)
-                    "#,
-                    user_id,
-                    page_path,
-                    1,
-                    now
-                )
-                .execute(&state.db.pool)
-                .await
-                .ok();
-            });
-        }
-        Err(e) => {
-            error!("Database error checking analytics: {}", e);
+    // Check if the path matches the admin edit page pattern
+    const EDIT_PREFIX: &str = "/admin/pages/edit/";
+    if page_path.starts_with(EDIT_PREFIX) {
+        if let Some(id_str) = page_path.strip_prefix(EDIT_PREFIX) {
+            // Remove trailing slash if present before parsing
+            let id_str_cleaned = id_str.trim_end_matches('/');
+            if let Ok(page_id) = id_str_cleaned.parse::<u32>() {
+                // Check specific permission for this page
+                match user_can_manage_page(&state.db.pool, user_id, page_id).await {
+                    Ok(can_manage) => {
+                        can_manage_this_page_result = Some(can_manage);
+                    }
+                    Err(e) => {
+                        error!(
+                            "Error checking page management permission for user {} on page {}: {}",
+                            user_id, page_id, e
+                        );
+                        // Default to false on error, or return server error? Let's default to false for security.
+                        can_manage_this_page_result = Some(false);
+                    }
+                }
+            } else {
+                log::warn!("Could not parse page ID from path: {}", page_path);
+                can_manage_this_page_result = Some(false); // Invalid ID, cannot manage
+            }
         }
     }
 
-    json_response(&CheckResponse { is_admin })
+    // --- Analytics Update (remains the same) ---
+    let now = chrono::Utc::now();
+    let user_id_u32 = user_id as u32; // Use appropriate type for query
+    let page_path_clone = page_path.clone(); // Clone for the async block
+    let pool_clone = state.db.pool.clone(); // Clone pool for the async block
+
+    actix_web::rt::spawn(async move {
+        let analytics = sqlx::query!(
+            r#"SELECT visit_count FROM user_page_analytics WHERE user_id = ? AND page_path = ?"#,
+            user_id_u32,
+            &page_path_clone // Use cloned path
+        )
+        .fetch_optional(&pool_clone) // Use cloned pool
+        .await;
+
+        match analytics {
+            Ok(Some(record)) => {
+                let new_count = record.visit_count + 1;
+                sqlx::query!(
+                    r#"UPDATE user_page_analytics SET visit_count = ?, last_visited_at = ? WHERE user_id = ? AND page_path = ?"#,
+                    new_count, now, user_id_u32, page_path_clone
+                )
+                .execute(&pool_clone).await.ok(); // Use cloned pool
+            }
+            Ok(None) => {
+                sqlx::query!(
+                    r#"INSERT INTO user_page_analytics (user_id, page_path, visit_count, last_visited_at) VALUES (?, ?, ?, ?)"#,
+                    user_id_u32, page_path_clone, 1, now
+                )
+                .execute(&pool_clone).await.ok(); // Use cloned pool
+            }
+            Err(e) => {
+                error!("Database error checking analytics: {}", e);
+            }
+        }
+    });
+    // --- End Analytics Update ---
+
+    // Return the potentially richer response
+    json_response(&CheckResponse {
+        is_admin: is_admin_session,
+        can_manage_this_page: can_manage_this_page_result,
+    })
 }
 
 pub async fn logout(session: Session) -> impl Responder {
