@@ -17,12 +17,13 @@ export interface FormField {
   type: FieldType;
   label: string;
   placeholder?: string;
-  value: any;
+  value: any; // This will be managed by the modal's internal state
   required?: boolean;
-  options?: SelectOption[]; // For select fields
-  colSpan?: number; // How many columns to span (default: 1)
-  searchField?: string; // For search fields
-  validate?: (value: any) => string | null;
+  options?: SelectOption[];
+  colSpan?: number;
+  // Removed searchField as it's not directly used in the modal
+  validation_name?: string | null; // Add validation name from backend
+  // Removed the client-side validate function, logic will be internal to modal
 }
 
 export const enum SubmitResult {

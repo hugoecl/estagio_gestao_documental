@@ -10,6 +10,26 @@
         type SelectOption,
     } from "@lib/types/form-modal";
     import type { PageRecordFile } from "@lib/types/page-record";
+    import { validateNIF } from "@utils/nif";
+
+    // --- Email Validation (Simple Regex Example) ---
+    function validateEmail(email: string): string | null {
+        if (!email) return null; // Don't validate empty optional fields here
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return "Formato de e-mail inválido.";
+        }
+        return null;
+    }
+
+    // --- Validation Function Map ---
+    const validationFunctions: Record<string, (value: any) => string | null> = {
+        nif: (value) =>
+            validateNIF(String(value ?? "")) ? null : "NIF inválido.",
+        email: (value) => validateEmail(String(value ?? "")),
+        // Add more validation functions here as needed
+        // 'required_non_empty': (value) => (value ? null : 'Campo obrigatório.'),
+    };
 
     // --- Props ---
     let {
@@ -116,10 +136,11 @@
             : [],
     );
 
-    // --- Validation ---
+    // --- UPDATED Validation Logic ---
     function validateField(field: FormField, value: any): string | null {
-        if (readOnly) return null; // Skip validation if read-only
+        if (readOnly) return null;
 
+        // 1. Check required first
         if (
             field.required &&
             (value === null ||
@@ -129,10 +150,33 @@
         ) {
             return `${field.label} é obrigatório.`;
         }
+
+        // 2. Check specific validation if name provided and value is not empty
+        if (
+            field.validation_name &&
+            value !== null &&
+            value !== undefined &&
+            value !== ""
+        ) {
+            const validator = validationFunctions[field.validation_name];
+            if (validator) {
+                const errorMsg = validator(value);
+                if (errorMsg) {
+                    return errorMsg; // Return specific error from validator
+                }
+            } else {
+                console.warn(
+                    `Validation function named "${field.validation_name}" not found.`,
+                );
+            }
+        }
+
+        // 3. Check internal 'validate' function if provided (less likely now)
         if (field.validate) {
             return field.validate(value);
         }
-        return null;
+
+        return null; // No errors found
     }
 
     function validateForm(): boolean {

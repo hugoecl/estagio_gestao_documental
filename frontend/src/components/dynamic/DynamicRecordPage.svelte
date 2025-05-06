@@ -29,6 +29,7 @@
         SubmitResult,
         type SubmitResponse,
         type SelectOption,
+        type FormField, // Import FormField type
     } from "@lib/types/form-modal";
     import { currentModal } from "@stores/modal-store";
     import {
@@ -96,23 +97,27 @@
     });
 
     // --- Form Fields ---
-    const formFields = $derived.by(() => {
+    const formFields = $derived.by((): FormField[] => {
+        // Explicitly type return
         if (!pageDefinition?.fields || !Array.isArray(pageDefinition.fields)) {
             return [];
         }
         return [...pageDefinition.fields]
             .sort((a, b) => a.order_index - b.order_index)
-            .map((pf) => ({
-                id: pf.name,
-                label: pf.display_name,
-                type: mapFieldType(pf.field_type_name),
-                required: pf.required,
-                options: pf.options ? mapOptions(pf.options) : undefined,
-                value: null, // Will be populated by FormModal's $effect
-                placeholder: `Insira ${pf.display_name.toLowerCase()}`,
-                // Add validation function mapping if needed
-                // validate: mapValidationFunction(pf.validation_name),
-            }));
+            .map(
+                (pf: PageField): FormField => ({
+                    // Map PageField to FormField
+                    id: pf.name,
+                    label: pf.display_name,
+                    type: mapFieldType(pf.field_type_name),
+                    required: pf.required,
+                    options: pf.options ? mapOptions(pf.options) : undefined,
+                    value: null, // Initial value is null, will be populated by FormModal
+                    placeholder: `Insira ${pf.display_name.toLowerCase()}`,
+                    validation_name: pf.validation_name, // Pass validation name
+                    colSpan: pf.field_type_name === "TEXTAREA" ? 2 : 1, // Example: Make TEXTAREA span 2 cols
+                }),
+            );
     });
 
     // --- Data Fetching ---
