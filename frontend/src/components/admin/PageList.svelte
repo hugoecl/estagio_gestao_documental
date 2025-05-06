@@ -17,11 +17,11 @@
     const columns: TableColumn[] = [
         { header: "ID", field: "id" },
         { header: "Nome", field: "name" },
+        { header: "Tipo", field: "is_group" }, // Add column for type
         { header: "Caminho", field: "path" },
         { header: "Pai", field: "parent_path" },
         { header: "Descrição", field: "description" },
         { header: "Ícone", field: "icon" },
-        // Add Edit/Delete buttons later
     ];
 
     onMount(async () => {
@@ -29,7 +29,11 @@
             const pagesArray = await getCustomPages();
             const pagesRecord: Record<string, CustomPage> = {};
             pagesArray.forEach((page) => {
-                pagesRecord[page.id.toString()] = page;
+                // Add the is_group property if it's missing from the type (should be included by backend now)
+                pagesRecord[page.id.toString()] = {
+                    ...page,
+                    is_group: page.is_group ?? false,
+                };
             });
             pages = pagesRecord;
         } catch (e: any) {
@@ -41,11 +45,10 @@
     });
 
     function handleRowClick(id: string, row: CustomPage) {
-        // Navigate to edit page (implement later)
         if (typeof window !== "undefined") {
-            window.location.href = `/admin/pages/edit/${id}/`; // Define this route later
+            window.location.href = `/admin/pages/edit/${id}/`;
         }
-        console.log("Edit page:", id, row);
+        // console.log("Edit page:", id, row); // Keep for debugging if needed
     }
 </script>
 

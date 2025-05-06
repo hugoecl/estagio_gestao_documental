@@ -1,9 +1,9 @@
 <script lang="ts">
     import type { TableColumn } from "@lib/types/table";
     import { toSearchString } from "@utils/search-utils";
-    import type { Role } from "@lib/types/roles"; // Import Role type
+    import type { Role } from "@lib/types/roles";
 
-    // Props... (keep existing props)
+    // Props
     let {
         data,
         columns,
@@ -26,7 +26,7 @@
         onRowClick: (id: string, row: any) => void;
     } = $props();
 
-    // Internal State... (keep existing state variables: searchQuery, currentPage, etc.)
+    // Internal State
     let searchQuery = $state("");
     let currentPage = $state(1);
     let perPage = $state(10);
@@ -38,7 +38,7 @@
     let sortColumn = $state<string | null>(null);
     let sortDirection = $state<SortDirection>(SortDirection.NONE);
 
-    // Derived Computations... (keep existing derived: filteredEntries, sortedEntries, etc.)
+    // --- Filtering ---
     const filteredEntries = $derived.by(() => {
         const entries = Object.entries(data || {});
         const query = searchQuery.trim();
@@ -48,13 +48,18 @@
         return entries.filter(([id, row]) => {
             if (id.toLowerCase().includes(lowerCaseQuery)) return true;
             for (const fieldPath of searchFields) {
-                // Special handling for roles during search
                 if (fieldPath === "roles" && Array.isArray(row.roles)) {
                     if (
                         row.roles.some((role: Role) =>
                             toSearchString(role.name).includes(lowerCaseQuery),
                         )
                     ) {
+                        return true;
+                    }
+                } else if (fieldPath === "is_group") {
+                    // Search logic for boolean 'is_group'
+                    const groupText = row.is_group ? "grupo" : "página";
+                    if (toSearchString(groupText).includes(lowerCaseQuery)) {
                         return true;
                     }
                 } else {
@@ -74,11 +79,10 @@
     });
 
     $effect(() => {
-        if (searchQuery !== undefined) {
-            currentPage = 1;
-        }
+        if (searchQuery !== undefined) currentPage = 1;
     });
 
+    // --- Sorting ---
     const sortedEntries = $derived.by(() => {
         const entriesToUse = filteredEntries;
         if (sortColumn === null || sortDirection === SortDirection.NONE)
@@ -86,8 +90,9 @@
         const column = columns.find((col) => col.header === sortColumn);
         if (!column) return entriesToUse;
 
-        // Special sort for roles: sort by the first role name alphabetically
+        // --- Role Sorting ---
         if (column.field === "roles") {
+            // ... (role sorting logic remains the same) ...
             const sorted = [...entriesToUse].sort(([, rowA], [, rowB]) => {
                 const rolesA = (rowA.roles as Role[]).sort((a, b) =>
                     a.name.localeCompare(b.name, "pt-PT"),
@@ -103,50 +108,56 @@
             });
             return sorted;
         }
+        // --- Boolean (is_group) Sorting ---
+        if (column.field === "is_group") {
+            const sorted = [...entriesToUse].sort(([, rowA], [, rowB]) => {
+                const valA = !!rowA.is_group; // Ensure boolean
+                const valB = !!rowB.is_group;
+                if (valA === valB) return 0;
+                if (sortDirection === SortDirection.ASC) {
+                    return valA ? 1 : -1; // Groups (true) come after Pages (false) when ascending
+                } else {
+                    return valA ? -1 : 1; // Pages (false) come after Groups (true) when descending
+                }
+            });
+            return sorted;
+        }
 
+        // --- Default/Other Sorting ---
         const fieldPath = column.field.split(".");
         const sorted = [...entriesToUse].sort(([, rowA], [, rowB]) => {
+            // ... (ID, date, number, string sorting logic remains the same) ...
             const getValue = (row: any, path: string[]) =>
                 path.reduce((obj, key) => obj?.[key], row);
             const valueA = getValue(rowA, fieldPath);
             const valueB = getValue(rowB, fieldPath);
 
             if (column.field === keyField) {
-                // Existing ID sort logic...
                 const numA = parseFloat(rowA[keyField]);
                 const numB = parseFloat(rowB[keyField]);
-                if (!isNaN(numA) && !isNaN(numB)) {
+                if (!isNaN(numA) && !isNaN(numB))
                     return sortDirection === SortDirection.ASC
                         ? numA - numB
                         : numB - numA;
-                }
                 const strA = rowA[keyField]?.toString() ?? "";
                 const strB = rowB[keyField]?.toString() ?? "";
                 return sortDirection === SortDirection.ASC
                     ? strA.localeCompare(strB, "pt-PT")
                     : strB.localeCompare(strA, "pt-PT");
             }
-
             if (column.dateValueField) {
-                // Existing date sort logic...
                 const datePath = column.dateValueField.split(".");
                 const dateA = getValue(rowA, datePath);
                 const dateB = getValue(rowB, datePath);
-                if (dateA instanceof Date && dateB instanceof Date) {
+                if (dateA instanceof Date && dateB instanceof Date)
                     return sortDirection === SortDirection.ASC
                         ? dateA.getTime() - dateB.getTime()
                         : dateB.getTime() - dateA.getTime();
-                }
             }
-
-            if (typeof valueA === "number" && typeof valueB === "number") {
-                // Existing number sort logic...
+            if (typeof valueA === "number" && typeof valueB === "number")
                 return sortDirection === SortDirection.ASC
                     ? valueA - valueB
                     : valueB - valueA;
-            }
-
-            // Default string sort
             const strA = valueA?.toString() ?? "";
             const strB = valueB?.toString() ?? "";
             return sortDirection === SortDirection.ASC
@@ -156,41 +167,32 @@
         return sorted;
     });
 
+    // --- Pagination ---
     const totalItems = $derived(sortedEntries.length);
     const totalPages = $derived(Math.max(1, Math.ceil(totalItems / perPage)));
-
     $effect(() => {
-        if (currentPage > totalPages) {
-            currentPage = totalPages;
-        }
+        if (currentPage > totalPages) currentPage = totalPages;
     });
-
-    const paginatedEntries = $derived.by(() => {
-        const start = (currentPage - 1) * perPage;
-        const end = start + perPage;
-        return sortedEntries.slice(start, end);
-    });
+    const paginatedEntries = $derived.by(() =>
+        sortedEntries.slice((currentPage - 1) * perPage, currentPage * perPage),
+    );
 
     // --- Helper Functions ---
-    // Keep getSortIndicator, toggleSort, generatePageNumbers, goToPage, handlePerPageChange
+    // ... (getSortIndicator, toggleSort, generatePageNumbers, goToPage, handlePerPageChange remain the same) ...
     function getSortIndicator(columnHeader: string): string {
         if (sortColumn !== columnHeader) return "";
         return sortDirection === SortDirection.ASC ? "↑" : "↓";
     }
-
     function toggleSort(column: TableColumn): void {
         if (sortColumn === column.header) {
             sortDirection = (sortDirection + 1) % 3;
-            if (sortDirection === SortDirection.NONE) {
-                sortColumn = null;
-            }
+            if (sortDirection === SortDirection.NONE) sortColumn = null;
         } else {
             sortColumn = column.header;
             sortDirection = SortDirection.ASC;
         }
         currentPage = 1;
     }
-
     function generatePageNumbers(
         current: number,
         total: number,
@@ -201,27 +203,22 @@
             return [1, null, total - 4, total - 3, total - 2, total - 1, total];
         return [1, null, current - 1, current, current + 1, null, total];
     }
-
     function goToPage(page: number) {
-        if (page >= 1 && page <= totalPages && page !== currentPage) {
+        if (page >= 1 && page <= totalPages && page !== currentPage)
             currentPage = page;
-        }
     }
-
     function handlePerPageChange(e: Event) {
         const newPerPage =
             parseInt((e.target as HTMLSelectElement).value, 10) || 10;
         if (newPerPage !== perPage) {
             perPage = newPerPage;
-            currentPage = 1; // Reset page when items per page changes
+            currentPage = 1;
         }
     }
 
-    // Updated getCellValue to handle potential errors and return the value itself
     function getCellValue(row: any, fieldPath: string): any {
         if (typeof row !== "object" || row === null) return "";
         try {
-            // Handle direct access or nested access
             return fieldPath.split(".").reduce((obj, key) => obj?.[key], row);
         } catch (e) {
             console.error(
@@ -229,11 +226,10 @@
                 row,
                 e,
             );
-            return "Error"; // Return specific error or empty string
+            return "Error";
         }
     }
 
-    // Helper to check if a value is a role array (simple check)
     function isRoleArray(value: any): value is Role[] {
         return (
             Array.isArray(value) &&
@@ -306,26 +302,24 @@
             </thead>
             <tbody>
                 {#if loading}
-                    {#each { length: Math.min(perPage, 5) } as _}
-                        <tr>
-                            {#each columns as column}
-                                <td class={column.responsive || ""}
+                    {#each { length: Math.min(perPage, 5) } as _}<tr
+                            >{#each columns as column}<td
+                                    class={column.responsive || ""}
                                     ><div
                                         class="skeleton h-4 w-16 my-1"
                                     ></div></td
-                                >
-                            {/each}
-                        </tr>
-                    {/each}
+                                >{/each}</tr
+                        >{/each}
                 {:else if filteredEntries.length === 0}
-                    <tr>
-                        <td
+                    <tr
+                        ><td
                             colspan={columns.length}
                             class="text-center py-8 text-base-content/70"
-                        >
-                            {searchQuery ? searchEmptyMessage : emptyMessage}
-                        </td>
-                    </tr>
+                            >{searchQuery
+                                ? searchEmptyMessage
+                                : emptyMessage}</td
+                        ></tr
+                    >
                 {:else}
                     {#each paginatedEntries as [id, row] (id)}
                         <tr
@@ -339,19 +333,26 @@
                                 )}
                                 <td class={column.responsive || ""}>
                                     {#if column.field === "roles" && isRoleArray(cellValue)}
-                                        <!-- Special rendering for roles -->
-                                        {#if cellValue.length > 0}
-                                            {#each cellValue as role (role.id)}
-                                                <span
+                                        <!-- Role rendering -->
+                                        {#if cellValue.length > 0}{#each cellValue as role (role.id)}<span
                                                     class:badge-primary={role.is_admin}
                                                     class="badge badge-outline badge-sm mr-1"
                                                     >{role.name}</span
-                                                >
-                                            {/each}
-                                        {:else}
-                                            <span
+                                                >{/each}{:else}<span
                                                 class="text-xs italic text-base-content/50"
                                                 >Nenhuma</span
+                                            >{/if}
+                                    {:else if column.field === "is_group"}
+                                        <!-- is_group rendering -->
+                                        {#if cellValue === true}
+                                            <span
+                                                class="badge badge-accent badge-sm"
+                                                >Grupo</span
+                                            >
+                                        {:else}
+                                            <span
+                                                class="badge badge-primary badge-sm"
+                                                >Página</span
                                             >
                                         {/if}
                                     {:else}
@@ -383,17 +384,14 @@
                     <option value={25}>25</option>
                     <option value={50}>50</option>
                     <option value={100}>100</option>
-                </select>
-                <span>por página</span>
+                </select> <span>por página</span>
             </div>
-
             <span class="text-sm text-center md:text-right">
                 A mostrar {filteredEntries.length > 0
                     ? (currentPage - 1) * perPage + 1
                     : 0} a {Math.min(currentPage * perPage, totalItems)} de {totalItems}
                 resultados
             </span>
-
             <div class="join mt-2 md:mt-0">
                 <button
                     class="join-item btn btn-sm"
@@ -405,7 +403,6 @@
                     disabled={currentPage === 1}
                     onclick={() => goToPage(currentPage - 1)}>‹</button
                 >
-
                 {#each generatePageNumbers(currentPage, totalPages) as page}
                     {#if page === null}
                         <button class="join-item btn btn-sm btn-disabled"
@@ -420,7 +417,6 @@
                         >
                     {/if}
                 {/each}
-
                 <button
                     class="join-item btn btn-sm"
                     disabled={currentPage === totalPages}
