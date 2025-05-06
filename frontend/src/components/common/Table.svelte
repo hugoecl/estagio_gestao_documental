@@ -1,13 +1,14 @@
 <script lang="ts">
     import type { TableColumn } from "@lib/types/table";
-    import { toSearchString } from "@utils/search-utils"; // Import for searching
+    import { toSearchString } from "@utils/search-utils";
+    import type { Role } from "@lib/types/roles"; // Import Role type
 
-    // Props
+    // Props... (keep existing props)
     let {
-        data, // Expects Record<string, any>
+        data,
         columns,
-        keyField, // Field name containing the unique ID (e.g., 'id')
-        searchFields, // Fields to use for client-side search
+        keyField,
+        searchFields,
         loading = false,
         emptyMessage,
         searchEmptyMessage = "Nenhum resultado encontrado",
@@ -25,12 +26,10 @@
         onRowClick: (id: string, row: any) => void;
     } = $props();
 
-    // Internal State for Search, Sort, Pagination
+    // Internal State... (keep existing state variables: searchQuery, currentPage, etc.)
     let searchQuery = $state("");
     let currentPage = $state(1);
     let perPage = $state(10);
-
-    // Sorting State
     const enum SortDirection {
         NONE,
         ASC,
@@ -39,61 +38,81 @@
     let sortColumn = $state<string | null>(null);
     let sortDirection = $state<SortDirection>(SortDirection.NONE);
 
-    // --- Client-side Filtering ---
+    // Derived Computations... (keep existing derived: filteredEntries, sortedEntries, etc.)
     const filteredEntries = $derived.by(() => {
         const entries = Object.entries(data || {});
-        const query = searchQuery.trim(); // Use internal state
-        if (!query) {
-            return entries; // No filter applied
-        }
+        const query = searchQuery.trim();
+        if (!query) return entries;
         const lowerCaseQuery = toSearchString(query);
 
         return entries.filter(([id, row]) => {
-            // Check ID first
-            if (id.toLowerCase().includes(lowerCaseQuery)) {
-                return true;
-            }
-            // Check against specified search fields
+            if (id.toLowerCase().includes(lowerCaseQuery)) return true;
             for (const fieldPath of searchFields) {
-                const value = getCellValue(row, fieldPath); // Use existing helper
-                if (
-                    value &&
-                    toSearchString(value.toString()).includes(lowerCaseQuery)
-                ) {
-                    return true;
+                // Special handling for roles during search
+                if (fieldPath === "roles" && Array.isArray(row.roles)) {
+                    if (
+                        row.roles.some((role: Role) =>
+                            toSearchString(role.name).includes(lowerCaseQuery),
+                        )
+                    ) {
+                        return true;
+                    }
+                } else {
+                    const value = getCellValue(row, fieldPath);
+                    if (
+                        value &&
+                        toSearchString(value.toString()).includes(
+                            lowerCaseQuery,
+                        )
+                    ) {
+                        return true;
+                    }
                 }
             }
             return false;
         });
     });
 
-    // Reset to first page when search changes
     $effect(() => {
         if (searchQuery !== undefined) {
             currentPage = 1;
         }
     });
 
-    // --- Sorting (Applied to filtered data) ---
     const sortedEntries = $derived.by(() => {
         const entriesToUse = filteredEntries;
-
-        if (sortColumn === null || sortDirection === SortDirection.NONE) {
+        if (sortColumn === null || sortDirection === SortDirection.NONE)
             return entriesToUse;
-        }
         const column = columns.find((col) => col.header === sortColumn);
         if (!column) return entriesToUse;
 
-        const fieldPath = column.field.split(".");
+        // Special sort for roles: sort by the first role name alphabetically
+        if (column.field === "roles") {
+            const sorted = [...entriesToUse].sort(([, rowA], [, rowB]) => {
+                const rolesA = (rowA.roles as Role[]).sort((a, b) =>
+                    a.name.localeCompare(b.name, "pt-PT"),
+                );
+                const rolesB = (rowB.roles as Role[]).sort((a, b) =>
+                    a.name.localeCompare(b.name, "pt-PT"),
+                );
+                const nameA = rolesA[0]?.name ?? "";
+                const nameB = rolesB[0]?.name ?? "";
+                return sortDirection === SortDirection.ASC
+                    ? nameA.localeCompare(nameB, "pt-PT")
+                    : nameB.localeCompare(nameA, "pt-PT");
+            });
+            return sorted;
+        }
 
+        const fieldPath = column.field.split(".");
         const sorted = [...entriesToUse].sort(([, rowA], [, rowB]) => {
             const getValue = (row: any, path: string[]) =>
                 path.reduce((obj, key) => obj?.[key], row);
-
             const valueA = getValue(rowA, fieldPath);
             const valueB = getValue(rowB, fieldPath);
 
             if (column.field === keyField) {
+                // Existing ID sort logic...
                 const numA = parseFloat(rowA[keyField]);
                 const numB = parseFloat(rowB[keyField]);
                 if (!isNaN(numA) && !isNaN(numB)) {
@@ -109,6 +128,7 @@
             }
 
             if (column.dateValueField) {
+                // Existing date sort logic...
                 const datePath = column.dateValueField.split(".");
                 const dateA = getValue(rowA, datePath);
                 const dateB = getValue(rowB, datePath);
@@ -120,11 +140,13 @@
             }
 
             if (typeof valueA === "number" && typeof valueB === "number") {
+                // Existing number sort logic...
                 return sortDirection === SortDirection.ASC
                     ? valueA - valueB
                     : valueB - valueA;
             }
 
+            // Default string sort
             const strA = valueA?.toString() ?? "";
             const strB = valueB?.toString() ?? "";
             return sortDirection === SortDirection.ASC
@@ -134,12 +156,10 @@
         return sorted;
     });
 
-    // --- Pagination (Applied to filtered and sorted data) ---
     const totalItems = $derived(sortedEntries.length);
     const totalPages = $derived(Math.max(1, Math.ceil(totalItems / perPage)));
 
     $effect(() => {
-        // Ensure currentPage is valid after filtering/sorting changes totalPages
         if (currentPage > totalPages) {
             currentPage = totalPages;
         }
@@ -151,7 +171,8 @@
         return sortedEntries.slice(start, end);
     });
 
-    // --- Other Functions ---
+    // --- Helper Functions ---
+    // Keep getSortIndicator, toggleSort, generatePageNumbers, goToPage, handlePerPageChange
     function getSortIndicator(columnHeader: string): string {
         if (sortColumn !== columnHeader) return "";
         return sortDirection === SortDirection.ASC ? "↑" : "↓";
@@ -174,18 +195,11 @@
         current: number,
         total: number,
     ): (number | null)[] {
-        if (total <= 7) {
-            // Show all pages if 7 or less
-            return Array.from({ length: total }, (_, i) => i + 1);
-        }
-        // Logic for more than 7 pages (ellipsis)
-        if (current < 4) {
-            return [1, 2, 3, 4, 5, null, total];
-        } else if (current > total - 3) {
+        if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+        if (current < 4) return [1, 2, 3, 4, 5, null, total];
+        if (current > total - 3)
             return [1, null, total - 4, total - 3, total - 2, total - 1, total];
-        } else {
-            return [1, null, current - 1, current, current + 1, null, total];
-        }
+        return [1, null, current - 1, current, current + 1, null, total];
     }
 
     function goToPage(page: number) {
@@ -196,30 +210,38 @@
 
     function handlePerPageChange(e: Event) {
         const newPerPage =
-            parseInt((e.target as HTMLInputElement).value, 10) || 10;
+            parseInt((e.target as HTMLSelectElement).value, 10) || 10;
         if (newPerPage !== perPage) {
             perPage = newPerPage;
-            currentPage = 1;
+            currentPage = 1; // Reset page when items per page changes
         }
     }
 
+    // Updated getCellValue to handle potential errors and return the value itself
     function getCellValue(row: any, fieldPath: string): any {
         if (typeof row !== "object" || row === null) return "";
         try {
-            if (fieldPath === keyField) {
-                return row[keyField] ?? "";
-            }
-            return (
-                fieldPath.split(".").reduce((obj, key) => obj?.[key], row) ?? ""
-            );
+            // Handle direct access or nested access
+            return fieldPath.split(".").reduce((obj, key) => obj?.[key], row);
         } catch (e) {
             console.error(
                 `Error getting cell value for path "${fieldPath}" in row:`,
                 row,
                 e,
             );
-            return "Error";
+            return "Error"; // Return specific error or empty string
         }
+    }
+
+    // Helper to check if a value is a role array (simple check)
+    function isRoleArray(value: any): value is Role[] {
+        return (
+            Array.isArray(value) &&
+            value.length > 0 &&
+            typeof value[0] === "object" &&
+            value[0] !== null &&
+            "name" in value[0]
+        );
     }
 </script>
 
@@ -258,10 +280,8 @@
                         searchQuery = "";
                     }}
                     title="Limpar pesquisa"
-                    disabled={loading}
+                    disabled={loading}>×</button
                 >
-                    ×
-                </button>
             {/if}
         </div>
     </div>
@@ -289,9 +309,11 @@
                     {#each { length: Math.min(perPage, 5) } as _}
                         <tr>
                             {#each columns as column}
-                                <td class={column.responsive || ""}>
-                                    <div class="skeleton h-4 w-16 my-1"></div>
-                                </td>
+                                <td class={column.responsive || ""}
+                                    ><div
+                                        class="skeleton h-4 w-16 my-1"
+                                    ></div></td
+                                >
                             {/each}
                         </tr>
                     {/each}
@@ -311,19 +333,41 @@
                             onclick={() => onRowClick(id, row)}
                         >
                             {#each columns as column (column.field)}
+                                {@const cellValue = getCellValue(
+                                    row,
+                                    column.field,
+                                )}
                                 <td class={column.responsive || ""}>
-                                    {getCellValue(row, column.field)}
+                                    {#if column.field === "roles" && isRoleArray(cellValue)}
+                                        <!-- Special rendering for roles -->
+                                        {#if cellValue.length > 0}
+                                            {#each cellValue as role (role.id)}
+                                                <span
+                                                    class:badge-primary={role.is_admin}
+                                                    class="badge badge-outline badge-sm mr-1"
+                                                    >{role.name}</span
+                                                >
+                                            {/each}
+                                        {:else}
+                                            <span
+                                                class="text-xs italic text-base-content/50"
+                                                >Nenhuma</span
+                                            >
+                                        {/if}
+                                    {:else}
+                                        <!-- Default rendering -->
+                                        {cellValue ?? ""}
+                                    {/if}
                                 </td>
                             {/each}
                         </tr>
                     {/each}
                 {/if}
             </tbody>
-            <!-- tfoot removed -->
         </table>
     </div>
 
-    <!-- Pagination - Always show if not loading and there are items -->
+    <!-- Pagination -->
     {#if !loading && totalItems > 0}
         <div
             class="flex flex-col md:flex-row justify-between items-center gap-2 p-2 bg-base-200 border-t border-base-content/10"
@@ -346,8 +390,8 @@
             <span class="text-sm text-center md:text-right">
                 A mostrar {filteredEntries.length > 0
                     ? (currentPage - 1) * perPage + 1
-                    : 0}
-                a {Math.min(currentPage * perPage, totalItems)} de {totalItems} resultados
+                    : 0} a {Math.min(currentPage * perPage, totalItems)} de {totalItems}
+                resultados
             </span>
 
             <div class="join mt-2 md:mt-0">

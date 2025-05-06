@@ -1,15 +1,19 @@
 use actix_session::Session;
-use actix_web::{HttpResponse, Responder, web};
+use actix_web::{HttpRequest, HttpResponse, Responder, web};
+use ahash::HashMap;
 use log::error;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     State,
-    auth::validate_session,
-    models::role::UserRoleAssignment,
+    auth::{is_admin, validate_session},
+    models::{
+        role::{Role, UserRoleAssignment},
+        user::{UserRoleRow, UserWithRoles},
+    },
     utils::{
         hashing_utils::{hash, verify},
-        json_utils::{Json, json_response},
+        json_utils::{Json, json_response, json_response_with_etag},
     },
 };
 
@@ -368,6 +372,90 @@ pub async fn assign_roles(
         Err(e) => {
             error!("Database error assigning roles: {}", e);
             HttpResponse::InternalServerError().body("Error assigning roles")
+        }
+    }
+}
+
+pub async fn get_users_with_roles(
+    state: web::Data<State>,
+    session: Session,
+    req: HttpRequest, // Add HttpRequest for ETag
+) -> impl Responder {
+    // Ensure only admins can access this
+    if is_admin(&session).is_err() {
+        return HttpResponse::Forbidden().finish();
+    }
+
+    // Fetch all users and their roles using a LEFT JOIN
+    let rows = sqlx::query_as!(
+        UserRoleRow,
+        r#"
+        SELECT
+            u.id as user_id,
+            u.username,
+            u.email,
+            r.id as role_id,
+            r.name as role_name,
+            r.description as role_description,
+            r.is_admin as "role_is_admin: bool",
+            r.created_at as "role_created_at?: chrono::DateTime<chrono::Utc>",
+            r.updated_at as "role_updated_at?: chrono::DateTime<chrono::Utc>"
+        FROM users u
+        LEFT JOIN user_roles ur ON u.id = ur.user_id
+        LEFT JOIN roles r ON ur.role_id = r.id
+        ORDER BY u.username, r.name
+        "#
+    )
+    .fetch_all(&state.db.pool)
+    .await;
+
+    match rows {
+        Ok(rows) => {
+            // Aggregate results: Group roles by user
+            let mut users_map: HashMap<u32, UserWithRoles> = HashMap::default();
+
+            for row in rows {
+                let user = users_map
+                    .entry(row.user_id)
+                    .or_insert_with(|| UserWithRoles {
+                        id: row.user_id,
+                        username: row.username.clone(),
+                        email: row.email.clone(),
+                        roles: Vec::new(),
+                    });
+
+                // Add role if it exists (due to LEFT JOIN)
+                if let (
+                    Some(role_id),
+                    Some(role_name),
+                    Some(role_created_at),
+                    Some(role_updated_at),
+                    Some(role_is_admin),
+                ) = (
+                    row.role_id,
+                    row.role_name,
+                    row.role_created_at,
+                    row.role_updated_at,
+                    row.role_is_admin,
+                ) {
+                    user.roles.push(Role {
+                        id: role_id,
+                        name: role_name,
+                        description: row.role_description,
+                        is_admin: role_is_admin,
+                        created_at: role_created_at,
+                        updated_at: role_updated_at,
+                    });
+                }
+            }
+
+            // Convert map values to a Vec for the final response
+            let users: Vec<UserWithRoles> = users_map.into_values().collect();
+            json_response_with_etag(&users, &req) // Use ETag response
+        }
+        Err(e) => {
+            error!("Database error fetching users with roles: {}", e);
+            HttpResponse::InternalServerError().body("Error fetching users")
         }
     }
 }

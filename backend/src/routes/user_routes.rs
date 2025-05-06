@@ -14,6 +14,7 @@ pub fn init(cfg: &mut web::ServiceConfig) {
                 "/analytics",
                 web::get().to(user_handlers::get_user_analytics),
             )
+            .route("/all", web::get().to(user_handlers::get_users_with_roles))
             .route("/roles", web::post().to(user_handlers::assign_roles)),
     );
 }
