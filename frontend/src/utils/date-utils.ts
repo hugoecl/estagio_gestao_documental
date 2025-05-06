@@ -13,7 +13,7 @@ export function DMYToDate(date: string): Date {
  */
 export function getFirstDateFromCallyRange(
   dateRange: string,
-  separator: string
+  separator: string,
 ): string {
   const day = dateRange.substring(8, 10);
   const month = dateRange.substring(5, 7);
@@ -26,7 +26,7 @@ export function getFirstDateFromCallyRange(
  */
 export function getSecondDateFromCallyRange(
   dateRange: string,
-  separator: string
+  separator: string,
 ): string {
   const day = dateRange.substring(19, 21);
   const month = dateRange.substring(16, 18);
@@ -40,8 +40,9 @@ export function getSecondDateFromCallyRange(
  */
 export function getFirstDateFromRangeToYMD(
   dateRange: string,
-  separator: string
+  separator: string,
 ): [string, string] {
+  console.log("RANGE:", dateRange);
   const day = dateRange.substring(0, 2);
   const month = dateRange.substring(3, 5);
   const year = dateRange.substring(6, 10);
@@ -53,7 +54,7 @@ export function getFirstDateFromRangeToYMD(
  */
 export function getSecondDateFromRangeToYMD(
   dateRange: string,
-  separator: string
+  separator: string,
 ): string {
   const day = dateRange.substring(13, 15);
   const month = dateRange.substring(16, 18);
