@@ -12,7 +12,7 @@ const { items, isRoot = false } = Astro.props;
 
 <ul
     class:list={[
-        "menu",
+        { menu: isRoot },
         "bg-base-100",
         { "w-full": isRoot },
         { "rounded-box": isRoot },
@@ -27,10 +27,10 @@ const { items, isRoot = false } = Astro.props;
             const path = item.path?.endsWith("/") ? item.path : item.path + "/";
 
             return (
-                <li class="w-full">
+                <li>
                     {hasChildren ? (
-                        <details open={false} class="w-full">
-                            <summary class="text-base-content">
+                        <details open={false}>
+                            <summary>
                                 {item.icon && (
                                     <i class={`fa-solid fa-${item.icon} `} />
                                 )}
@@ -38,17 +38,15 @@ const { items, isRoot = false } = Astro.props;
                             </summary>
                             <Astro.self items={item.children} />
                         </details>
-                    ) : path ? ( // Only render <a> if path is not null (i.e., it's a page)
-                        <a href={path} class="text-base-content">
+                    ) : path ? (
+                        <a href={path}>
                             {item.icon && (
                                 <i class={`fa-solid fa-${item.icon} `} />
                             )}
                             {item.title}
                         </a>
                     ) : (
-                        <span class="text-base-content pl-4 py-2">
-                            {" "}
-                            {/* Fallback for items without path/children - should not happen with groups */}
+                        <span>
                             {item.icon && (
                                 <i class={`fa-solid fa-${item.icon} `} />
                             )}
