@@ -126,10 +126,10 @@
                                     `${ed}/${em}/${ey}`,
                                 ];
                             } else {
-                                valueToSet = [];
+                                valueToSet = null;
                             } // Invalid format
                         } catch {
-                            valueToSet = [];
+                            valueToSet = null;
                         }
                     } else {
                         // For other types, use the raw value (or null if it's undefined/null)

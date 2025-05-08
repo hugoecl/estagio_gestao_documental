@@ -42,7 +42,6 @@ export function getFirstDateFromRangeToYMD(
   dateRange: string,
   separator: string,
 ): [string, string] {
-  console.log("RANGE:", dateRange);
   const day = dateRange.substring(0, 2);
   const month = dateRange.substring(3, 5);
   const year = dateRange.substring(6, 10);
@@ -93,4 +92,12 @@ export function DMYHMSToDate(date: string): Date {
   const minute = date.substring(15, 17);
   const second = date.substring(18, 20);
   return new Date(+year, +month - 1, +day, +hour, +minute, +second);
+}
+
+export function DMYToYMD(date: string, sep: string): string {
+  const day = date.substring(0, 2);
+  const month = date.substring(3, 5);
+  const year = date.substring(6, 10);
+
+  return `${year}${sep}${month}${sep}${day}`;
 }
