@@ -47,6 +47,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
         isAuthenticated = true;
         const data: CheckAuthResponse = await response.json();
         isSessionAdmin = data.isAdmin; // General admin status
+        context.locals.isAdmin = isSessionAdmin;
         // If it was the edit page route, check the specific permission
         if (isAdminEditPageRoute) {
           canManageCurrentPage = data.canManageThisPage ?? false;
