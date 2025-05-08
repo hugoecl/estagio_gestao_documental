@@ -89,7 +89,10 @@
                 value &&
                 /^\d{2}\/\d{2}\/\d{4}$/.test(value)
             ) {
-                const [firstYMD, year] = getFirstDateFromRangeToYMD(value, "/");
+                console.log("value:", value);
+                // const [firstYMD, year] = getFirstDateFromRangeToYMD(value, "/");
+                const firstYMD = DMYToYMD(value, "-");
+                const year = value.substring(6, 10);
                 if (yearSelectElement && yearSelectElement.value !== year)
                     yearSelectElement.value = year;
                 if (calendar && calendar.value !== firstYMD) {
