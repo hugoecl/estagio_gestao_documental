@@ -1,0 +1,24 @@
+{
+  "db_name": "MySQL",
+  "query": "\n        SELECT COUNT(*) as count\n        FROM user_roles ur\n        LEFT JOIN roles r ON r.id = ur.role_id\n        LEFT JOIN page_permissions pp ON pp.role_id = ur.role_id AND pp.page_id = ?\n        WHERE ur.user_id = ? AND (r.is_admin = 1 OR pp.can_manage_fields = 1)\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count",
+        "type_info": {
+          "type": "LongLong",
+          "flags": "NOT_NULL | BINARY",
+          "max_size": 21
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "7a28d0ce347fcdcd9289c4cfafc7ab07b057465db4b1fd0609ccb0a1c0d200ab"
+}

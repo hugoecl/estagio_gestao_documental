@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "\n            INSERT INTO custom_pages (name, path, parent_path, is_group, description, icon)\n            VALUES (?, ?, ?, ?, ?, ?)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "5af144a5deb2915efa00aa33a258956faf29e3f7d81d6e56d7179f8a2fe3a76e"
+}

@@ -1,4 +1,5 @@
 // TODO: See about running the schema on build.rs
+// TODO: Benchmark web::Bytes and sonic vs web::Json and serde_json
 
 #[cfg(feature = "https")]
 use std::{fs::File, io::BufReader};
@@ -10,7 +11,6 @@ use actix_web::{
     cookie::{Key, time::Duration},
     web,
 };
-use cache::Cache;
 use mimalloc::MiMalloc;
 
 #[global_allocator]
@@ -18,7 +18,7 @@ static GLOBAL: MiMalloc = MiMalloc;
 
 const SECS_IN_WEEK: i64 = 60 * 60 * 24 * 7;
 
-mod cache;
+mod auth;
 mod db;
 mod handlers;
 mod macros;
@@ -35,7 +35,6 @@ use rustls_pemfile::{certs, pkcs8_private_keys};
 
 struct State {
     db: Db,
-    cache: Cache,
 }
 
 #[derive(argh::FromArgs)]
@@ -73,21 +72,15 @@ struct CliArgs {
 async fn main() -> std::io::Result<()> {
     let args: CliArgs = argh::from_env();
 
-    let (db, cache) = match Db::new().await {
-        Ok(db) => match Cache::new(&db.pool).await {
-            Ok(cache) => (db, cache),
-            Err(e) => {
-                eprintln!("Failed to create cache: {e:?}");
-                return Ok(());
-            }
-        },
+    let db = match Db::new().await {
+        Ok(db) => db,
         Err(e) => {
             eprintln!("Failed to connect to the database: {e:?}");
             return Ok(());
         }
     };
 
-    let state = web::Data::new(State { db, cache });
+    let state = web::Data::new(State { db });
 
     #[cfg(feature = "https")]
     let protocol = if args.https { "https" } else { "http" };

@@ -1,0 +1,93 @@
+---
+import Layout from "@layouts/Layout.astro";
+import DynamicRecordPage from "@components/dynamic/DynamicRecordPage.svelte";
+import { getCustomPageByPath } from "@api/custom-pages-api";
+import type { CustomPageWithFields } from "@lib/types/custom-page";
+
+const { slug } = Astro.params;
+const path = `/${slug || ""}`; // Ensure leading slash, handle root case if necessary
+
+let pageDefinition: CustomPageWithFields | null = null;
+let error: string | null = null;
+let status = 200;
+
+// --- Backend Endpoint Assumption ---
+// This assumes your backend will have an endpoint like /custom_pages/by-path/{full_path}
+// that returns the CustomPageWithFields structure including the current user's permissions.
+// If not, this fetching logic needs adjustment based on your actual backend capabilities.
+// It might involve fetching the page ID first, then permissions separately.
+// For now, we proceed with the ideal scenario.
+
+try {
+    // Ensure path ends with a slash for consistency with backend/menu
+    const requestPath = path.endsWith("/") ? path : `${path}/`;
+    pageDefinition = await getCustomPageByPath(
+        requestPath,
+        Astro.request.headers.get("cookie") ?? undefined,
+    );
+
+    if (!pageDefinition) {
+        error = "SLUG Página não encontrada.";
+        status = 404;
+    } else {
+        // TODO: Check pageDefinition.currentUserPermissions.can_view
+        // If the backend doesn't filter, you might need an extra check here.
+        // For now, assume if we get a definition, we have view permission.
+    }
+} catch (e: any) {
+    console.error(`Error fetching page data for ${path}:`, e);
+    error = `Erro ao carregar a página: ${e.message || "Erro desconhecido"}`;
+    status = 500;
+    // Potentially check for specific error types like 401/403
+    if (e.message?.includes("401") || e.message?.includes("403")) {
+        status = 403; // Or redirect to login
+        error = "Não tem permissão para aceder a esta página.";
+    } else if (e.message?.includes("404")) {
+        status = 404;
+        error = "Página não encontrada.";
+    }
+}
+
+// Handle errors or not found
+if (status !== 200) {
+    // Option 1: Redirect to 404 (cleaner)
+    // return Astro.redirect('/404');
+
+    // Option 2: Render an error message within the layout
+    // Set response status code
+    Astro.response.status = status;
+}
+
+const pageTitle =
+    pageDefinition?.page.name || (status === 404 ? "Não Encontrado" : "Erro");
+---
+
+<Layout title={`${pageTitle} | Gestão Documental`}>
+    {
+        status !== 200 && (
+            <div class="alert alert-error shadow-lg">
+                <div>
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="stroke-current flex-shrink-0 h-6 w-6"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                    </svg>
+                    <span>{error}</span>
+                </div>
+            </div>
+        )
+    }
+    {
+        status === 200 && pageDefinition && (
+            <DynamicRecordPage client:load pageDefinition={pageDefinition} />
+        )
+    }
+</Layout>

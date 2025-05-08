@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "\n                    INSERT INTO user_page_analytics (user_id, page_path, visit_count, last_visited_at)\n                    VALUES (?, ?, ?, ?)\n                    ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "55b7a371b35001542d789a3190e9d37109cdb3ac0461d15aad198dec49bd591f"
+}

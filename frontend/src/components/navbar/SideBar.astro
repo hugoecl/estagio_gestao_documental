@@ -2,17 +2,49 @@
 import { Image } from "astro:assets";
 import jccBigLogo from "@assets/jcc_big.svg";
 import RecursiveMenu from "@components/navbar/RecursiveMenu.astro";
-import { menuItems } from "@utils/route-utils";
+import { getNavigationMenu } from "@api/custom-pages-api";
+import type { NavigationItem } from "@lib/types/custom-page";
+import { updatePathNames } from "@utils/route-utils"; // Import the update function
+
+let menuItems: NavigationItem[] = [];
+let error: string | null = null; // Explicitly type error as string | null
+
+try {
+  // Fetch menu items on the server during build/request
+  // Pass the cookie from the request headers
+  const cookie = Astro.request.headers.get("cookie") ?? undefined;
+  menuItems = await getNavigationMenu(cookie);
+  // Update the globally accessible pathNames mapping
+  updatePathNames(menuItems);
+} catch (e: any) { // Catch any error
+  console.error("Failed to load navigation menu:", e);
+  error = "Falha ao carregar o menu de navegação."; // Set error message
+  // Decide how to handle error: show message, empty menu, etc.
+}
 ---
 
-<main class="w-100">
+<main class="">
   <aside class="sidebar bg-base-200" transition:persist="true">
     <a href="/" class="sidebar__header">
       <Image height="100" src={jccBigLogo} alt="JCC" />
       <h1 class="sidebar__title font-bold">Gestão Documental</h1>
     </a>
     <nav>
-      <RecursiveMenu items={menuItems} isRoot={true} />
+      {/* Conditional Rendering using JSX-like syntax */}
+      {error && (
+        <div class="p-4 text-error">{error}</div>
+      )}
+
+      {!error && menuItems.length > 0 && (
+        <RecursiveMenu items={menuItems} isRoot={true} />
+      )}
+
+      {!error && menuItems.length === 0 && (
+        <div class="p-4 text-base-content/70">Nenhum item de menu disponível.</div>
+        <ul class="menu bg-base-100 border border-zinc-200 rounded-box w-56">
+            <li><a href="/">Início</a></li>
+        </ul>
+      )}
     </nav>
   </aside>
 </main>
@@ -20,11 +52,18 @@ import { menuItems } from "@utils/route-utils";
 <style>
   .sidebar {
     height: 100vh;
-    position: absolute;
     padding: 16px;
     overflow-y: auto;
-    z-index: 40;
+    z-index: 400; /* Ensure it's above content if overlapping */
+    width: 100%; /* Ensure it takes full width in drawer */
   }
+
+   @media (min-width: 1024px) { /* lg breakpoint */
+       .sidebar {
+           width: 255px; /* Fixed width on large screens */
+       }
+   }
+
 
   .sidebar__header {
     display: flex;
@@ -35,6 +74,6 @@ import { menuItems } from "@utils/route-utils";
   }
 
   .sidebar__title {
-    font-size: 24px;
+    font-size: 20px;
   }
 </style>

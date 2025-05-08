@@ -1,49 +1,62 @@
 ---
-import type { MenuItem } from "@lib/types/menu";
+// src/components/navbar/RecursiveMenu.astro
+import type { NavigationItem } from "@lib/types/custom-page";
 
 interface Props {
-  items: MenuItem[];
-  isRoot?: boolean;
-  parentPath?: string;
+    items: NavigationItem[];
+    isRoot?: boolean;
 }
 
-const { items, isRoot = false, parentPath = "" } = Astro.props;
-
-function buildPath(item: MenuItem, parentPath: string): string {
-  if ("path" in item && item.path) {
-    // If path starts with "/", it's absolute
-    return item.path.startsWith("/") ? item.path : `${parentPath}/${item.path}`;
-  }
-  return "#";
-}
+const { items, isRoot = false } = Astro.props;
 ---
 
 <ul
-  class:list={{
-    "menu bg-base-100 border border-zinc-200 rounded-box w-56": isRoot,
-  }}
+    class:list={[
+        "menu",
+        "bg-base-100",
+        { "w-full": isRoot },
+        { "rounded-box": isRoot },
+        { "border border-base-content/10": isRoot },
+    ]}
 >
-  {
-    items.map((item) => {
-      const currentPath =
-        "parentPath" in item && item.parentPath
-          ? parentPath
-            ? `${parentPath}/${item.parentPath}`
-            : item.parentPath
-          : parentPath;
+    {
+        items.map((item) => {
+            const hasChildren = item.children && item.children.length > 0;
+            // The `item.path` from backend NavigationItem is None for groups,
+            // and a direct, correctly formatted path for pages.
+            const path = item.path?.endsWith("/") ? item.path : item.path + "/";
 
-      return (
-        <li>
-          {item.children ? (
-            <details>
-              <summary>{item.title}</summary>
-              <Astro.self items={item.children} parentPath={currentPath} />
-            </details>
-          ) : (
-            <a href={buildPath(item, currentPath)}>{item.title}</a>
-          )}
-        </li>
-      );
-    })
-  }
+            return (
+                <li class="w-full">
+                    {hasChildren ? (
+                        <details open={false} class="w-full">
+                            <summary class="text-base-content">
+                                {item.icon && (
+                                    <i class={`fa-solid fa-${item.icon} `} />
+                                )}
+                                {item.title}
+                            </summary>
+                            <Astro.self items={item.children} />
+                        </details>
+                    ) : path ? ( // Only render <a> if path is not null (i.e., it's a page)
+                        <a href={path} class="text-base-content">
+                            {item.icon && (
+                                <i class={`fa-solid fa-${item.icon} `} />
+                            )}
+                            {item.title}
+                        </a>
+                    ) : (
+                        <span class="text-base-content pl-4 py-2">
+                            {" "}
+                            {/* Fallback for items without path/children - should not happen with groups */}
+                            {item.icon && (
+                                <i class={`fa-solid fa-${item.icon} `} />
+                            )}
+                            {item.title} (Grupo sem link direto)
+                        </span>
+                    )}
+                </li>
+            );
+        })
+    }
 </ul>

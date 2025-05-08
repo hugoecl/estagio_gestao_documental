@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "\n            INSERT INTO page_fields (\n                page_id, name, display_name, field_type_id, required, \n                options, validation_name, is_searchable, is_displayed_in_table, order_index\n            )\n            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 10
+    },
+    "nullable": []
+  },
+  "hash": "894674420bf2c0e1bcbcad01daf251830b502014257ac943b67036ee842add87"
+}

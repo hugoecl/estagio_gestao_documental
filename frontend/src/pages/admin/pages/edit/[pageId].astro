@@ -1,0 +1,22 @@
+---
+import Layout from "@layouts/Layout.astro";
+import EditPageForm from "@components/admin/EditPageForm.svelte";
+
+const { pageId } = Astro.params;
+const pageIdNum = parseInt(pageId || "", 10);
+
+// Basic validation - redirect if ID is not a number
+if (isNaN(pageIdNum)) {
+    return Astro.redirect("/admin/pages/");
+}
+---
+
+<Layout title={`Editar Página #${pageIdNum}`}>
+    <div class="flex justify-between items-center mb-4">
+        <h1 class="text-2xl font-bold">Editar Página Dinâmica #{pageIdNum}</h1>
+        <a href="/admin/pages/" class="btn btn-sm btn-ghost">
+            <i class="fa-solid fa-arrow-left mr-2"></i> Voltar à Lista
+        </a>
+    </div>
+    <EditPageForm pageId={pageIdNum} client:load />
+</Layout>
