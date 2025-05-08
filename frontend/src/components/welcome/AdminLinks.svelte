@@ -19,7 +19,7 @@
             {#each adminLinks as link}
                 <a
                     href={link.href}
-                    class="btn btn-outline flex items-center justify-start gap-2"
+                    class="btn btn-outline flex items-center justify-start gap-2 hover:bg-primary hover:text-primary-content"
                 >
                     <i class="fa-solid fa-{link.icon} w-4 text-center"></i>
                     <span class="truncate">{link.title}</span>
