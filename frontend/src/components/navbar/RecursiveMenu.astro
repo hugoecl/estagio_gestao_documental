@@ -22,10 +22,9 @@ const { items, isRoot = false } = Astro.props;
     {
         items.map((item) => {
             const hasChildren = item.children && item.children.length > 0;
-            const path =
-                !hasChildren && item.path!.endsWith("/")
-                    ? item.path
-                    : `${item.path}/`;
+            // The `item.path` from backend NavigationItem is None for groups,
+            // and a direct, correctly formatted path for pages.
+            const path = item.path?.endsWith("/") ? item.path : item.path + "/";
 
             return (
                 <li class="w-full">
@@ -39,13 +38,22 @@ const { items, isRoot = false } = Astro.props;
                             </summary>
                             <Astro.self items={item.children} />
                         </details>
-                    ) : (
+                    ) : path ? ( // Only render <a> if path is not null (i.e., it's a page)
                         <a href={path} class="text-base-content">
                             {item.icon && (
                                 <i class={`fa-solid fa-${item.icon} `} />
                             )}
                             {item.title}
                         </a>
+                    ) : (
+                        <span class="text-base-content pl-4 py-2">
+                            {" "}
+                            {/* Fallback for items without path/children - should not happen with groups */}
+                            {item.icon && (
+                                <i class={`fa-solid fa-${item.icon} `} />
+                            )}
+                            {item.title} (Grupo sem link direto)
+                        </span>
                     )}
                 </li>
             );

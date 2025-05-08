@@ -380,122 +380,117 @@ impl CustomPage {
     // Updated get_navigation_menu
     pub async fn get_navigation_menu(
         pool: &sqlx::MySqlPool,
-        user_id: i32, // Pass user_id
+        user_id: i32,
     ) -> Result<Vec<NavigationItem>, sqlx::Error> {
-        // 1. Fetch ALL pages/groups initially
-        let all_items_raw = sqlx::query_as!(
+        // 1. Fetch ALL pages/groups initially, ordered to help with tree construction
+        let all_db_items = sqlx::query_as!(
             CustomPage,
             r#"
-                SELECT
-                    id, name, path, parent_path, is_group as "is_group: bool", description,
-                    icon, created_at as "created_at!", updated_at as "updated_at!"
-                FROM custom_pages
-                ORDER BY parent_path, name
-                "#
+            SELECT
+                id, name, path, parent_path, is_group as "is_group: bool", description,
+                icon, created_at as "created_at!", updated_at as "updated_at!"
+            FROM custom_pages
+            ORDER BY parent_path IS NULL DESC, parent_path ASC, name ASC
+            "# // Order by parent_path (nulls first), then by parent_path itself, then name
         )
         .fetch_all(pool)
         .await?;
 
-        // 2. Fetch IDs of pages the user CAN view
+        // 2. Fetch IDs of pages the user CAN view (non-groups only)
         let viewable_page_ids: HashSet<u32> = sqlx::query_scalar!(
             r#"
-                SELECT DISTINCT cp.id
-                FROM custom_pages cp
-                JOIN page_permissions pp ON cp.id = pp.page_id
-                JOIN user_roles ur ON pp.role_id = ur.role_id
-                WHERE ur.user_id = ? AND pp.can_view = 1 AND cp.is_group = 0
-                "#,
+            SELECT DISTINCT cp.id
+            FROM custom_pages cp
+            LEFT JOIN page_permissions pp ON cp.id = pp.page_id
+            LEFT JOIN user_roles ur ON pp.role_id = ur.role_id AND ur.user_id = ?
+            LEFT JOIN roles ro ON ur.role_id = ro.id
+            WHERE
+                cp.is_group = 0 AND (ro.is_admin = 1 OR pp.can_view = 1)
+            "#,
             user_id
         )
         .fetch_all(pool)
         .await?
         .into_iter()
+        .filter_map(|id_opt| Some(id_opt)) // Filter out potential NULLs from LEFT JOIN if any (though DISTINCT cp.id should handle)
         .collect();
 
         // 3. Check if user is admin
         let is_admin = sqlx::query_scalar!(
-                "SELECT EXISTS(SELECT 1 FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = ? AND r.is_admin = 1)",
-                user_id
-            ).fetch_one(pool).await? == 1;
+            "SELECT EXISTS(SELECT 1 FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = ? AND r.is_admin = 1)",
+            user_id
+        )
+        .fetch_one(pool)
+        .await? == 1;
 
-        // 4. Build initial map of all potential navigation items
-        let mut items_map: HashMap<u32, NavigationItem> = HashMap::new();
-        let mut children_map: HashMap<Option<String>, Vec<u32>> = HashMap::new(); // Map parent_path -> Vec<child_id>
+        // 4. Build a map of all items by their `path` (for groups) or `id` (for pages)
+        // and a map for children lookup: parent_path -> Vec<NavigationItem>
+        let mut items_by_path = HashMap::new(); // Keyed by their own path (used for parent lookup)
+        let mut items_by_id = HashMap::new(); // Keyed by ID (for direct page lookup)
 
-        for item_raw in all_items_raw {
-            let item_id = item_raw.id;
+        for db_item in all_db_items {
             let nav_item = NavigationItem {
-                id: item_id,                 // Store ID
-                is_group: item_raw.is_group, // Store is_group
-                title: item_raw.name.clone(),
-                path: if item_raw.is_group {
+                id: db_item.id,
+                is_group: db_item.is_group,
+                title: db_item.name.clone(),
+                // For pages, path is its own path. For groups, path is None in NavItem,
+                // but we use db_item.path for structuring.
+                path: if db_item.is_group {
                     None
                 } else {
-                    Some(item_raw.path.clone())
+                    Some(db_item.path.clone())
                 },
-                parent_db_path: item_raw.parent_path.clone(),
-                db_path: item_raw.path.clone(),
-                icon: item_raw.icon.clone(),
+                parent_db_path: db_item.parent_path.clone(), // Store the DB parent_path
+                db_path: db_item.path.clone(),               // Store the DB path for grouping
+                icon: db_item.icon.clone(),
                 children: Vec::new(),
             };
-            items_map.insert(item_id, nav_item);
-            children_map
-                .entry(item_raw.parent_path)
-                .or_default()
-                .push(item_id);
+            items_by_path.insert(db_item.path.clone(), nav_item.clone());
+            items_by_id.insert(db_item.id, nav_item);
         }
 
-        // 5. Recursive function to build the filtered tree
-        fn build_filtered_tree(
-            parent_db_path: Option<&str>, // The DB path of the parent
-            items_map: &HashMap<u32, NavigationItem>,
-            children_map: &HashMap<Option<String>, Vec<u32>>,
+        // 5. Recursive function to build and filter the tree
+        fn build_tree_level(
+            current_parent_db_path: Option<&String>, // The DB path of the parent we are looking for children of
+            all_items: &HashMap<u32, NavigationItem>, // All items by ID
             viewable_page_ids: &HashSet<u32>,
             is_admin: bool,
         ) -> Vec<NavigationItem> {
-            let parent_key = parent_db_path.map(String::from); // Key for children_map
-            let mut visible_children: Vec<NavigationItem> = Vec::new();
+            let mut level_children: Vec<NavigationItem> = Vec::new();
 
-            if let Some(child_ids) = children_map.get(&parent_key) {
-                for child_id in child_ids {
-                    if let Some(child_item_template) = items_map.get(child_id) {
-                        let mut current_child = child_item_template.clone(); // Clone to modify children
+            for (_id, item_template) in all_items {
+                // Match parent
+                if item_template.parent_db_path.as_ref() == current_parent_db_path {
+                    let mut current_nav_item = item_template.clone();
 
-                        if current_child.is_group {
-                            // It's a group: Recursively build its children
-                            let grandchildren = build_filtered_tree(
-                                Some(&current_child.db_path), // Use group's db_path as parent for next level
-                                items_map,
-                                children_map,
-                                viewable_page_ids,
-                                is_admin,
-                            );
-
-                            // Only include the group if it has visible children OR if the user is admin
-                            if !grandchildren.is_empty() || is_admin {
-                                current_child.children = grandchildren;
-                                visible_children.push(current_child);
-                            }
-                        } else {
-                            // It's a page: Check view permission
-                            if is_admin || viewable_page_ids.contains(&current_child.id) {
-                                visible_children.push(current_child); // Add the page
-                            }
+                    if current_nav_item.is_group {
+                        // It's a group, recursively find its children
+                        let grandchildren = build_tree_level(
+                            Some(&current_nav_item.db_path), // Children of this group
+                            all_items,
+                            viewable_page_ids,
+                            is_admin,
+                        );
+                        // A group is visible if it's admin OR it has visible children
+                        if is_admin || !grandchildren.is_empty() {
+                            current_nav_item.children = grandchildren;
+                            level_children.push(current_nav_item);
+                        }
+                    } else {
+                        // It's a page, check direct view permission
+                        if is_admin || viewable_page_ids.contains(&current_nav_item.id) {
+                            level_children.push(current_nav_item);
                         }
                     }
                 }
             }
-            visible_children // Return the filtered children for this level
+            // Sort children at this level by title (or other criteria if needed)
+            level_children.sort_by(|a, b| a.title.cmp(&b.title));
+            level_children
         }
 
-        // Start building the filtered tree from the root (parent_path is None)
-        let root_items = build_filtered_tree(
-            None,
-            &items_map,
-            &children_map,
-            &viewable_page_ids,
-            is_admin,
-        );
+        // Start building from the root (items with parent_db_path = None)
+        let root_items = build_tree_level(None, &items_by_id, &viewable_page_ids, is_admin);
 
         Ok(root_items)
     }
