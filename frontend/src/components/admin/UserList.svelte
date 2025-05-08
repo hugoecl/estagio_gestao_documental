@@ -25,11 +25,14 @@
         { header: "ID", field: "id" },
         { header: "Nome Utilizador", field: "username" },
         { header: "Email", field: "email" },
-        { header: "Funções", field: "roles" },
     ];
 
-    onMount(async () => {
+    // --- Renamed Function to Load Data ---
+    async function loadUsersAndRoles() {
+        isLoading = true;
+        error = null;
         try {
+            // Fetch both users and roles
             const [usersArray, rolesArray] = await Promise.all([
                 getUsersWithRoles(),
                 getRoles(),
@@ -39,14 +42,20 @@
             usersArray.forEach((user) => {
                 usersRecord[user.id.toString()] = user;
             });
-            users = usersRecord;
-            allRoles = rolesArray;
+            users = usersRecord; // Update users state
+            allRoles = rolesArray; // Update roles state
         } catch (e: any) {
             error = `Erro ao carregar utilizadores ou funções: ${e.message}`;
             showAlert(error, AlertType.ERROR, AlertPosition.TOP);
         } finally {
             isLoading = false;
         }
+    }
+
+    // --- End Renamed Function ---
+
+    onMount(async () => {
+        await loadUsersAndRoles(); // Call the combined loading function on mount
     });
 
     // --- Updated handleRowClick ---
@@ -62,13 +71,22 @@
             );
         }
     }
-    // --- End Update ---
 
     function handleRolesUpdated(userId: number, updatedRoles: Role[]) {
         if (users[userId.toString()]) {
             users[userId.toString()].roles = updatedRoles;
             users = { ...users }; // Trigger reactivity
         }
+    }
+
+    // Function to refresh the list, exposed globally
+    async function refreshUserList() {
+        // console.log("Refreshing user list..."); // Optional log
+        await loadUsersAndRoles(); // Call the renamed data loading function
+    }
+    if (typeof window !== "undefined") {
+        // Make sure the type definition includes the global function if using strict TS
+        (window as any).refreshUserList = refreshUserList;
     }
 </script>
 

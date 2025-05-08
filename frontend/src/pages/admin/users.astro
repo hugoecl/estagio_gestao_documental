@@ -1,19 +1,40 @@
 ---
 import Layout from "@layouts/Layout.astro";
 import UserList from "@components/admin/UserList.svelte"; // Import the list component
+import CreateUserModal from "@components/admin/CreateUserModal.svelte";
 ---
 
 <Layout title="Gerir Utilizadores">
     <div class="flex justify-between items-center mb-4">
         <h1 class="text-2xl font-bold">Gerir Utilizadores</h1>
-        <!-- Add Create User button/link if needed -->
-        <!-- <a href="/admin/users/create/" class="btn btn-primary">
+        <button id="create-user-button" class="btn btn-primary">
             <i class="fa-solid fa-plus mr-2"></i> Criar Utilizador
-        </a> -->
+        </button>
     </div>
     <div
         class="bg-base-100 rounded-lg shadow-md border border-base-content/10 overflow-hidden p-4"
     >
         <UserList client:load />
+        <CreateUserModal client:load />
     </div>
 </Layout>
+
+<script>
+    // Script to trigger the modal opening from the Astro page button
+    document.addEventListener("astro:page-load", () => {
+        if (window.location.pathname !== "/admin/users/") return;
+
+        const createButton = document.getElementById("create-user-button");
+
+        createButton?.addEventListener("click", () => {
+            // Assuming CreateUserModal exposes openModal globally
+            if (window.openCreateUserModal) {
+                window.openCreateUserModal();
+            } else {
+                console.error(
+                    "openCreateUserModal function not found on window.",
+                );
+            }
+        });
+    });
+</script>
