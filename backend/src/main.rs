@@ -7,11 +7,16 @@ use std::{fs::File, io::BufReader};
 use actix_cors::Cors;
 use actix_session::{SessionMiddleware, config::PersistentSession, storage::CookieSessionStore};
 use actix_web::{
-    App, HttpServer,
-    cookie::{Key, time::Duration},
+    App,
+    HttpServer,
+    cookie::{Key, time::Duration as ActixDuration}, // Rename to avoid clash with tokio::time::Duration
+    rt::spawn,                                      // Import spawn
     web,
 };
 use mimalloc::MiMalloc;
+use tokio::time::{Duration as TokioDuration, interval}; // Import interval and Duration
+
+use crate::services::notification_service::check_expiring_date_ranges; // Import the check function
 
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
@@ -24,7 +29,8 @@ mod handlers;
 mod macros;
 mod models;
 mod routes;
-mod utils;
+mod services;
+mod utils; // Declare the services module
 
 use db::Db;
 
@@ -82,6 +88,21 @@ async fn main() -> std::io::Result<()> {
 
     let state = web::Data::new(State { db });
 
+    // --- Spawn Notification Check Task ---
+    let state_clone = state.clone(); // Clone state for the background task
+    spawn(async move {
+        let mut timer = interval(TokioDuration::from_secs(10)); // 1 hour interval
+        log::info!("Notification check service started.");
+        loop {
+            timer.tick().await; // Wait for the next interval
+            log::debug!("Running hourly notification check...");
+            // Execute the check logic, passing the cloned pool
+            check_expiring_date_ranges(&state_clone.db.pool).await;
+            log::debug!("Hourly notification check finished.");
+        }
+    });
+    // --- End Notification Check Task ---
+
     #[cfg(feature = "https")]
     let protocol = if args.https { "https" } else { "http" };
     #[cfg(not(feature = "https"))]
@@ -114,7 +135,7 @@ async fn main() -> std::io::Result<()> {
                 .cookie_http_only(false)
                 .cookie_same_site(actix_web::cookie::SameSite::Strict)
                 .session_lifecycle(
-                    PersistentSession::default().session_ttl(Duration::seconds(SECS_IN_WEEK)),
+                    PersistentSession::default().session_ttl(ActixDuration::seconds(SECS_IN_WEEK)),
                 )
                 .build()
         } else {
@@ -131,7 +152,7 @@ async fn main() -> std::io::Result<()> {
                 .cookie_http_only(true)
                 .cookie_same_site(actix_web::cookie::SameSite::Lax)
                 .session_lifecycle(
-                    PersistentSession::default().session_ttl(Duration::seconds(SECS_IN_WEEK)),
+                    PersistentSession::default().session_ttl(ActixDuration::seconds(SECS_IN_WEEK)),
                 )
                 .build()
         };

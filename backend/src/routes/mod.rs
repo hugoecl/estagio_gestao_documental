@@ -8,6 +8,7 @@ pub mod field_routes;
 pub mod record_routes;
 pub mod role_routes;
 pub mod user_routes;
+pub mod notification_routes; // Add the new module
 
 #[get("/{filename:.*}")]
 async fn serve_files(req: HttpRequest, session: Session) -> Result<actix_files::NamedFile, Error> {
@@ -31,6 +32,7 @@ pub fn init(cfg: &mut web::ServiceConfig) {
     field_routes::init(cfg);
     role_routes::init(cfg);
     record_routes::init(cfg);
+    notification_routes::init(cfg); // Initialize the notification routes
 
     cfg.service(serve_files);
 }

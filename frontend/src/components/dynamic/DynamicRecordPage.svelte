@@ -419,21 +419,7 @@
                                 ? null
                                 : parseFloat(value);
                         if (value !== null && isNaN(value)) value = null; // Ensure null if parse fails
-                    } else if (
-                        intendedType === "DATE_RANGE" &&
-                        Array.isArray(value)
-                    ) {
-                        const [startStr, endStr] = value;
-                        const formatDate = (dmy: string) => {
-                            if (!dmy || !/^\d{2}\/\d{2}\/\d{4}$/.test(dmy))
-                                return null;
-                            const [d, m, y] = dmy.split("/");
-                            return `${y}-${m}-${d}`;
-                        };
-                        const start = formatDate(startStr);
-                        const end = formatDate(endStr);
-                        value = start && end ? { start, end } : null;
-                    } else if (
+                    } else if ( // Keep the else if structure, but handle DATE next
                         intendedType === "DATE" &&
                         typeof value === "string"
                     ) {

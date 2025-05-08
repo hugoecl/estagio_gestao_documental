@@ -64,6 +64,9 @@ pub struct CreatePageFieldRequest {
     pub is_searchable: bool,
     pub is_displayed_in_table: bool,
     pub order_index: u32,
+    pub notification_enabled: Option<bool>, // New field
+    pub notification_days_before: Option<u32>, // New field
+    pub notification_target_date_part: Option<String>, // New field
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
@@ -244,7 +247,7 @@ impl CustomPage {
 
         let mut fields = Vec::new();
         let mut permissions = Vec::new();
-        let mut current_user_permissions = None; // Initialize
+        // current_user_permissions will be calculated later
 
         let can_view_this = auth::user_can_view_page(pool, user_id, page_id).await?;
         if !can_view_this {
@@ -271,28 +274,27 @@ impl CustomPage {
             .fetch_all(pool)
             .await?;
 
-            // Fetch current user's specific permissions for this page
-            current_user_permissions =
-                Some(Self::get_user_permissions_for_page(pool, user_id, page_id).await?);
+            // Permissions will be calculated below
+        }
+        // No need to calculate permissions within the `if` block anymore
+
+        // Calculate current_user_permissions directly based on whether it's a group
+        let final_user_permissions = if !page.is_group {
+             Some(Self::get_user_permissions_for_page(pool, user_id, page_id).await?)
         } else {
-            // For groups, check if the user is admin (admins can see everything)
-            // Non-admins might see groups if they have children they can view (handled in menu)
-            // For the get_by_id endpoint, maybe just return basic admin status for groups?
-            let is_admin = sqlx::query_scalar!(
+             let is_admin = sqlx::query_scalar!(
                  "SELECT EXISTS(SELECT 1 FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = ? AND r.is_admin = 1)",
                  user_id
              ).fetch_one(pool).await? == 1;
-            current_user_permissions = Some(UserPagePermissions {
-                is_admin,
-                ..Default::default()
-            });
-        }
+             Some(UserPagePermissions { is_admin, ..Default::default() })
+        };
+
 
         Ok(CustomPageWithFields {
             page,
             fields,
             permissions,
-            current_user_permissions,
+            current_user_permissions: final_user_permissions,
         })
     }
 
