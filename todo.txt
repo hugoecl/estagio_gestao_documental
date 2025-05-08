@@ -1,0 +1,11 @@
+Ver quem tem acesso ao servidor
+
+Adicionar notificações para validades ou seja cada campo de validade vai passar a ter mais uma opção para notificação(se é para
+notificar ou nao e com quanto tempo de antecedencia)
+
+Administrador e cargo com nivel poderem enviar mensagem para todos que aparece na notificação
+
+administrador criar perfeis
+
+
+Adicionar tipo de pagina que é comunicação. O admin vai adicionado documentos de "comunicação" (que serão notificados) e aparecem em primeiro, quando utilizador clica para abrir o documento, aprece um aviso a dizer "ao abrir este registo assino que tomo conhecimento, etc.". Depois admin consegue ver quem viu o documento
