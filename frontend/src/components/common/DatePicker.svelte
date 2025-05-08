@@ -84,33 +84,50 @@
                     previousCallyValue = result;
                 }
                 return result;
-            } else if (
-                typeof value === "string" &&
-                value &&
-                /^\d{2}\/\d{2}\/\d{4}$/.test(value)
-            ) {
-                const firstYMD = DMYToYMD(value, "-");
-                const year = value.substring(6, 10);
-                if (yearSelectElement && yearSelectElement.value !== year)
-                    yearSelectElement.value = year;
-                if (calendar && calendar.value !== firstYMD) {
-                    calendar.focusedDate = firstYMD;
-                    previousCallyValue = firstYMD;
+            } else if (typeof value === "string" && value) {
+                console.log("range:", range);
+                if (!range) {
+                    const firstYMD = DMYToYMD(value, "-");
+                    const year = value.substring(6, 10);
+                    if (yearSelectElement && yearSelectElement.value !== year)
+                        yearSelectElement.value = year;
+                    if (calendar && calendar.value !== firstYMD) {
+                        calendar.focusedDate = firstYMD;
+                        previousCallyValue = firstYMD;
+                    }
+                    return firstYMD;
+                } else {
+                    const firstYMD = DMYToYMD(value.substring(0, 10), "-");
+                    const year = firstYMD.substring(0, 4);
+                    if (yearSelectElement && yearSelectElement.value !== year)
+                        yearSelectElement.value = year;
+
+                    const secondYMD = DMYToYMD(value.substring(13, 23), "-");
+
+                    const result = `${firstYMD}/${secondYMD}`;
+                    if (calendar && calendar.value !== result) {
+                        // If external change, update cally's focus and internal previous value
+                        calendar.focusedDate = result;
+                        previousCallyValue = result;
+                    }
+                    console.log("result:", result);
+                    return result;
                 }
-                return firstYMD;
             }
         } catch (e) {
             console.error("Error processing date value for cally:", value, e);
         }
-        if (calendar) calendar.focusedDate = undefined;
-        previousCallyValue = undefined;
-        return undefined;
+        // if (calendar) calendar.focusedDate = undefined;
+        // previousCallyValue = undefined;
+        // return undefined;
     });
 
     // --- Year Select Options ---
     const dates: number[] = [];
     const now: Date = new Date();
+    const nowISOString = now.toISOString().substring(0, 10);
     const currentYear = now.getFullYear();
+    const currentYearString = currentYear.toString();
     const todayCallyFormat = `${currentYear}/${(now.getMonth() + 1).toString().padStart(2, "0")}/${now.getDate().toString().padStart(2, "0")}`;
     for (let i = -10; i <= 10; i++) {
         dates.push(currentYear + i);
@@ -137,76 +154,112 @@
         }
         document.addEventListener("mousedown", handleDocumentClick);
 
-        // --- Cally Date Selection Handler ---
         const handleCallyFocusDay = (e: any) => {
-            if (disabled) return;
+            yearSelectElement.value = e.detail.getUTCFullYear();
 
-            const targetCalendar = e.currentTarget;
-            const newCallyValue = targetCalendar.value;
+            if (
+                e.currentTarget.value.length !== 0 &&
+                previousCallyValue !== e.currentTarget.value
+            ) {
+                previousCallyValue = e.currentTarget.value;
 
-            if (yearSelectElement && e.detail) {
-                yearSelectElement.value = e.detail.getUTCFullYear().toString();
-            }
-
-            // Update only if Cally provides a value and it's different from the last processed one
-            if (newCallyValue && newCallyValue !== previousCallyValue) {
-                previousCallyValue = newCallyValue; // Update tracker
-
-                let newValueToEmit: string | [string, string] | null = null;
-                let isValidSelection = false;
-
-                try {
-                    if (range) {
-                        if (newCallyValue.includes("-")) {
-                            // Complete range
-                            const firstDate = getFirstDateFromCallyRange(
-                                newCallyValue,
-                                "/",
-                            );
-                            const secondDate = getSecondDateFromCallyRange(
-                                newCallyValue,
-                                "/",
-                            );
-                            newValueToEmit = [firstDate, secondDate];
-                            isValidSelection = true;
-                        }
-                    } else {
-                        if (!newCallyValue.includes("-")) {
-                            // Single date
-                            newValueToEmit = getFirstDateFromCallyRange(
-                                newCallyValue,
-                                "/",
-                            );
-                            isValidSelection = true;
-                        }
-                    }
-                } catch (err) {
-                    console.error(
-                        "Error parsing date from Cally:",
-                        newCallyValue,
-                        err,
+                // e.currentTarget.value is something like 2012/12/24-2012/12/25
+                const firstDate = getFirstDateFromCallyRange(
+                    e.currentTarget.value,
+                    "/",
+                );
+                if (range) {
+                    const secondDate = getSecondDateFromCallyRange(
+                        e.currentTarget.value,
+                        "/",
                     );
-                    isValidSelection = false;
+
+                    // displayValue = `${firstDate} - ${secondDate}`;
+                    // value = displayValue;
+                    value = `${firstDate} - ${secondDate}`;
+                } else {
+                    // displayValue= firstDate;
+                    // value = displayValue.value;
+                    value = firstDate;
                 }
 
-                if (isValidSelection) {
-                    value = newValueToEmit; // Update Svelte state
-
-                    if (onchange) {
-                        // Call parent's onchange if provided
-                        const newDisplay = Array.isArray(newValueToEmit)
-                            ? `${newValueToEmit[0]} - ${newValueToEmit[1]}`
-                            : newValueToEmit;
-                        const syntheticEvent = {
-                            target: { value: newDisplay },
-                            currentTarget: hiddenDateInput,
-                        } as unknown as Event;
-                        onchange(syntheticEvent);
-                    }
-                    detailsDropdown.open = false; // Close dropdown
-                }
+                // @ts-ignore
+                detailsDropdown.open = false;
+                handleDropdownToggle(false);
+                callyContainerDiv.style.opacity = "1";
             }
         };
+
+        // --- Cally Date Selection Handler ---
+        // const handleCallyFocusDay = (e: any) => {
+        //     if (disabled) return;
+
+        //     if (yearSelectElement && e.detail) {
+        //         yearSelectElement.value = e.detail.getUTCFullYear();
+        //     }
+
+        //     // Update only if Cally provides a value and it's different from the last processed one
+        //     if (
+        //         e.currentTarget.value.length !== 0 &&
+        //         e.currentTarget.value !== previousCallyValue
+        //     ) {
+        //         previousCallyValue = e.currentTarget.value; // Update tracker
+
+        //         let newValueToEmit: string | [string, string] | null = null;
+        //         let isValidSelection = false;
+
+        //         try {
+        //             if (range) {
+        //                 if (newCallyValue.includes("-")) {
+        //                     // Complete range
+        //                     const firstDate = getFirstDateFromCallyRange(
+        //                         newCallyValue,
+        //                         "/",
+        //                     );
+        //                     const secondDate = getSecondDateFromCallyRange(
+        //                         newCallyValue,
+        //                         "/",
+        //                     );
+        //                     newValueToEmit = [firstDate, secondDate];
+        //                     isValidSelection = true;
+        //                 }
+        //             } else {
+        //                 if (!newCallyValue.includes("-")) {
+        //                     // Single date
+        //                     newValueToEmit = getFirstDateFromCallyRange(
+        //                         newCallyValue,
+        //                         "/",
+        //                     );
+        //                     isValidSelection = true;
+        //                 }
+        //             }
+        //         } catch (err) {
+        //             console.error(
+        //                 "Error parsing date from Cally:",
+        //                 newCallyValue,
+        //                 err,
+        //             );
+        //             isValidSelection = false;
+        //         }
+
+        //         if (isValidSelection) {
+        //             value = newValueToEmit; // Update Svelte state
+
+        //             if (onchange) {
+        //                 // Call parent's onchange if provided
+        //                 const newDisplay = Array.isArray(newValueToEmit)
+        //                     ? `${newValueToEmit[0]} - ${newValueToEmit[1]}`
+        //                     : newValueToEmit;
+        //                 const syntheticEvent = {
+        //                     target: { value: newDisplay },
+        //                     currentTarget: hiddenDateInput,
+        //                 } as unknown as Event;
+        //                 onchange(syntheticEvent);
+        //             }
+        //             detailsDropdown.open = false; // Close dropdown
+        //         }
+        //     }
+        // };
 
         // --- Attach Listener After Cally Renders ---
         // Use tick to wait for initial render, then check periodically until calendar exists
@@ -394,27 +447,42 @@
     }
 
     async function handleYearChange(e: Event) {
+        // if (disabled || !calendar) return;
+        // const newYear = (e.target as HTMLSelectElement).value;
+        // let focusDateStr = todayCallyFormat; // Use Cally format
+
+        // // Try to keep the current month/day
+        // if (calendar.focusedDate) {
+        //     const currentFocus =
+        //         calendar.focusedDate.length > 10
+        //             ? calendar.focusedDate.substring(0, 10)
+        //             : calendar.focusedDate;
+        //     if (currentFocus && currentFocus.includes("/")) {
+        //         focusDateStr = currentFocus.replace(/^\d{4}/, newYear);
+        //     } else {
+        //         focusDateStr = `${newYear}/01/01`;
+        //     }
+        // } else {
+        //     focusDateStr = `${newYear}/01/01`;
+        // }
+
+        // calendar.focusedDate = focusDateStr;
+        // await tick();
+
         if (disabled || !calendar) return;
-        const newYear = (e.target as HTMLSelectElement).value;
-        let focusDateStr = todayCallyFormat; // Use Cally format
+        console.log("focusedDate:", calendar.focusedDate);
 
-        // Try to keep the current month/day
-        if (calendar.focusedDate) {
-            const currentFocus =
-                calendar.focusedDate.length > 10
-                    ? calendar.focusedDate.substring(0, 10)
-                    : calendar.focusedDate;
-            if (currentFocus && currentFocus.includes("/")) {
-                focusDateStr = currentFocus.replace(/^\d{4}/, newYear);
-            } else {
-                focusDateStr = `${newYear}/01/01`;
-            }
+        if (calendar.focusedDate === undefined) {
+            calendar.focusedDate = nowISOString.replace(
+                currentYearString,
+                e.currentTarget!.value,
+            );
         } else {
-            focusDateStr = `${newYear}/01/01`;
+            const focusedYear = calendar.focusedDate.substring(0, 4);
+            calendar.focusedDate = calendar.focusedDate
+                .substring(0, 10)
+                .replace(focusedYear, e.currentTarget.value);
         }
-
-        calendar.focusedDate = focusDateStr;
-        await tick();
     }
 </script>
 
