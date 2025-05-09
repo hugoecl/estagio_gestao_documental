@@ -7,9 +7,14 @@ import RoleList from "@components/admin/RoleList.svelte"; // Import the list com
 <Layout title="Gerir Funções">
     <div class="flex justify-between items-center mb-4">
         <h1 class="text-2xl font-bold">Gerir Funções</h1>
-        <button id="create-role-button" class="btn btn-primary">
-            <i class="fa-solid fa-plus mr-2"></i> Criar Função
-        </button>
+        <div>
+            <button id="create-role-button" class="btn btn-primary mr-2">
+                <i class="fa-solid fa-plus mr-2"></i> Criar Função
+            </button>
+            <a href="/admin/" class="btn btn-sm btn-ghost">
+                <i class="fa-solid fa-arrow-left mr-2"></i> Voltar
+            </a>
+        </div>
     </div>
     <div
         class="bg-base-100 rounded-lg shadow-md border border-base-content/10 overflow-hidden p-4"
