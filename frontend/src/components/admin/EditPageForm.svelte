@@ -615,6 +615,16 @@
                  would be part of the old_text if it also needed removal.
                  Given the user asked to remove only one "notify" checkbox, this edit is targeted.
             -->
+            <label class="form-control w-full md:col-span-2">
+                <div class="label">
+                    <span class="label-text">Descrição (Opcional)</span>
+                </div>
+                <textarea
+                    placeholder="Breve descrição da finalidade"
+                    class="textarea textarea-bordered w-full"
+                    bind:value={pageData.description}
+                ></textarea>
+            </label>
             <div class="form-control">
                 <label class="label cursor-pointer justify-start gap-2">
                     <input
@@ -634,23 +644,11 @@
                     >
                 </div>
             </div>
-            <label class="form-control w-full md:col-span-2">
-                <div class="label">
-                    <span class="label-text">Descrição (Opcional)</span>
-                </div>
-                <textarea
-                    placeholder="Breve descrição da finalidade"
-                    class="textarea textarea-bordered w-full"
-                    bind:value={pageData.description}
-                ></textarea>
-            </label>
 
             <!-- Notify on New Record Checkbox (Only if NOT a group) -->
             {#if !isGroup}
                 <div class="form-control md:col-span-1">
-                    <label
-                        class="label cursor-pointer justify-start gap-2 pt-8"
-                    >
+                    <label class="label cursor-pointer justify-start gap-2">
                         <input
                             type="checkbox"
                             class="toggle toggle-info"

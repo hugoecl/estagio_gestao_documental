@@ -18,7 +18,11 @@
         CreatePageFieldRequest,
         ValidationFunction,
     } from "@lib/types/fields";
-    import { createCustomPage, getGroupPages, type CustomPage } from "@api/custom-pages-api";
+    import {
+        createCustomPage,
+        getGroupPages,
+        type CustomPage,
+    } from "@api/custom-pages-api";
     import { toSearchString } from "@utils/search-utils";
 
     // --- State ---
@@ -53,31 +57,37 @@
     let isSubmitting = $state(false);
     let errors = $state<Record<string, string>>({});
 
-
     // --- Path Generation ---
-    function generatePathFromName(name: string, parentPath: string | null): string {
+    function generatePathFromName(
+        name: string,
+        parentPath: string | null,
+    ): string {
         let slug = toSearchString(name).replace(/\s+/g, "-"); // Replace spaces with hyphens
         slug = slug.replace(/[^a-z0-9-]/g, ""); // Remove invalid chars, keep hyphens
         slug = slug.replace(/-+/g, "-"); // Replace multiple hyphens with single
         slug = slug.trimStart().trimEnd(); // Trim leading/trailing spaces/hyphens (though regex should handle most)
-        if (!slug) { // Handle empty slug after processing
+        if (!slug) {
+            // Handle empty slug after processing
             slug = "nova-pagina"; // Default slug if name results in empty
         }
 
         if (parentPath && parentPath !== "/") {
-            const cleanParentPath = parentPath.endsWith("/") ? parentPath.slice(0, -1) : parentPath;
+            const cleanParentPath = parentPath.endsWith("/")
+                ? parentPath.slice(0, -1)
+                : parentPath;
             return `${cleanParentPath}/${slug}`;
         }
         return `/${slug}`;
     }
 
     $effect(() => {
-        const selectedGroup = availableGroups.find(g => g.id.toString() === selectedParentGroupId);
+        const selectedGroup = availableGroups.find(
+            (g) => g.id.toString() === selectedParentGroupId,
+        );
         const parentPath = selectedGroup ? selectedGroup.path : null;
         pageData.parent_path = parentPath; // Update parent_path for submission
         pageData.path = generatePathFromName(pageData.name || "", parentPath);
     });
-
 
     // --- Fetch Initial Data ---
     onMount(async () => {
@@ -163,12 +173,14 @@
         );
     }
 
-    function getTranslatedFieldTypeName(backendName: string | undefined): string {
+    function getTranslatedFieldTypeName(
+        backendName: string | undefined,
+    ): string {
         if (!backendName) return "Desconhecido";
         return fieldTypeTranslations[backendName] || backendName;
     }
 
-     function getFieldTypeById(id: number): BackendFieldType | undefined {
+    function getFieldTypeById(id: number): BackendFieldType | undefined {
         return fieldTypes.find((ft) => ft.id === id);
     }
 
@@ -355,19 +367,21 @@
                         ? "/auto-gerado-grupo"
                         : "/auto-gerado-pagina"}
                     class="input input-bordered w-full bg-base-200"
-                    bind:value={pageData.path} 
+                    bind:value={pageData.path}
                     required
                     readonly
                 />
                 {#if errors.page_path}<span class="text-error text-xs mt-1"
                         >{errors.page_path}</span
                     >{/if}
-                {#if errors.page_name_for_path}<span class="text-error text-xs mt-1"
-                    >{errors.page_name_for_path}</span
-                >{/if}
+                {#if errors.page_name_for_path}<span
+                        class="text-error text-xs mt-1"
+                        >{errors.page_name_for_path}</span
+                    >{/if}
                 <div class="label">
                     <span class="label-text-alt"
-                        >Gerado automaticamente a partir do Nome e Grupo Pai. Use / para raiz.</span
+                        >Gerado automaticamente a partir do Nome e Grupo Pai.
+                        Use / para raiz.</span
                     >
                 </div>
             </label>
@@ -381,7 +395,9 @@
                 >
                     <option value={null}>Nenhum (Nível Raiz)</option>
                     {#each availableGroups as group (group.id)}
-                        <option value={group.id.toString()}>{group.name} ({group.path})</option>
+                        <option value={group.id.toString()}
+                            >{group.name} ({group.path})</option
+                        >
                     {/each}
                 </select>
                 <div class="label">
@@ -443,7 +459,7 @@
             </div>
 
             {#if !pageData.is_group}
-                <div class="form-control md:col-span-1 self-end">
+                <div class="form-control md:col-span-1">
                     <label
                         class="label cursor-pointer justify-start gap-2 pt-2"
                     >
@@ -579,7 +595,11 @@
                                     }}
                                 >
                                     {#each fieldTypes as ft (ft.id)}
-                                        <option value={ft.id}>{getTranslatedFieldTypeName(ft.name)}</option>
+                                        <option value={ft.id}
+                                            >{getTranslatedFieldTypeName(
+                                                ft.name,
+                                            )}</option
+                                        >
                                     {/each}
                                 </select>
                             </label>
