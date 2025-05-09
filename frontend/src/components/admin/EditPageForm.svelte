@@ -625,28 +625,28 @@
                     bind:value={pageData.description}
                 ></textarea>
             </label>
-            <div class="form-control">
-                <label class="label cursor-pointer justify-start gap-2">
-                    <input
-                        type="checkbox"
-                        class="toggle toggle-info"
-                        bind:checked={pageData.requires_acknowledgment}
-                        disabled={isGroup}
-                    />
-                    <span class="label-text font-medium"
-                        >Exigir Tomar Conhecimento?</span
-                    >
-                </label>
-                <div class="label">
-                    <span class="label-text-alt"
-                        >Se marcado, utilizadores terão de confirmar a leitura
-                        antes de ver detalhes de um registo.</span
-                    >
-                </div>
-            </div>
 
             <!-- Notify on New Record Checkbox (Only if NOT a group) -->
             {#if !isGroup}
+                <div class="form-control">
+                    <label class="label cursor-pointer justify-start gap-2">
+                        <input
+                            type="checkbox"
+                            class="toggle toggle-info"
+                            bind:checked={pageData.requires_acknowledgment}
+                            disabled={isGroup}
+                        />
+                        <span class="label-text font-medium"
+                            >Exigir Tomar Conhecimento?</span
+                        >
+                    </label>
+                    <div class="label">
+                        <span class="label-text-alt"
+                            >Se marcado, utilizadores terão de confirmar a
+                            leitura antes de ver detalhes de um registo.</span
+                        >
+                    </div>
+                </div>
                 <div class="form-control md:col-span-1">
                     <label class="label cursor-pointer justify-start gap-2">
                         <input
