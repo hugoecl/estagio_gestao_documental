@@ -19,7 +19,7 @@
         { header: "Nome", field: "name" },
         { header: "Tipo", field: "is_group" }, // Add column for type
         { header: "Caminho", field: "path" },
-        { header: "Pai", field: "parent_path" },
+        { header: "Grupo", field: "parent_path" },
         { header: "Descrição", field: "description" },
         { header: "Ícone", field: "icon" },
     ];
