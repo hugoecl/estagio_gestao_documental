@@ -17,6 +17,7 @@ pub struct CustomPage {
     pub is_group: bool,
     pub description: Option<String>,
     pub icon: Option<String>,
+    pub notify_on_new_record: bool, // New field
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -29,6 +30,7 @@ pub struct CreateCustomPageRequest {
     pub is_group: bool, // Added field
     pub description: Option<String>,
     pub icon: Option<String>,
+    pub notify_on_new_record: bool, // New field
     // Fields and permissions might be empty if is_group is true
     pub fields: Vec<CreatePageFieldRequest>,
     pub permissions: Vec<RolePermissionRequest>,
@@ -40,6 +42,7 @@ pub struct UpdateCustomPageRequest {
     pub parent_path: Option<String>, // Allow changing parent
     pub description: Option<String>,
     pub icon: Option<String>,
+    pub notify_on_new_record: Option<bool>, // New field, optional for update
     // is_group is generally not updatable after creation easily
 }
 
@@ -142,15 +145,16 @@ impl CustomPage {
         // Insert the page/group
         let result = sqlx::query!(
             r#"
-            INSERT INTO custom_pages (name, path, parent_path, is_group, description, icon)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO custom_pages (name, path, parent_path, is_group, description, icon, notify_on_new_record)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             "#,
             request.name,
             cleaned_path,        // Use cleaned path
             cleaned_parent_path, // Use cleaned parent path
             request.is_group,
             request.description,
-            request.icon
+            request.icon,
+            request.notify_on_new_record
         )
         .execute(&mut *tx)
         .await?;
@@ -199,7 +203,8 @@ impl CustomPage {
             r#"
             SELECT
                 id, name, path, parent_path, is_group as "is_group: bool", description,
-                icon, created_at as "created_at!", updated_at as "updated_at!"
+                icon, notify_on_new_record as "notify_on_new_record: bool",
+                created_at as "created_at!", updated_at as "updated_at!"
             FROM custom_pages
             ORDER BY name
             "#
@@ -218,7 +223,8 @@ impl CustomPage {
             r#"
             SELECT
                 id, name, path, parent_path, is_group as "is_group: bool", description,
-                icon, created_at as "created_at!", updated_at as "updated_at!"
+                icon, notify_on_new_record as "notify_on_new_record: bool",
+                created_at as "created_at!", updated_at as "updated_at!"
             FROM custom_pages
             WHERE id = ?
             "#,
@@ -336,13 +342,14 @@ impl CustomPage {
         sqlx::query!(
             r#"
                 UPDATE custom_pages
-                SET name = ?, description = ?, icon = ?, parent_path = ?
+                SET name = ?, description = ?, icon = ?, parent_path = ?, notify_on_new_record = ?
                 WHERE id = ?
                 "#,
             request.name,
             request.description,
             request.icon,
             cleaned_parent_path, // Use cleaned parent path
+            request.notify_on_new_record.unwrap_or(false), // Default to false if not provided in update
             page_id
         )
         .execute(pool)
@@ -372,7 +379,8 @@ impl CustomPage {
             r#"
             SELECT
                 id, name, path, parent_path, is_group as "is_group: bool", description,
-                icon, created_at as "created_at!", updated_at as "updated_at!"
+                icon, notify_on_new_record as "notify_on_new_record: bool",
+                 created_at as "created_at!", updated_at as "updated_at!"
             FROM custom_pages
             ORDER BY parent_path IS NULL DESC, parent_path ASC, name ASC
             "# // Order by parent_path (nulls first), then by parent_path itself, then name

@@ -82,6 +82,7 @@
                 parent_path: fetchedPageData.page.parent_path,
                 description: fetchedPageData.page.description,
                 icon: fetchedPageData.page.icon,
+                notify_on_new_record: fetchedPageData.page.notify_on_new_record, // Load this
             };
             isGroup = fetchedPageData.page.is_group;
             originalPageDataJson = JSON.stringify(pageData);
@@ -494,6 +495,7 @@
             <legend class="text-lg font-semibold px-2"
                 >Detalhes {isGroup ? "do Grupo" : "da Página"}</legend
             >
+
             <div class="form-control w-full">
                 <div class="label"><span class="label-text">Tipo</span></div>
                 <input
@@ -578,6 +580,28 @@
                     bind:value={pageData.description}
                 ></textarea>
             </label>
+
+            <!-- Notify on New Record Checkbox (Only if NOT a group) -->
+            {#if !isGroup}
+            <div class="form-control md:col-span-1">
+                <label class="label cursor-pointer justify-start gap-2 pt-8">
+                    <input
+                        type="checkbox"
+                        class="toggle toggle-info"
+                        bind:checked={pageData.notify_on_new_record}
+                    />
+                    <span class="label-text font-medium">Notificar em Novos Registos?</span>
+                </label>
+                <div class="label pt-0">
+                    <span class="label-text-alt">Notifica utilizadores com acesso à página quando um novo registo é criado.</span>
+                </div>
+            </div>
+             <!-- Placeholder for alignment if it's a group or if the other toggle isn't shown -->
+             <div class="md:col-span-1"></div>
+            {:else}
+            <!-- Span two columns if it's a group to maintain layout, or if you want to hide the new record toggle for groups -->
+            <div class="md:col-span-2"></div>
+            {/if}
         </fieldset>
 
         {#if !isGroup}

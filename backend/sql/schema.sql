@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS custom_pages (
     is_group BOOLEAN NOT NULL DEFAULT false COMMENT 'True if this entry is just a menu group/folder/submenu',
     description TEXT,
     icon VARCHAR(20) COMMENT 'FontAwesome icon name',
+    notify_on_new_record BOOLEAN NOT NULL DEFAULT false COMMENT 'Notify users with page access when a new record is created',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id)

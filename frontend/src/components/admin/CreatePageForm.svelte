@@ -187,7 +187,8 @@
             name: pageData.name!,
             path: formattedPath,
             parent_path: formattedParentPath,
-            is_group: pageData.is_group!,
+            is_group: pageData.is_group ?? false,
+            notify_on_new_record: pageData.is_group ? false : (pageData.notify_on_new_record ?? false),
             description: pageData.description || null,
             icon: pageData.icon || null,
             fields: pageData.is_group
@@ -252,6 +253,7 @@
             <legend class="text-lg font-semibold px-2"
                 >Detalhes {pageData.is_group ? "do Grupo" : "da Página"}</legend
             >
+
             <label class="form-control w-full">
                 <div class="label"><span class="label-text">Nome*</span></div>
                 <input
@@ -338,24 +340,43 @@
             </label>
 
             <!-- Is Group Checkbox -->
-            <div class="form-control md:col-span-2">
-                <label class="label cursor-pointer justify-start gap-2">
+            <div class="form-control md:col-span-1">
+                <label class="label cursor-pointer justify-start gap-2 pt-8">
                     <input
                         type="checkbox"
-                        class="toggle toggle-primary"
+                        class="toggle toggle-accent"
                         bind:checked={pageData.is_group}
                     />
                     <span class="label-text font-medium"
                         >É um Grupo/Pasta (sem registos)?</span
                     >
                 </label>
-                <div class="label">
+                <div class="label pt-0">
                     <span class="label-text-alt"
-                        >Marque se isto for apenas uma pasta no menu para
-                        organizar outras páginas.</span
+                        >Marque se for uma pasta no menu para organizar outras
+                        páginas.</span
                     >
                 </div>
             </div>
+
+            <!-- Notify on New Record Checkbox (Only if NOT a group) -->
+            {#if !pageData.is_group}
+            <div class="form-control md:col-span-1">
+                <label class="label cursor-pointer justify-start gap-2 pt-8">
+                    <input
+                        type="checkbox"
+                        class="toggle toggle-info"
+                        bind:checked={pageData.notify_on_new_record}
+                    />
+                    <span class="label-text font-medium">Notificar em Novos Registos?</span>
+                </label>
+                <div class="label pt-0">
+                    <span class="label-text-alt">Notifica utilizadores com acesso à página quando um novo registo é criado.</span>
+                </div>
+            </div>
+            {:else}
+            <div class="md:col-span-1"></div> <!-- Placeholder to keep grid consistent -->
+            {/if}
         </fieldset>
 
         {#if !pageData.is_group}
