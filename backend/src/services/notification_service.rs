@@ -104,12 +104,13 @@ pub async fn check_expiring_date_ranges(pool: &MySqlPool) {
                                 match get_user_ids_with_view_permission(pool, field.page_id).await {
                                     Ok(user_ids) => {
                                         for user_id in user_ids {
-                                            // Check if an unread notification already exists
-                                            match Notification::check_if_unread_exists(
+                                            // Check if a notification for this event already exists
+                                            match Notification::check_if_event_notification_exists(
                                                 pool,
                                                 user_id,
                                                 record.id,
                                                 NOTIFICATION_TYPE_DATE_EXPIRY,
+                                                Some(due_date), // Pass the specific due_date
                                             )
                                             .await
                                             {

@@ -156,26 +156,28 @@ impl Notification {
         Ok(result.rows_affected())
     }
 
-    /// Checks if an unread notification for a specific user/record/type already exists.
-    pub async fn check_if_unread_exists(
+    /// Checks if any notification (read or unread) for a specific user/record/type/due_date already exists.
+    /// This helps prevent re-notifying for the exact same expiring event if it has already been created.
+    pub async fn check_if_event_notification_exists(
         pool: &sqlx::MySqlPool,
         user_id: u32,
         record_id: u32,
         notification_type: &str,
-        // Optional: could add field_id or due_date check if needed for more specificity
+        due_date: Option<NaiveDate>, // Add due_date to make the check event-specific
     ) -> Result<bool, sqlx::Error> {
         let count = sqlx::query_scalar!(
             r#"
-            SELECT COUNT(*)
-            FROM notifications
-            WHERE user_id = ?
-              AND record_id = ?
-              AND notification_type = ?
-              AND is_read = false
+            SELECT COUNT(*) 
+            FROM notifications 
+            WHERE user_id = ? 
+              AND record_id = ? 
+              AND notification_type = ? 
+              AND due_date <=> ?  -- Use NULL-safe equality for due_date
             "#,
             user_id,
             record_id,
-            notification_type
+            notification_type,
+            due_date
         )
         .fetch_one(pool)
         .await?;
