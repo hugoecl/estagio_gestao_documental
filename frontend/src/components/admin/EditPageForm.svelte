@@ -600,28 +600,21 @@
                     >
                 </div>
             </label>
-            <!-- Notify on New Record Checkbox -->
-            <div class="form-control">
-                <label class="label cursor-pointer justify-start gap-2">
-                    <input
-                        type="checkbox"
-                        class="toggle toggle-primary"
-                        bind:checked={pageData.notify_on_new_record}
-                        disabled={isGroup}
-                    />
-                    <span class="label-text font-medium"
-                        >Notificar em Novos Registos?</span
-                    >
-                </label>
-                <div class="label">
-                    <span class="label-text-alt"
-                        >Se marcado, utilizadores com acesso serão notificados
-                        quando um novo registo for criado nesta página.</span
-                    >
-                </div>
-            </div>
 
-            <!-- Requires Acknowledgment Checkbox -->
+            <!-- Requires Acknowledgment Checkbox was here, but the correct ones are at the end of this fieldset -->
+            <!-- The "Notify on New Record" that was here is the duplicate being removed. -->
+            <!-- The actual "Requires Acknowledgment" toggle is now correctly placed at the end of this fieldset,
+                 inside the {#if !isGroup} block, along with the non-duplicate "Notify on New Record".
+                 However, if "Requires Acknowledgment" was ALSO duplicated before "Description",
+                 this edit only removes the "Notify on New Record".
+                 Based on user request, only one "Notify on New Record" needs to be removed.
+                 The "Requires Acknowledgment" that might have been here is assumed to be handled
+                 by the existing correct placement at the end of fieldset.
+            -->
+            <!-- The div for "Requires Acknowledgment" that was previously here (if it existed as a duplicate)
+                 would be part of the old_text if it also needed removal.
+                 Given the user asked to remove only one "notify" checkbox, this edit is targeted.
+            -->
             <div class="form-control">
                 <label class="label cursor-pointer justify-start gap-2">
                     <input
