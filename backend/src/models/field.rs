@@ -109,11 +109,63 @@ impl PageField {
         .await
     }
 
+    pub async fn create_with_tx(
+        tx: &mut sqlx::Transaction<'_, sqlx::MySql>,
+        page_id: u32,
+        field: &crate::models::custom_page::CreatePageFieldRequest,
+    ) -> Result<u32, sqlx::Error> {
+        log::debug!(
+            "PageField::create_with_tx for page_id: {}, field_name: '{}', received notification_enabled: {:?}, days_before: {:?}, target_part: {:?}",
+            page_id,
+            field.name,
+            field.notification_enabled,
+            field.notification_days_before,
+            field.notification_target_date_part
+        );
+
+        let result = sqlx::query!(
+            r#"
+            INSERT INTO page_fields (
+                page_id, name, display_name, field_type_id, required, 
+                options, validation_name, is_searchable, is_displayed_in_table, order_index,
+                notification_enabled, notification_days_before, notification_target_date_part
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            "#,
+            page_id,
+            field.name,
+            field.display_name,
+            field.field_type_id,
+            field.required,
+            field.options,
+            field.validation_name,
+            field.is_searchable,
+            field.is_displayed_in_table,
+            field.order_index,
+            field.notification_enabled.unwrap_or(false),
+            field.notification_days_before,
+            field.notification_target_date_part
+        )
+        .execute(&mut **tx) // Use &mut **tx to effectively pass &mut MySqlConnection
+        .await?;
+
+        Ok(result.last_insert_id() as u32)
+    }
+
     pub async fn create(
         pool: &sqlx::MySqlPool,
         page_id: u32,
         field: &crate::models::custom_page::CreatePageFieldRequest,
     ) -> Result<u32, sqlx::Error> {
+        log::debug!(
+            "PageField::create for page_id: {}, field_name: '{}', received notification_enabled: {:?}, days_before: {:?}, target_part: {:?}",
+            page_id,
+            field.name,
+            field.notification_enabled,
+            field.notification_days_before,
+            field.notification_target_date_part
+        );
+
         let result = sqlx::query!(
             r#"
             INSERT INTO page_fields (
@@ -137,7 +189,7 @@ impl PageField {
             field.notification_days_before,
             field.notification_target_date_part
         )
-        .execute(pool)
+        .execute(pool) // Use the pool
         .await?;
 
         Ok(result.last_insert_id() as u32)

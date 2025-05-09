@@ -160,28 +160,10 @@ impl CustomPage {
         // Only insert fields and permissions if it's NOT a group
         if !request.is_group {
             // Insert the fields
-            for field in &request.fields {
-                sqlx::query!(
-                    r#"
-                    INSERT INTO page_fields (
-                        page_id, name, display_name, field_type_id, required,
-                        options, validation_name, is_searchable, is_displayed_in_table, order_index
-                    )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    "#,
-                    page_id,
-                    field.name,
-                    field.display_name,
-                    field.field_type_id,
-                    field.required,
-                    field.options,
-                    field.validation_name,
-                    field.is_searchable,
-                    field.is_displayed_in_table,
-                    field.order_index
-                )
-                .execute(&mut *tx)
-                .await?;
+            for field_request in &request.fields {
+                // Call PageField::create using the transaction
+                // PageField::create already handles the unwrap_or(false) for notification_enabled
+                PageField::create_with_tx(&mut tx, page_id, field_request).await?;
             }
 
             // Insert permissions
