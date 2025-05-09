@@ -57,6 +57,15 @@
     let errors = $state<Record<string, string>>({});
     let pagePath = $state("");
 
+    const fieldTypeTranslations: Record<string, string> = {
+        TEXT: "Texto Curto",
+        NUMBER: "Número",
+        SELECT: "Seleção Única",
+        DATE: "Data",
+        DATE_RANGE: "Intervalo de Datas",
+        TEXTAREA: "Texto Longo",
+    };
+
     // --- Fetch Initial Data ---
     onMount(async () => {
         // ... (fetching logic remains the same, populating state from fetchedPageData)
@@ -225,6 +234,13 @@
         return (
             fieldTypes.find((ft) => ft.id === fieldTypeId)?.name ?? "UNKNOWN"
         );
+    }
+
+    function getTranslatedFieldTypeName(
+        backendName: string | undefined,
+    ): string {
+        if (!backendName) return "Desconhecido";
+        return fieldTypeTranslations[backendName] || backendName;
     }
 
     // Helper to get field type object
@@ -776,8 +792,12 @@
                                         fields = [...fields]; // Trigger reactivity
                                     }}
                                 >
-                                    {#each fieldTypes as ft}
-                                        <option value={ft.id}>{ft.name}</option>
+                                    {#each fieldTypes as ft (ft.id)}
+                                        <option value={ft.id}
+                                            >{getTranslatedFieldTypeName(
+                                                ft.name,
+                                            )}</option
+                                        >
                                     {/each}
                                 </select>
                             </label>

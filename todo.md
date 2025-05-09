@@ -4,6 +4,6 @@
 - [X] Adicionar notificações para validades ou seja cada campo de validade vai passar a ter mais um opção para notificação (se é para notificar ou nao e com quanto tempo de antecedencia)
 - [X] Adicionar pagina de "Comunicações/Documentos Importantes". O admin vai adicionando documentos em que os colaborador tem de "assinar" que tomaram conhecimento. Quando o admin adicionar tal documento, os colaboradores serão notificados. Quando um colaborador clica para abrir um documento novo, aparece um popup a dizer que concorda que ao abrir este documento esta a tomar conhecimento do mesmo. O admin depois consegue ver com tomou conhecimento
 - [X] Simplificar a criação de paginas. Fazer com que o caminho seja automatico e selecionar grupo
-- [ ] Traduzir campos
+- [ ] Traduzir campos, formatar datas em funções, e traduzir true/false em funcoes
 - [ ] Meter verificações de campos apenas em TEXT
 - [ ] Ver quem tem acesso ao servidor

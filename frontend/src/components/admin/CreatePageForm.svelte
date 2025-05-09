@@ -18,8 +18,8 @@
         CreatePageFieldRequest,
         ValidationFunction,
     } from "@lib/types/fields";
-    import { createCustomPage, getGroupPages, type CustomPage } from "@api/custom-pages-api"; // Added getGroupPages and CustomPage
-    import { toSearchString } from "@utils/search-utils"; // Added for path generation
+    import { createCustomPage, getGroupPages, type CustomPage } from "@api/custom-pages-api";
+    import { toSearchString } from "@utils/search-utils";
 
     // --- State ---
     let pageData = $state<Partial<CreateCustomPageRequest>>({
@@ -39,6 +39,16 @@
     let roles = $state<Role[]>([]);
     let availableGroups = $state<CustomPage[]>([]); // For parent group selector
     let selectedParentGroupId = $state<string | null>(null); // Store ID of selected parent group
+
+    const fieldTypeTranslations: Record<string, string> = {
+        TEXT: "Texto Curto",
+        NUMBER: "Número",
+        SELECT: "Seleção Única",
+        DATE: "Data",
+        DATE_RANGE: "Intervalo de Datas",
+        TEXTAREA: "Texto Longo",
+    };
+
     let isLoading = $state(true);
     let isSubmitting = $state(false);
     let errors = $state<Record<string, string>>({});
@@ -152,7 +162,13 @@
             fieldTypes.find((ft) => ft.id === fieldTypeId)?.name ?? "UNKNOWN"
         );
     }
-    function getFieldTypeById(id: number): BackendFieldType | undefined {
+
+    function getTranslatedFieldTypeName(backendName: string | undefined): string {
+        if (!backendName) return "Desconhecido";
+        return fieldTypeTranslations[backendName] || backendName;
+    }
+
+     function getFieldTypeById(id: number): BackendFieldType | undefined {
         return fieldTypes.find((ft) => ft.id === id);
     }
 
@@ -562,8 +578,8 @@
                                         fields = [...fields]; // Trigger reactivity
                                     }}
                                 >
-                                    {#each fieldTypes as ft}
-                                        <option value={ft.id}>{ft.name}</option>
+                                    {#each fieldTypes as ft (ft.id)}
+                                        <option value={ft.id}>{getTranslatedFieldTypeName(ft.name)}</option>
                                     {/each}
                                 </select>
                             </label>
