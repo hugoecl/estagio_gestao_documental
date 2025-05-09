@@ -87,8 +87,8 @@ if (isNaN(recordIdNum)) {
                     >{recordDisplayString}</span
                 >
             </h1>
-            <a href="/admin/" class="btn btn-sm btn-ghost">
-                <i class="fa-solid fa-arrow-left mr-2"></i> Voltar
+            <a href={pagePathForLink.endsWith("/") ? pagePathForLink : `${pagePathForLink}/`} class="btn btn-sm btn-ghost">
+                <i class="fa-solid fa-arrow-left mr-2"></i> Voltar à Página do Registo
             </a>
         </div>
     </div>
