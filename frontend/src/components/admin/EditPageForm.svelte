@@ -888,24 +888,29 @@
                             {/if}
 
                             <!-- Validation -->
-                            <label class="form-control w-full">
-                                <div class="label">
-                                    <span class="label-text"
-                                        >Validação (Opcional)</span
-                                    >
-                                </div>
-                                <select
-                                    class="select select-sm select-bordered w-full"
-                                    bind:value={field.validation_name}
-                                >
-                                    <option value={null}>Nenhuma</option>
-                                    {#each validations as v}
-                                        <option value={v.name}
-                                            >{v.name} ({v.description})</option
+                            {#if getFieldTypeName(field.field_type_id) === "TEXT"}
+                                <label class="form-control w-full">
+                                    <div class="label">
+                                        <span class="label-text"
+                                            >Validação (Opcional)</span
                                         >
-                                    {/each}
-                                </select>
-                            </label>
+                                    </div>
+                                    <select
+                                        class="select select-sm select-bordered w-full"
+                                        bind:value={field.validation_name}
+                                    >
+                                        <option value={null}>Nenhuma</option>
+                                        {#each validations as v (v.name)}
+                                            <option value={v.name}
+                                                >{v.name} ({v.description})</option
+                                            >
+                                        {/each}
+                                    </select>
+                                </label>
+                            {:else}
+                                <!-- Placeholder for grid alignment if validation is not shown -->
+                                <div class="form-control w-full"></div>
+                            {/if}
 
                             <!-- Checkboxes -->
                             <div class="form-control">
