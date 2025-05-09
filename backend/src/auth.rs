@@ -53,6 +53,28 @@ pub async fn user_can_manage_page(
     Ok(result.count > 0)
 }
 
+// Function to get user IDs who have view permission for a specific page
+pub async fn get_user_ids_with_view_permission(
+    pool: &sqlx::MySqlPool,
+    page_id: u32,
+) -> Result<Vec<u32>, sqlx::Error> {
+    let user_ids = sqlx::query_scalar!(
+        r#"
+        SELECT DISTINCT ur.user_id
+        FROM user_roles ur
+        LEFT JOIN roles r ON ur.role_id = r.id
+        LEFT JOIN page_permissions pp ON pp.role_id = ur.role_id AND pp.page_id = ?
+        WHERE r.is_admin = 1 OR pp.can_view = 1
+        "#,
+        page_id
+    )
+    .fetch_all(pool)
+    .await?;
+
+    // The query directly returns Vec<u32> as user_id is not nullable
+    Ok(user_ids)
+}
+
 pub async fn user_can_view_page(
     pool: &sqlx::MySqlPool,
     user_id: i32,

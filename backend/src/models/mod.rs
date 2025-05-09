@@ -8,5 +8,6 @@ pub mod page_record;
 pub mod role;
 pub mod user;
 pub mod validation;
+pub mod notification;
 
 pub mod auth;

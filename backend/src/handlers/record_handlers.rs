@@ -15,7 +15,7 @@ use crate::{
     },
     utils::{
         forms::FilesFormRequest,
-        json_utils::{Json, json_response, json_response_with_etag},
+        json_utils::{Json, json_response_with_etag},
     },
 };
 

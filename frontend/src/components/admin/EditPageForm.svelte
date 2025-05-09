@@ -23,6 +23,9 @@
     import type { Role } from "@lib/types/roles";
     import type {
         CreatePageFieldRequest,
+        FieldType as BackendFieldType, // Rename to avoid clash if needed
+        PageField,
+        UpdatePageFieldRequest, // Import UpdatePageFieldRequest
         ValidationFunction,
     } from "@lib/types/fields";
     import type {
@@ -37,7 +40,12 @@
     let pageData = $state<Partial<UpdateCustomPageRequest>>({});
     let isGroup = $state(false);
     let originalPageDataJson = $state("");
-    let fields = $state([]); // Same complex type for fields
+    // Define a type for the fields array with transient properties
+    type FormFieldWithState = PageField & {
+        isNew?: boolean;
+        isDeleted?: boolean;
+    };
+    let fields = $state<FormFieldWithState[]>([]); // Use the extended type
     let originalFieldsJson = $state("");
     let permissions = $state<Record<number, RolePermissionRequest>>({});
     let originalPermissionsJson = $state("");
@@ -80,11 +88,16 @@
             pagePath = fetchedPageData.page.path;
 
             if (!isGroup) {
-                // IMPORTANT: Initialize fields.options ensuring it's null if backend returns null/undefined
+                // IMPORTANT: Initialize fields, including notification fields
                 fields = fetchedPageData.fields.map((f) => ({
                     ...f,
-                    options: f.options ?? null, // Ensure options is explicitly null if needed
+                    options: f.options ?? null,
                     validation_name: f.validation_name ?? null,
+                    // Ensure notification fields are initialized correctly
+                    notification_enabled: f.notification_enabled ?? false,
+                    notification_days_before: f.notification_days_before ?? null,
+                    notification_target_date_part:
+                        f.notification_target_date_part ?? null,
                     isNew: false,
                     isDeleted: false,
                 }));
@@ -160,6 +173,9 @@
             is_searchable: true,
             is_displayed_in_table: true,
             order_index: fields.filter((f) => !f.isDeleted).length,
+            notification_enabled: false, // Initialize notification fields for new fields
+            notification_days_before: null,
+            notification_target_date_part: null,
         });
         fields = [...fields];
         updateOrderIndexes();
@@ -201,6 +217,11 @@
         return (
             fieldTypes.find((ft) => ft.id === fieldTypeId)?.name ?? "UNKNOWN"
         );
+    }
+
+    // Helper to get field type object
+    function getFieldTypeById(fieldTypeId: number): BackendFieldType | undefined {
+        return fieldTypes.find((ft) => ft.id === fieldTypeId);
     }
     // --- REMOVE parseOptions ---
 
@@ -262,9 +283,8 @@
             JSON.stringify(currentPermissions) !== originalPermissionsJson;
 
         const fieldsToCreate: CreatePageFieldRequest[] = [];
-        const fieldsToUpdate: Array<
-            { id: number } & Omit<CreatePageFieldRequest, "name">
-        > = [];
+        // Use the imported UpdatePageFieldRequest directly
+        const fieldsToUpdate: Array<{ id: number } & UpdatePageFieldRequest> = [];
         const fieldsToDelete: number[] = [];
         let fieldsChanged = false;
 
@@ -302,25 +322,65 @@
                         // Ensure options is null if empty array before sending
                         const payloadWithOptions = {
                             ...fieldPayload,
-                            options: fieldPayload.options ?? null,
+                            options: fieldPayload.options ?? null, // Ensure null if needed
+                            // Ensure notification fields are null if disabled
+                            notification_days_before: fieldPayload.notification_enabled
+                                ? fieldPayload.notification_days_before
+                                : null,
+                            notification_target_date_part: fieldPayload.notification_enabled
+                                ? fieldPayload.notification_target_date_part
+                                : null,
                         };
+
                         if (isNew) {
+                            // Use the full payload including name for creation
                             fieldsToCreate.push(payloadWithOptions);
                         } else if (id) {
-                            // Check if this specific field changed compared to its original state
-                            const originalField = JSON.parse(
-                                originalFieldsJson,
-                            ).find((of: any) => of.id === id);
-                            const { id: _id, ...originalComparable } =
-                                originalField || {};
-                            const { name, ...updatePayload } =
-                                payloadWithOptions; // Exclude name
+                            // Find the original field data (without transient props)
+                            const originalField = JSON.parse(originalFieldsJson).find(
+                                (of: any) => of.id === id,
+                            );
+
+                            // Prepare the update payload (exclude ID, name, isNew, isDeleted)
+                            // NOTE: updatePayload now contains the correctly nulled notification fields if needed
+                            const {
+                                name: _name, // Name cannot be updated
+                                ...updatePayload
+                            } = payloadWithOptions; // Use the correct variable name here
+
+                            // Compare the update payload with the original field data
+                            // Need to map original to also nullify notification fields if disabled for fair compare
+                            const {
+                                id: _id,
+                                isNew: _isNew,
+                                isDeleted: _isDeleted,
+                                ...originalRawComparable
+                            } = originalField || {};
+
+                            // Nullify original notification fields if disabled for comparison
+                            const originalComparable = {
+                                ...originalRawComparable,
+                                notification_days_before:
+                                    originalRawComparable.notification_enabled
+                                        ? originalRawComparable.notification_days_before
+                                        : null,
+                                notification_target_date_part:
+                                    originalRawComparable.notification_enabled
+                                        ? originalRawComparable.notification_target_date_part
+                                        : null,
+                            };
+
 
                             if (
-                                JSON.stringify(updatePayload) !==
-                                JSON.stringify(originalComparable)
+                                originalField &&
+                                JSON.stringify(updatePayload) !== JSON.stringify(originalComparable)
                             ) {
-                                fieldsToUpdate.push({ id, ...updatePayload });
+                                // Only add to update if something actually changed
+                                // Ensure the payload matches UpdatePageFieldRequest
+                                fieldsToUpdate.push({
+                                    id,
+                                    ...(updatePayload as UpdatePageFieldRequest),
+                                });
                             }
                         }
                     }
@@ -377,10 +437,11 @@
                 );
                 fieldsToUpdate.forEach((f) =>
                     promises.push(
-                        updateField(f.id, f).then((ok) => {
+                        // Pass UpdatePageFieldRequest type here
+                        updateField(f.id, f as UpdatePageFieldRequest).then((ok) => {
                             if (!ok)
                                 throw new Error(
-                                    `Falha ao atualizar campo ${f.id}.`,
+                                    `Falha ao atualizar campo ${f.display_name} (ID: ${f.id}).`,
                                 );
                         }),
                     ),
@@ -616,6 +677,14 @@
                                     class="select select-sm select-bordered w-full"
                                     bind:value={field.field_type_id}
                                     required
+                                    onchange={() => {
+                                        // Reset options and notification settings if type changes
+                                        fields[index].options = null;
+                                        fields[index].notification_enabled = false;
+                                        fields[index].notification_days_before = null;
+                                        fields[index].notification_target_date_part = null;
+                                        fields = [...fields]; // Trigger reactivity
+                                    }}
                                 >
                                     {#each fieldTypes as ft}
                                         <option value={ft.id}>{ft.name}</option>
@@ -636,6 +705,69 @@
                                                 `field_${field.id ?? `new_${index}`}_options`
                                             ]}</span
                                         >{/if}
+                                </div>
+                            {/if}
+
+                            <!-- Notification Settings for Date Range -->
+                            {#if getFieldTypeName(field.field_type_id) === "DATE_RANGE"}
+                                <div
+                                    class="md:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-3 border-t border-base-content/10 pt-3 mt-3"
+                                >
+                                    <div class="form-control md:col-span-1">
+                                        <label
+                                            class="label cursor-pointer justify-start gap-2"
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                class="toggle toggle-primary toggle-sm"
+                                                bind:checked={field.notification_enabled}
+                                            />
+                                            <span class="label-text"
+                                                >Ativar Notificação?</span
+                                            >
+                                        </label>
+                                    </div>
+
+                                    {#if field.notification_enabled}
+                                        <label class="form-control w-full">
+                                            <div class="label pb-0">
+                                                <span class="label-text"
+                                                    >Notificar Dias Antes*</span
+                                                >
+                                            </div>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                placeholder="Ex: 7"
+                                                class="input input-sm input-bordered w-full"
+                                                bind:value={field.notification_days_before}
+                                                required={field.notification_enabled}
+                                            />
+                                        </label>
+                                        <label class="form-control w-full">
+                                            <div class="label pb-0">
+                                                <span class="label-text"
+                                                    >Referente a*</span
+                                                >
+                                            </div>
+                                            <select
+                                                class="select select-sm select-bordered w-full"
+                                                bind:value={field.notification_target_date_part}
+                                                required={field.notification_enabled}
+                                            >
+                                                <option value={null} disabled
+                                                    >Selecione...</option
+                                                >
+                                                <option value="start_date"
+                                                    >Data de Início</option
+                                                >
+                                                <option value="end_date"
+                                                    >Data de Fim</option
+                                                >
+                                                <!-- Add other parts if applicable -->
+                                            </select>
+                                        </label>
+                                    {/if}
                                 </div>
                             {/if}
 
@@ -720,9 +852,7 @@
 
             <!-- Permissions Fieldset -->
             <fieldset class="border p-4 rounded-md border-base-content/20">
-                <legend class="text-lg font-semibold px-2"
-                    >Permissões por Função</legend
-                >
+                <legend class="text-lg font-semibold px-2">Permissões</legend>
                 <div class="overflow-x-auto">
                     <table class="table table-sm w-full">
                         <thead>

@@ -62,6 +62,9 @@ CREATE TABLE IF NOT EXISTS page_fields (
     is_searchable BOOLEAN NOT NULL DEFAULT true,
     is_displayed_in_table BOOLEAN NOT NULL DEFAULT true,
     order_index INT UNSIGNED NOT NULL DEFAULT 0,
+    notification_enabled BOOLEAN NOT NULL DEFAULT false COMMENT 'If notifications are enabled for this field',
+    notification_days_before INT UNSIGNED DEFAULT NULL COMMENT 'How many days before the target date to notify',
+    notification_target_date_part VARCHAR(10) DEFAULT NULL COMMENT 'Which part of the date field triggers notification (e.g., start_date, end_date)',
     PRIMARY KEY (id),
     FOREIGN KEY (page_id) REFERENCES custom_pages (id) ON DELETE CASCADE,
     FOREIGN KEY (field_type_id) REFERENCES field_types (id)
@@ -132,4 +135,24 @@ CREATE TABLE IF NOT EXISTS page_record_files (
     PRIMARY KEY (id),
     FOREIGN KEY (record_id) REFERENCES page_records (id) ON DELETE CASCADE,
     FOREIGN KEY (uploaded_by) REFERENCES users (id)
+);
+
+-- Notifications Table
+CREATE TABLE IF NOT EXISTS notifications (
+    id INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL,
+    user_id INT UNSIGNED NOT NULL COMMENT 'The user receiving the notification',
+    record_id INT UNSIGNED NOT NULL COMMENT 'The record the notification relates to',
+    page_id INT UNSIGNED NOT NULL COMMENT 'The page the record belongs to (denormalized for easier linking)',
+    field_id INT UNSIGNED NULL COMMENT 'The specific field triggering the notification (if applicable)',
+    notification_type VARCHAR(50) NOT NULL COMMENT 'Type of notification (e.g., DATE_EXPIRY, SIGNATURE_REQUIRED)',
+    message TEXT NOT NULL COMMENT 'Notification message content',
+    due_date DATE NULL COMMENT 'The relevant date from the record (e.g., expiry date)',
+    is_read BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+    FOREIGN KEY (record_id) REFERENCES page_records (id) ON DELETE CASCADE,
+    FOREIGN KEY (page_id) REFERENCES custom_pages (id) ON DELETE CASCADE,
+    FOREIGN KEY (field_id) REFERENCES page_fields (id) ON DELETE SET NULL, -- Set NULL if field is deleted
+    INDEX idx_user_unread (user_id, is_read) -- Index for efficiently fetching unread notifications
 );

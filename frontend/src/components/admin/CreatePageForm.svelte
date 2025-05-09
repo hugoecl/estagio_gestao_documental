@@ -16,6 +16,7 @@
     import type { Role } from "@lib/types/roles";
     import type {
         CreatePageFieldRequest,
+        FieldType as BackendFieldType, // Rename to avoid clash if needed
         ValidationFunction,
     } from "@lib/types/fields";
     import { createCustomPage } from "@api/custom-pages-api";
@@ -23,7 +24,7 @@
     // --- State ---
     // ... (pageData, fields, permissions, etc. - no change needed here initially)
     let pageData = $state<Partial<CreateCustomPageRequest>>({
-        /* ... */
+        is_group: false, // Default to page
     });
     let fields = $state<CreatePageFieldRequest[]>([]);
     let permissions = $state<Record<number, RolePermissionRequest>>({});
@@ -84,6 +85,9 @@
             is_searchable: true,
             is_displayed_in_table: true,
             order_index: fields.length,
+            notification_enabled: false, // Initialize notification fields
+            notification_days_before: null,
+            notification_target_date_part: null,
         });
         fields = [...fields];
     }
@@ -109,6 +113,11 @@
         return (
             fieldTypes.find((ft) => ft.id === fieldTypeId)?.name ?? "UNKNOWN"
         );
+    }
+
+    // Helper to get field type object
+    function getFieldTypeById(fieldTypeId: number): BackendFieldType | undefined {
+        return fieldTypes.find((ft) => ft.id === fieldTypeId);
     }
 
     // --- *** REMOVE parseOptions function - logic moved to FieldOptionsEditor *** ---
@@ -183,7 +192,18 @@
             icon: pageData.icon || null,
             fields: pageData.is_group
                 ? []
-                : fields.map((f) => ({ ...f, options: f.options ?? null })), // Ensure null if undefined
+                : fields.map((f) => ({
+                      // Ensure null options if empty
+                      ...f,
+                      options: f.options ?? null,
+                      // Ensure notification fields are null if not enabled
+                      notification_days_before: f.notification_enabled
+                          ? f.notification_days_before
+                          : null,
+                      notification_target_date_part: f.notification_enabled
+                          ? f.notification_target_date_part
+                          : null,
+                  })),
             permissions: pageData.is_group ? [] : Object.values(permissions),
         };
         // --- End Prepare Data ---
@@ -414,6 +434,14 @@
                                     class="select select-sm select-bordered w-full"
                                     bind:value={field.field_type_id}
                                     required
+                                    onchange={() => {
+                                        // Reset options and notification settings if type changes
+                                        fields[index].options = null;
+                                        fields[index].notification_enabled = false;
+                                        fields[index].notification_days_before = null;
+                                        fields[index].notification_target_date_part = null;
+                                        fields = [...fields]; // Trigger reactivity
+                                    }}
                                 >
                                     {#each fieldTypes as ft}
                                         <option value={ft.id}>{ft.name}</option>
@@ -435,6 +463,68 @@
                                                 `field_${index}_options`
                                             ]}</span
                                         >{/if}
+                                </div>
+                            {/if}
+
+                            {#if getFieldTypeName(field.field_type_id) === "DATE_RANGE"}
+                                <div
+                                    class="md:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-3 border-t border-base-content/10 pt-3 mt-3"
+                                >
+                                    <div class="form-control md:col-span-1">
+                                        <label
+                                            class="label cursor-pointer justify-start gap-2"
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                class="toggle toggle-primary toggle-sm"
+                                                bind:checked={field.notification_enabled}
+                                            />
+                                            <span class="label-text"
+                                                >Ativar Notificação?</span
+                                            >
+                                        </label>
+                                    </div>
+
+                                    {#if field.notification_enabled}
+                                        <label class="form-control w-full">
+                                            <div class="label pb-0">
+                                                <span class="label-text"
+                                                    >Notificar Dias Antes*</span
+                                                >
+                                            </div>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                placeholder="Ex: 7"
+                                                class="input input-sm input-bordered w-full"
+                                                bind:value={field.notification_days_before}
+                                                required={field.notification_enabled}
+                                            />
+                                        </label>
+                                        <label class="form-control w-full">
+                                            <div class="label pb-0">
+                                                <span class="label-text"
+                                                    >Referente a*</span
+                                                >
+                                            </div>
+                                            <select
+                                                class="select select-sm select-bordered w-full"
+                                                bind:value={field.notification_target_date_part}
+                                                required={field.notification_enabled}
+                                            >
+                                                <option value={null} disabled
+                                                    >Selecione...</option
+                                                >
+                                                <option value="start_date"
+                                                    >Data de Início</option
+                                                >
+                                                <option value="end_date"
+                                                    >Data de Fim</option
+                                                >
+                                                <!-- Add other parts if applicable -->
+                                            </select>
+                                        </label>
+                                    {/if}
                                 </div>
                             {/if}
                             <!-- *** END NEW *** -->
@@ -525,7 +615,7 @@
             <!-- Permissions Fieldset -->
             <fieldset class="border p-4 rounded-md border-base-content/20">
                 <legend class="text-lg font-semibold px-2"
-                    >Permissões por Função</legend
+                    >Permissões</legend
                 >
                 <div class="overflow-x-auto">
                     <table class="table table-sm w-full">

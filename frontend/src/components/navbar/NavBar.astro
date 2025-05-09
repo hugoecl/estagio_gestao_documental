@@ -1,7 +1,7 @@
 ---
 import SideBar from "@components/navbar/SideBar.astro";
 import ThemeController from "@components/navbar/ThemeController.astro";
-import NotificationsButton from "@components/navbar/NotificationsButton.astro";
+import NotificationsButton from "@components/navbar/NotificationsButton.svelte"; // Import Svelte component
 import SettingsDropdown from "@components/navbar/SettingsDropdown.svelte";
 import MenuIcon from "@assets/menu_icon.svg?raw";
 ---
@@ -24,7 +24,7 @@ import MenuIcon from "@assets/menu_icon.svg?raw";
             </div>
             <div class="flex-none">
                 <ThemeController />
-                <NotificationsButton />
+                <NotificationsButton client:load />
                 <SettingsDropdown client:load />
             </div>
         </div>
