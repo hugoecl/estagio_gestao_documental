@@ -11,7 +11,12 @@
         AlertPosition,
     } from "@components/alert/alert";
 
-    let roles = $state<Record<string, Role>>({});
+    interface FormattedRole extends Role {
+        created_at_formatted: string;
+        updated_at_formatted: string;
+        is_admin_translated: string;
+    }
+    let roles = $state<Record<string, FormattedRole>>({});
     let isLoading = $state(true);
     let error = $state<string | null>(null);
 
@@ -22,9 +27,9 @@
         { header: "ID", field: "id" },
         { header: "Nome", field: "name" },
         { header: "Descrição", field: "description" },
-        { header: "É Admin?", field: "is_admin" },
-        { header: "Criado Em", field: "created_at" },
-        { header: "Atualizado Em", field: "updated_at" },
+        { header: "É Admin?", field: "is_admin_translated" }, // Updated field
+        { header: "Criado Em", field: "created_at_formatted" }, // Updated field
+        { header: "Atualizado Em", field: "updated_at_formatted" }, // Updated field
     ];
 
     onMount(async () => {
@@ -37,9 +42,14 @@
         error = null;
         try {
             const rolesArray = await getRoles();
-            const rolesRecord: Record<string, Role> = {};
+            const rolesRecord: Record<string, FormattedRole> = {};
             rolesArray.forEach((role) => {
-                rolesRecord[role.id.toString()] = role;
+                rolesRecord[role.id.toString()] = {
+                    ...role,
+                    created_at_formatted: new Date(role.created_at).toLocaleString("pt-PT", { dateStyle: "short", timeStyle: "medium" }),
+                    updated_at_formatted: new Date(role.updated_at).toLocaleString("pt-PT", { dateStyle: "short", timeStyle: "medium" }),
+                    is_admin_translated: role.is_admin ? "Sim" : "Não",
+                };
             });
             roles = rolesRecord;
         } catch (e: any) {
@@ -126,21 +136,7 @@
     searchFields={["name", "description"]}
     onRowClick={handleRowClick}
     rowClassName="hover:bg-base-300 cursor-pointer"
->
-    <svelte:fragment slot="column-is_admin" let:row>
-        {#if row.is_admin}
-            <span class="badge badge-primary badge-sm">Sim</span>
-        {:else}
-            <span class="badge badge-ghost badge-sm">Não</span>
-        {/if}
-    </svelte:fragment>
-    <svelte:fragment slot="column-created_at" let:row>
-        {new Date(row.created_at).toLocaleString("pt-PT")}
-    </svelte:fragment>
-    <svelte:fragment slot="column-updated_at" let:row>
-        {new Date(row.updated_at).toLocaleString("pt-PT")}
-    </svelte:fragment>
-</Table>
+></Table>
 
 <!-- Pass role one-way and provide onClose callback -->
 <RoleFormModal
