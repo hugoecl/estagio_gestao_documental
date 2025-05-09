@@ -13,6 +13,10 @@ pub fn init(cfg: &mut web::ServiceConfig) {
                 "/menu",
                 web::get().to(custom_page_handlers::get_navigation_menu),
             )
+            .route( // New route for fetching only groups
+                "/groups",
+                web::get().to(custom_page_handlers::get_group_pages),
+            )
             .route("", web::get().to(custom_page_handlers::get_custom_pages))
             .route("", web::post().to(custom_page_handlers::create_custom_page))
             .route(

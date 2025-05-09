@@ -18,38 +18,73 @@
         CreatePageFieldRequest,
         ValidationFunction,
     } from "@lib/types/fields";
-    import { createCustomPage } from "@api/custom-pages-api";
+    import { createCustomPage, getGroupPages, type CustomPage } from "@api/custom-pages-api"; // Added getGroupPages and CustomPage
+    import { toSearchString } from "@utils/search-utils"; // Added for path generation
 
     // --- State ---
     let pageData = $state<Partial<CreateCustomPageRequest>>({
         name: "",
-        path: "",
-        parent_path: "",
+        path: "/", // Default to root, will be auto-generated
+        parent_path: null, // Will be set by selectedParentPath
         is_group: false,
         description: "",
         icon: "",
-        notify_on_new_record: false, // Added
-        requires_acknowledgment: false, // Added
+        notify_on_new_record: false,
+        requires_acknowledgment: false,
     });
-    let fields = $state<Array<CreatePageFieldRequest & { key: Symbol }>>([]); // Added key for #each
+    let fields = $state<Array<CreatePageFieldRequest & { key: Symbol }>>([]);
     let permissions = $state<Record<number, RolePermissionRequest>>({});
     let fieldTypes = $state<BackendFieldType[]>([]);
     let validations = $state<ValidationFunction[]>([]);
     let roles = $state<Role[]>([]);
+    let availableGroups = $state<CustomPage[]>([]); // For parent group selector
+    let selectedParentGroupId = $state<string | null>(null); // Store ID of selected parent group
     let isLoading = $state(true);
     let isSubmitting = $state(false);
     let errors = $state<Record<string, string>>({});
 
+
+    // --- Path Generation ---
+    function generatePathFromName(name: string, parentPath: string | null): string {
+        let slug = toSearchString(name).replace(/\s+/g, "-"); // Replace spaces with hyphens
+        slug = slug.replace(/[^a-z0-9-]/g, ""); // Remove invalid chars, keep hyphens
+        slug = slug.replace(/-+/g, "-"); // Replace multiple hyphens with single
+        slug = slug.trimStart().trimEnd(); // Trim leading/trailing spaces/hyphens (though regex should handle most)
+        if (!slug) { // Handle empty slug after processing
+            slug = "nova-pagina"; // Default slug if name results in empty
+        }
+
+        if (parentPath && parentPath !== "/") {
+            const cleanParentPath = parentPath.endsWith("/") ? parentPath.slice(0, -1) : parentPath;
+            return `${cleanParentPath}/${slug}`;
+        }
+        return `/${slug}`;
+    }
+
+    $effect(() => {
+        const selectedGroup = availableGroups.find(g => g.id.toString() === selectedParentGroupId);
+        const parentPath = selectedGroup ? selectedGroup.path : null;
+        pageData.parent_path = parentPath; // Update parent_path for submission
+        pageData.path = generatePathFromName(pageData.name || "", parentPath);
+    });
+
+
     // --- Fetch Initial Data ---
     onMount(async () => {
         try {
-            const [fetchedFieldTypes, fetchedValidations, fetchedRoles] =
-                await Promise.all([
-                    getFieldTypes(),
-                    getValidations(),
-                    getRoles(),
-                ]);
+            const [
+                fetchedFieldTypes,
+                fetchedValidations,
+                fetchedRoles,
+                fetchedGroups, // Fetch groups
+            ] = await Promise.all([
+                getFieldTypes(),
+                getValidations(),
+                getRoles(),
+                getGroupPages(), // Call new API function
+            ]);
             fieldTypes = fetchedFieldTypes;
+            availableGroups = fetchedGroups; // Store groups
             validations = fetchedValidations;
             roles = fetchedRoles;
             const initialPermissions: Record<number, RolePermissionRequest> =
@@ -301,35 +336,41 @@
                 <input
                     type="text"
                     placeholder={pageData.is_group
-                        ? "Ex: /gestao"
-                        : "Ex: /gestao/licencas-software"}
-                    class="input input-bordered w-full"
-                    bind:value={pageData.path}
+                        ? "/auto-gerado-grupo"
+                        : "/auto-gerado-pagina"}
+                    class="input input-bordered w-full bg-base-200"
+                    bind:value={pageData.path} 
                     required
+                    readonly
                 />
                 {#if errors.page_path}<span class="text-error text-xs mt-1"
                         >{errors.page_path}</span
                     >{/if}
+                {#if errors.page_name_for_path}<span class="text-error text-xs mt-1"
+                    >{errors.page_name_for_path}</span
+                >{/if}
                 <div class="label">
                     <span class="label-text-alt"
-                        >Será formatado (minúsculas, -, /). Sem / no final. Use
-                        / para raiz.</span
+                        >Gerado automaticamente a partir do Nome e Grupo Pai. Use / para raiz.</span
                     >
                 </div>
             </label>
             <label class="form-control w-full">
                 <div class="label">
-                    <span class="label-text">Caminho Pai (Opcional)</span>
+                    <span class="label-text">Grupo Pai (Opcional)</span>
                 </div>
-                <input
-                    type="text"
-                    placeholder="Ex: /gestao ou deixe em branco"
-                    class="input input-bordered w-full"
-                    bind:value={pageData.parent_path}
-                />
+                <select
+                    class="select select-bordered w-full"
+                    bind:value={selectedParentGroupId}
+                >
+                    <option value={null}>Nenhum (Nível Raiz)</option>
+                    {#each availableGroups as group (group.id)}
+                        <option value={group.id.toString()}>{group.name} ({group.path})</option>
+                    {/each}
+                </select>
                 <div class="label">
                     <span class="label-text-alt"
-                        >Para menus aninhados. Será formatado.</span
+                        >Selecione um grupo para aninhar esta página/grupo.</span
                     >
                 </div>
             </label>

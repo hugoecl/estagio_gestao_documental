@@ -14,6 +14,38 @@ use crate::{
     utils::json_utils::{Json, json_response_with_etag},
 };
 
+pub async fn get_group_pages(
+    state: web::Data<State>,
+    session: Session,
+    req: HttpRequest,
+) -> impl Responder {
+    if let Err(resp) = validate_session(&session) {
+        return resp;
+    }
+
+    // In a more structured approach, this query would be in `CustomPage::get_all_groups(&state.db.pool).await`
+    match sqlx::query_as!(
+        CustomPage,
+        r#"
+        SELECT 
+            id, name, path, parent_path, is_group as "is_group: bool", description, 
+            icon, notify_on_new_record as "notify_on_new_record: bool", requires_acknowledgment as "requires_acknowledgment: bool", created_at as "created_at!", updated_at as "updated_at!"
+        FROM custom_pages 
+        WHERE is_group = true 
+        ORDER BY name
+        "#
+    )
+    .fetch_all(&state.db.pool)
+    .await
+    {
+        Ok(pages) => json_response_with_etag(&pages, &req),
+        Err(e) => {
+            log::error!("Error fetching group pages: {}", e);
+            HttpResponse::InternalServerError().finish()
+        }
+    }
+}
+
 pub async fn get_custom_pages(
     state: web::Data<State>,
     session: Session,

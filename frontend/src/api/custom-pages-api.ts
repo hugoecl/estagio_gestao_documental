@@ -151,6 +151,19 @@ export async function updatePagePermissions(
 
 // Add updateCustomPage, deleteCustomPage later if needed for edit/delete functionality
 
+export async function getGroupPages(cookie?: string): Promise<CustomPage[]> {
+  const response = await handleFetch(`${API_BASE_URL}/custom_pages/groups`, {
+    method: "GET",
+    credentials: "include",
+    headers: cookie ? { Cookie: cookie } : undefined,
+  });
+  if (response.ok) {
+    return await response.json();
+  }
+  if (response.status === 304) return []; // Or cached
+  throw new Error(`Failed to fetch group pages: ${response.statusText}`);
+}
+
 export async function updateCustomPage(
   pageId: number,
   data: UpdateCustomPageRequest,
