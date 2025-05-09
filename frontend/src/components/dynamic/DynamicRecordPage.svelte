@@ -2,6 +2,11 @@
     import { onMount, tick } from "svelte";
     import Table from "@components/common/Table.svelte";
     import FormModal from "@components/common/FormModal.svelte";
+    import AcknowledgmentModal from "@components/common/AcknowledgmentModal.svelte"; // Import AcknowledgmentModal
+    import {
+        acknowledgeRecord,
+        checkIfRecordAcknowledged,
+    } from "@api/acknowledgment-api"; // Import acknowledgment API functions
     import type {
         CustomPageWithFields,
         UserPagePermissions,
@@ -54,6 +59,11 @@
     let selectedRecordWithFiles = $state<PageRecordWithFiles | null>(null);
     let originalRecordJson = $state<string | null>(null);
     let isModalReadOnly = $state(false); // State to control modal read-only status
+
+    // State for Acknowledgment Modal
+    let isAcknowledgmentModalOpen = $state(false);
+    let recordIdToAcknowledge = $state<number | null>(null);
+    let recordNameToAcknowledge = $state<string>("este registo");
 
     // --- Permissions ---
     const permissions = $derived<UserPagePermissions>(
@@ -319,21 +329,14 @@
     }
 
     // --- Event Handlers ---
-    async function handleRowClick(id: string, row: PageRecord) {
-        // Allow opening if user can view OR edit
-        if (!permissions.can_view && !permissions.can_edit) {
-            showAlert(
-                "Não tem permissão para ver detalhes deste registo.",
-                AlertType.WARNING,
-                AlertPosition.TOP,
-            );
-            return;
-        }
-
-        const recordIdNum = parseInt(id, 10);
+    async function proceedToOpenFormModal(
+        recordIdNum: number,
+        rowData?: PageRecord,
+    ) {
+        // rowData is optional now
         selectedRecordId = recordIdNum;
-        isModalReadOnly = !permissions.can_edit; // Set read-only based on edit permission
-        isLoading = true; // Show loading indicator while fetching details
+        isModalReadOnly = !permissions.can_edit;
+        isLoading = true;
 
         try {
             selectedRecordWithFiles = await getRecordById(recordIdNum);
@@ -341,9 +344,9 @@
                 originalRecordJson = JSON.stringify(
                     selectedRecordWithFiles.record.data,
                 );
-                await tick(); // Ensure modal exists in DOM if dynamically created
+                await tick();
                 formModalRef?.showModal();
-                currentModal.set(formModalRef?.children[0] as HTMLDivElement);
+                currentModal.set(formModalRef); // formModalRef is the dialog element
             } else {
                 showAlert(
                     "Erro ao carregar detalhes do registo.",
@@ -364,6 +367,90 @@
         }
     }
 
+    async function handleRowClick(id: string, row: PageRecord) {
+        if (!permissions.can_view && !permissions.can_edit) {
+            showAlert(
+                "Não tem permissão para ver detalhes deste registo.",
+                AlertType.WARNING,
+                AlertPosition.TOP,
+            );
+            return;
+        }
+
+        const recordIdNum = parseInt(id, 10);
+
+        if (
+            pageDefinition?.page?.requires_acknowledgment &&
+            !permissions.is_admin
+        ) {
+            isLoading = true;
+            try {
+                const alreadyAcknowledged =
+                    await checkIfRecordAcknowledged(recordIdNum);
+                if (!alreadyAcknowledged) {
+                    recordIdToAcknowledge = recordIdNum;
+                    const primaryDisplayField = pageDefinition.fields.find(
+                        (f) => f.order_index === 0 && f.is_displayed_in_table,
+                    );
+                    recordNameToAcknowledge =
+                        primaryDisplayField &&
+                        row.processedData &&
+                        row.processedData[primaryDisplayField.name]
+                            ? `"${row.processedData[primaryDisplayField.name]}" (ID: ${id})`
+                            : `o registo #${id}`;
+                    isAcknowledgmentModalOpen = true;
+                    return;
+                }
+            } catch (e) {
+                showAlert(
+                    "Erro ao verificar confirmação de leitura.",
+                    AlertType.ERROR,
+                    AlertPosition.TOP,
+                );
+            } finally {
+                isLoading = false;
+            }
+        }
+        await proceedToOpenFormModal(recordIdNum, row);
+    }
+
+    async function handleAcknowledgmentConfirm() {
+        if (recordIdToAcknowledge === null) return;
+        isLoading = true;
+        try {
+            const success = await acknowledgeRecord(recordIdToAcknowledge);
+            if (success) {
+                // Find the original row data to pass to proceedToOpenFormModal
+                const recordData = records[recordIdToAcknowledge.toString()];
+                if (recordData) {
+                    await proceedToOpenFormModal(
+                        recordIdToAcknowledge,
+                        recordData,
+                    );
+                } else {
+                    // Fallback if recordData not found in local state, just open by ID
+                    await proceedToOpenFormModal(recordIdToAcknowledge);
+                }
+            } else {
+                showAlert(
+                    "Falha ao registar confirmação de leitura.",
+                    AlertType.ERROR,
+                    AlertPosition.TOP,
+                );
+            }
+        } catch (e: any) {
+            showAlert(
+                `Erro ao confirmar leitura: ${e.message}`,
+                AlertType.ERROR,
+                AlertPosition.TOP,
+            );
+        } finally {
+            isLoading = false;
+            isAcknowledgmentModalOpen = false;
+            recordIdToAcknowledge = null;
+        }
+    }
+
     function handleCreateClick() {
         if (!permissions.can_create) {
             showAlert(
@@ -378,7 +465,7 @@
         originalRecordJson = JSON.stringify({});
         isModalReadOnly = false; // Create mode is never read-only
         formModalRef?.showModal();
-        currentModal.set(formModalRef?.children[0] as HTMLDivElement);
+        currentModal.set(formModalRef); // formModalRef is the dialog element
     }
 
     // --- Form Submission ---
@@ -419,7 +506,8 @@
                                 ? null
                                 : parseFloat(value);
                         if (value !== null && isNaN(value)) value = null; // Ensure null if parse fails
-                    } else if ( // Keep the else if structure, but handle DATE next
+                    } else if (
+                        // Keep the else if structure, but handle DATE next
                         intendedType === "DATE" &&
                         typeof value === "string"
                     ) {
@@ -671,5 +759,19 @@
         submitButtonText={selectedRecordId ? "Atualizar" : "Criar"}
         apiBaseUrl={API_BASE_URL}
         readOnly={isModalReadOnly}
+        currentUserPermissions={pageDefinition?.currentUserPermissions}
+        pageRequiresAcknowledgment={pageDefinition?.page?.requires_acknowledgment ?? false}
+    />
+{/if}
+
+{#if pageDefinition?.page?.requires_acknowledgment}
+    <AcknowledgmentModal
+        bind:isOpen={isAcknowledgmentModalOpen}
+        recordDisplayName={recordNameToAcknowledge}
+        onConfirm={handleAcknowledgmentConfirm}
+        onCancel={() => {
+            isAcknowledgmentModalOpen = false;
+            recordIdToAcknowledge = null;
+        }}
     />
 {/if}

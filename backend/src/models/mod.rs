@@ -5,6 +5,7 @@
 pub mod custom_page;
 pub mod field;
 pub mod page_record;
+pub mod record_acknowledgment;
 pub mod role;
 pub mod user;
 pub mod validation;

@@ -17,7 +17,8 @@ pub struct CustomPage {
     pub is_group: bool,
     pub description: Option<String>,
     pub icon: Option<String>,
-    pub notify_on_new_record: bool, // New field
+    pub notify_on_new_record: bool,
+    pub requires_acknowledgment: bool, // New field
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -27,10 +28,11 @@ pub struct CreateCustomPageRequest {
     pub name: String,
     pub path: String,
     pub parent_path: Option<String>,
-    pub is_group: bool, // Added field
+    pub is_group: bool,
     pub description: Option<String>,
     pub icon: Option<String>,
-    pub notify_on_new_record: bool, // New field
+    pub notify_on_new_record: bool,
+    pub requires_acknowledgment: bool, // New field
     // Fields and permissions might be empty if is_group is true
     pub fields: Vec<CreatePageFieldRequest>,
     pub permissions: Vec<RolePermissionRequest>,
@@ -42,8 +44,9 @@ pub struct UpdateCustomPageRequest {
     pub parent_path: Option<String>, // Allow changing parent
     pub description: Option<String>,
     pub icon: Option<String>,
-    pub notify_on_new_record: Option<bool>, // New field, optional for update
-    // is_group is generally not updatable after creation easily
+    pub notify_on_new_record: Option<bool>,
+    pub requires_acknowledgment: Option<bool>, // New field, optional for update
+                                               // is_group is generally not updatable after creation easily
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -54,6 +57,7 @@ pub struct RolePermissionRequest {
     pub can_edit: bool,
     pub can_delete: bool,
     pub can_manage_fields: bool,
+    pub can_view_acknowledgments: bool, // New field
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -67,7 +71,7 @@ pub struct CreatePageFieldRequest {
     pub is_searchable: bool,
     pub is_displayed_in_table: bool,
     pub order_index: u32,
-    pub notification_enabled: Option<bool>, // New field
+    pub notification_enabled: Option<bool>,    // New field
     pub notification_days_before: Option<u32>, // New field
     pub notification_target_date_part: Option<String>, // New field
 }
@@ -79,6 +83,7 @@ pub struct UserPagePermissions {
     pub can_edit: bool,
     pub can_delete: bool,
     pub can_manage_fields: bool,
+    pub can_view_acknowledgments: bool, // New field
     pub is_admin: bool,
 }
 
@@ -103,6 +108,7 @@ pub struct PagePermission {
     pub can_edit: bool,
     pub can_delete: bool,
     pub can_manage_fields: bool,
+    pub can_view_acknowledgments: bool, // New field
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -145,8 +151,8 @@ impl CustomPage {
         // Insert the page/group
         let result = sqlx::query!(
             r#"
-            INSERT INTO custom_pages (name, path, parent_path, is_group, description, icon, notify_on_new_record)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO custom_pages (name, path, parent_path, is_group, description, icon, notify_on_new_record, requires_acknowledgment)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             "#,
             request.name,
             cleaned_path,        // Use cleaned path
@@ -154,7 +160,8 @@ impl CustomPage {
             request.is_group,
             request.description,
             request.icon,
-            request.notify_on_new_record
+            request.notify_on_new_record,
+            request.requires_acknowledgment
         )
         .execute(&mut *tx)
         .await?;
@@ -171,13 +178,14 @@ impl CustomPage {
             }
 
             // Insert permissions
+            // Only insert fields and permissions if it's NOT a group
             for permission in &request.permissions {
                 sqlx::query!(
                     r#"
                     INSERT INTO page_permissions (
-                        page_id, role_id, can_view, can_create, can_edit, can_delete, can_manage_fields
+                        page_id, role_id, can_view, can_create, can_edit, can_delete, can_manage_fields, can_view_acknowledgments
                     )
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     "#,
                     page_id,
                     permission.role_id,
@@ -185,7 +193,8 @@ impl CustomPage {
                     permission.can_create,
                     permission.can_edit,
                     permission.can_delete,
-                    permission.can_manage_fields
+                    permission.can_manage_fields,
+                    permission.can_view_acknowledgments // New field
                 )
                 .execute(&mut *tx)
                 .await?;
@@ -204,10 +213,11 @@ impl CustomPage {
             SELECT
                 id, name, path, parent_path, is_group as "is_group: bool", description,
                 icon, notify_on_new_record as "notify_on_new_record: bool",
+                requires_acknowledgment as "requires_acknowledgment: bool",
                 created_at as "created_at!", updated_at as "updated_at!"
             FROM custom_pages
             ORDER BY name
-            "#
+            "#,
         )
         .fetch_all(pool)
         .await
@@ -224,6 +234,7 @@ impl CustomPage {
             SELECT
                 id, name, path, parent_path, is_group as "is_group: bool", description,
                 icon, notify_on_new_record as "notify_on_new_record: bool",
+                requires_acknowledgment as "requires_acknowledgment: bool",
                 created_at as "created_at!", updated_at as "updated_at!"
             FROM custom_pages
             WHERE id = ?
@@ -252,7 +263,8 @@ impl CustomPage {
                     p.id, p.page_id, p.role_id, r.name as role_name,
                     p.can_view as "can_view: bool", p.can_create as "can_create: bool",
                     p.can_edit as "can_edit: bool", p.can_delete as "can_delete: bool",
-                    p.can_manage_fields as "can_manage_fields: bool"
+                    p.can_manage_fields as "can_manage_fields: bool",
+                    p.can_view_acknowledgments as "can_view_acknowledgments: bool"
                 FROM page_permissions p
                 JOIN roles r ON p.role_id = r.id
                 WHERE p.page_id = ?
@@ -268,15 +280,17 @@ impl CustomPage {
 
         // Calculate current_user_permissions directly based on whether it's a group
         let final_user_permissions = if !page.is_group {
-             Some(Self::get_user_permissions_for_page(pool, user_id, page_id).await?)
+            Some(Self::get_user_permissions_for_page(pool, user_id, page_id).await?)
         } else {
-             let is_admin = sqlx::query_scalar!(
-                 "SELECT EXISTS(SELECT 1 FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = ? AND r.is_admin = 1)",
-                 user_id
-             ).fetch_one(pool).await? == 1;
-             Some(UserPagePermissions { is_admin, ..Default::default() })
+            let is_admin = sqlx::query_scalar!(
+                  "SELECT EXISTS(SELECT 1 FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = ? AND r.is_admin = 1)",
+                  user_id
+              ).fetch_one(pool).await? == 1;
+            Some(UserPagePermissions {
+                is_admin,
+                ..Default::default()
+            })
         };
-
 
         Ok(CustomPageWithFields {
             page,
@@ -299,7 +313,8 @@ impl CustomPage {
                 MAX(CASE WHEN pp.can_create = 1 THEN 1 ELSE 0 END) as can_create,
                 MAX(CASE WHEN pp.can_edit = 1 THEN 1 ELSE 0 END) as can_edit,
                 MAX(CASE WHEN pp.can_delete = 1 THEN 1 ELSE 0 END) as can_delete,
-                MAX(CASE WHEN pp.can_manage_fields = 1 THEN 1 ELSE 0 END) as can_manage_fields
+                MAX(CASE WHEN pp.can_manage_fields = 1 THEN 1 ELSE 0 END) as can_manage_fields,
+                MAX(CASE WHEN pp.can_view_acknowledgments = 1 THEN 1 ELSE 0 END) as can_view_acknowledgments
             FROM user_roles ur
             LEFT JOIN roles r ON r.id = ur.role_id
             LEFT JOIN page_permissions pp ON pp.role_id = ur.role_id AND pp.page_id = ?
@@ -321,6 +336,7 @@ impl CustomPage {
             can_edit: is_admin || perms.can_edit.unwrap_or(0) == 1,
             can_delete: is_admin || perms.can_delete.unwrap_or(0) == 1,
             can_manage_fields: is_admin || perms.can_manage_fields.unwrap_or(0) == 1,
+            can_view_acknowledgments: is_admin || perms.can_view_acknowledgments.unwrap_or(0) == 1, // New field
         })
     }
 
@@ -342,14 +358,16 @@ impl CustomPage {
         sqlx::query!(
             r#"
                 UPDATE custom_pages
-                SET name = ?, description = ?, icon = ?, parent_path = ?, notify_on_new_record = ?
+                SET name = ?, description = ?, icon = ?, parent_path = ?,
+                    notify_on_new_record = ?, requires_acknowledgment = ?
                 WHERE id = ?
                 "#,
             request.name,
             request.description,
             request.icon,
             cleaned_parent_path, // Use cleaned parent path
-            request.notify_on_new_record.unwrap_or(false), // Default to false if not provided in update
+            request.notify_on_new_record,
+            request.requires_acknowledgment,
             page_id
         )
         .execute(pool)
@@ -380,7 +398,8 @@ impl CustomPage {
             SELECT
                 id, name, path, parent_path, is_group as "is_group: bool", description,
                 icon, notify_on_new_record as "notify_on_new_record: bool",
-                 created_at as "created_at!", updated_at as "updated_at!"
+                requires_acknowledgment as "requires_acknowledgment: bool",
+                created_at as "created_at!", updated_at as "updated_at!"
             FROM custom_pages
             ORDER BY parent_path IS NULL DESC, parent_path ASC, name ASC
             "# // Order by parent_path (nulls first), then by parent_path itself, then name

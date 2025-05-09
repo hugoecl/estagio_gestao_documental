@@ -15,15 +15,35 @@
       menuPageNames = menuPageNamesProps;
 
       const { getAnalytics } = await import("@api/analytics-api");
-      const data = await getAnalytics();
+      const data = await getAnalytics(); // getAnalytics now returns [] on auth error
 
-      frequentPages = data
-        .sort((a, b) => b[1] - a[1])
-        .filter(([path]) => path !== "/" && path !== "/iniciar-sessao/")
-        .slice(0, 6);
-    } catch (err) {
-      console.error(err);
-      error = "Não foi possível carregar as páginas frequentes";
+      // No need to check response.ok or response.status here if getAnalytics handles it
+      // by returning an empty array on auth failure.
+
+      if (data && data.length > 0) {
+        frequentPages = data
+          .sort((a, b) => b[1] - a[1])
+          .filter(([path]) => path !== "/" && path !== "/iniciar-sessao/")
+          .slice(0, 6);
+      } else {
+        // This case will be hit if getAnalytics returns an empty array due to auth or other issues
+        frequentPages = [];
+        // Don't set general error for auth issues, let it fail silently for this component
+        // or show a specific "not available when logged out" message if desired.
+        // If data is empty for other reasons, you might still want to log or set an error.
+        if (data.length === 0 && !error) { // Avoid overwriting other potential errors
+            console.warn("FrequentPages: No analytics data received, possibly due to auth or empty data.");
+            // error = "Não foi possível carregar as páginas frequentes"; // Keep this commented or conditional
+        }
+      }
+    } catch (err: any) { // Catch any error that getAnalytics might still throw for non-API issues
+      console.error("Error in FrequentPages onMount:", err);
+      if (!err.message || !err.message.toLowerCase().includes("unauthorized")) {
+           error = "Não foi possível carregar as páginas frequentes";
+      } else {
+           frequentPages = [];
+           error = null;
+      }
     } finally {
       isLoading = false;
     }

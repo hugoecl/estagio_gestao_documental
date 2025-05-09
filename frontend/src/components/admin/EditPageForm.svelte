@@ -82,7 +82,9 @@
                 parent_path: fetchedPageData.page.parent_path,
                 description: fetchedPageData.page.description,
                 icon: fetchedPageData.page.icon,
-                notify_on_new_record: fetchedPageData.page.notify_on_new_record, // Load this
+                notify_on_new_record: fetchedPageData.page.notify_on_new_record,
+                requires_acknowledgment:
+                    fetchedPageData.page.requires_acknowledgment,
             };
             isGroup = fetchedPageData.page.is_group;
             originalPageDataJson = JSON.stringify(pageData);
@@ -96,7 +98,8 @@
                     validation_name: f.validation_name ?? null,
                     // Ensure notification fields are initialized correctly
                     notification_enabled: f.notification_enabled ?? false,
-                    notification_days_before: f.notification_days_before ?? null,
+                    notification_days_before:
+                        f.notification_days_before ?? null,
                     notification_target_date_part:
                         f.notification_target_date_part ?? null,
                     isNew: false,
@@ -126,6 +129,9 @@
                               can_edit: existingPerm.can_edit,
                               can_delete: existingPerm.can_delete,
                               can_manage_fields: existingPerm.can_manage_fields,
+                              can_view_acknowledgments:
+                                  (existingPerm as any)
+                                      .can_view_acknowledgments || false, // Load if exists
                           }
                         : {
                               role_id: role.id,
@@ -134,6 +140,7 @@
                               can_edit: false,
                               can_delete: false,
                               can_manage_fields: false,
+                              can_view_acknowledgments: false, // Default for new
                           };
                 });
                 permissions = initialPermissions;
@@ -221,7 +228,9 @@
     }
 
     // Helper to get field type object
-    function getFieldTypeById(fieldTypeId: number): BackendFieldType | undefined {
+    function getFieldTypeById(
+        fieldTypeId: number,
+    ): BackendFieldType | undefined {
         return fieldTypes.find((ft) => ft.id === fieldTypeId);
     }
     // --- REMOVE parseOptions ---
@@ -285,7 +294,8 @@
 
         const fieldsToCreate: CreatePageFieldRequest[] = [];
         // Use the imported UpdatePageFieldRequest directly
-        const fieldsToUpdate: Array<{ id: number } & UpdatePageFieldRequest> = [];
+        const fieldsToUpdate: Array<{ id: number } & UpdatePageFieldRequest> =
+            [];
         const fieldsToDelete: number[] = [];
         let fieldsChanged = false;
 
@@ -325,12 +335,14 @@
                             ...fieldPayload,
                             options: fieldPayload.options ?? null, // Ensure null if needed
                             // Ensure notification fields are null if disabled
-                            notification_days_before: fieldPayload.notification_enabled
-                                ? fieldPayload.notification_days_before
-                                : null,
-                            notification_target_date_part: fieldPayload.notification_enabled
-                                ? fieldPayload.notification_target_date_part
-                                : null,
+                            notification_days_before:
+                                fieldPayload.notification_enabled
+                                    ? fieldPayload.notification_days_before
+                                    : null,
+                            notification_target_date_part:
+                                fieldPayload.notification_enabled
+                                    ? fieldPayload.notification_target_date_part
+                                    : null,
                         };
 
                         if (isNew) {
@@ -338,9 +350,9 @@
                             fieldsToCreate.push(payloadWithOptions);
                         } else if (id) {
                             // Find the original field data (without transient props)
-                            const originalField = JSON.parse(originalFieldsJson).find(
-                                (of: any) => of.id === id,
-                            );
+                            const originalField = JSON.parse(
+                                originalFieldsJson,
+                            ).find((of: any) => of.id === id);
 
                             // Prepare the update payload (exclude ID, name, isNew, isDeleted)
                             // NOTE: updatePayload now contains the correctly nulled notification fields if needed
@@ -371,10 +383,10 @@
                                         : null,
                             };
 
-
                             if (
                                 originalField &&
-                                JSON.stringify(updatePayload) !== JSON.stringify(originalComparable)
+                                JSON.stringify(updatePayload) !==
+                                    JSON.stringify(originalComparable)
                             ) {
                                 // Only add to update if something actually changed
                                 // Ensure the payload matches UpdatePageFieldRequest
@@ -439,12 +451,14 @@
                 fieldsToUpdate.forEach((f) =>
                     promises.push(
                         // Pass UpdatePageFieldRequest type here
-                        updateField(f.id, f as UpdatePageFieldRequest).then((ok) => {
-                            if (!ok)
-                                throw new Error(
-                                    `Falha ao atualizar campo ${f.display_name} (ID: ${f.id}).`,
-                                );
-                        }),
+                        updateField(f.id, f as UpdatePageFieldRequest).then(
+                            (ok) => {
+                                if (!ok)
+                                    throw new Error(
+                                        `Falha ao atualizar campo ${f.display_name} (ID: ${f.id}).`,
+                                    );
+                            },
+                        ),
                     ),
                 );
                 fieldsToCreate.forEach((f) =>
@@ -570,6 +584,47 @@
                     >
                 </div>
             </label>
+            <!-- Notify on New Record Checkbox -->
+            <div class="form-control">
+                <label class="label cursor-pointer justify-start gap-2">
+                    <input
+                        type="checkbox"
+                        class="toggle toggle-primary"
+                        bind:checked={pageData.notify_on_new_record}
+                        disabled={isGroup}
+                    />
+                    <span class="label-text font-medium"
+                        >Notificar em Novos Registos?</span
+                    >
+                </label>
+                <div class="label">
+                    <span class="label-text-alt"
+                        >Se marcado, utilizadores com acesso serão notificados
+                        quando um novo registo for criado nesta página.</span
+                    >
+                </div>
+            </div>
+
+            <!-- Requires Acknowledgment Checkbox -->
+            <div class="form-control">
+                <label class="label cursor-pointer justify-start gap-2">
+                    <input
+                        type="checkbox"
+                        class="toggle toggle-info"
+                        bind:checked={pageData.requires_acknowledgment}
+                        disabled={isGroup}
+                    />
+                    <span class="label-text font-medium"
+                        >Exigir Tomar Conhecimento?</span
+                    >
+                </label>
+                <div class="label">
+                    <span class="label-text-alt"
+                        >Se marcado, utilizadores terão de confirmar a leitura
+                        antes de ver detalhes de um registo.</span
+                    >
+                </div>
+            </div>
             <label class="form-control w-full md:col-span-2">
                 <div class="label">
                     <span class="label-text">Descrição (Opcional)</span>
@@ -583,24 +638,31 @@
 
             <!-- Notify on New Record Checkbox (Only if NOT a group) -->
             {#if !isGroup}
-            <div class="form-control md:col-span-1">
-                <label class="label cursor-pointer justify-start gap-2 pt-8">
-                    <input
-                        type="checkbox"
-                        class="toggle toggle-info"
-                        bind:checked={pageData.notify_on_new_record}
-                    />
-                    <span class="label-text font-medium">Notificar em Novos Registos?</span>
-                </label>
-                <div class="label pt-0">
-                    <span class="label-text-alt">Notifica utilizadores com acesso à página quando um novo registo é criado.</span>
+                <div class="form-control md:col-span-1">
+                    <label
+                        class="label cursor-pointer justify-start gap-2 pt-8"
+                    >
+                        <input
+                            type="checkbox"
+                            class="toggle toggle-info"
+                            bind:checked={pageData.notify_on_new_record}
+                        />
+                        <span class="label-text font-medium"
+                            >Notificar em Novos Registos?</span
+                        >
+                    </label>
+                    <div class="label pt-0">
+                        <span class="label-text-alt"
+                            >Notifica utilizadores com acesso à página quando um
+                            novo registo é criado.</span
+                        >
+                    </div>
                 </div>
-            </div>
-             <!-- Placeholder for alignment if it's a group or if the other toggle isn't shown -->
-             <div class="md:col-span-1"></div>
+                <!-- Placeholder for alignment if it's a group or if the other toggle isn't shown -->
+                <div class="md:col-span-1"></div>
             {:else}
-            <!-- Span two columns if it's a group to maintain layout, or if you want to hide the new record toggle for groups -->
-            <div class="md:col-span-2"></div>
+                <!-- Span two columns if it's a group to maintain layout, or if you want to hide the new record toggle for groups -->
+                <div class="md:col-span-2"></div>
             {/if}
         </fieldset>
 
@@ -704,9 +766,13 @@
                                     onchange={() => {
                                         // Reset options and notification settings if type changes
                                         fields[index].options = null;
-                                        fields[index].notification_enabled = false;
-                                        fields[index].notification_days_before = null;
-                                        fields[index].notification_target_date_part = null;
+                                        fields[index].notification_enabled =
+                                            false;
+                                        fields[index].notification_days_before =
+                                            null;
+                                        fields[
+                                            index
+                                        ].notification_target_date_part = null;
                                         fields = [...fields]; // Trigger reactivity
                                     }}
                                 >
@@ -744,7 +810,9 @@
                                             <input
                                                 type="checkbox"
                                                 class="toggle toggle-primary toggle-sm"
-                                                bind:checked={field.notification_enabled}
+                                                bind:checked={
+                                                    field.notification_enabled
+                                                }
                                             />
                                             <span class="label-text"
                                                 >Ativar Notificação?</span
@@ -764,7 +832,9 @@
                                                 min="1"
                                                 placeholder="Ex: 7"
                                                 class="input input-sm input-bordered w-full"
-                                                bind:value={field.notification_days_before}
+                                                bind:value={
+                                                    field.notification_days_before
+                                                }
                                                 required={field.notification_enabled}
                                             />
                                         </label>
@@ -776,7 +846,9 @@
                                             </div>
                                             <select
                                                 class="select select-sm select-bordered w-full"
-                                                bind:value={field.notification_target_date_part}
+                                                bind:value={
+                                                    field.notification_target_date_part
+                                                }
                                                 required={field.notification_enabled}
                                             >
                                                 <option value={null} disabled
@@ -886,6 +958,7 @@
                                 <th class="text-center">Editar</th>
                                 <th class="text-center">Eliminar</th>
                                 <th class="text-center">Gerir Campos</th>
+                                <th class="text-center">Ver Confirmações</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -965,6 +1038,24 @@
                                                         role.is_admin,
                                                     (value) =>
                                                         (perm.can_manage_fields =
+                                                            value)
+                                                }
+                                                disabled={role.is_admin}
+                                            /></td
+                                        >
+                                        <td class="text-center"
+                                            ><input
+                                                type="checkbox"
+                                                class="checkbox checkbox-xs"
+                                                bind:checked={
+                                                    () =>
+                                                        (perm as any)
+                                                            .can_view_acknowledgments ||
+                                                        role.is_admin,
+                                                    (value) =>
+                                                        ((
+                                                            perm as any
+                                                        ).can_view_acknowledgments =
                                                             value)
                                                 }
                                                 disabled={role.is_admin}

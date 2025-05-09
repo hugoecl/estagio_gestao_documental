@@ -26,7 +26,8 @@ CREATE TABLE IF NOT EXISTS custom_pages (
     is_group BOOLEAN NOT NULL DEFAULT false COMMENT 'True if this entry is just a menu group/folder/submenu',
     description TEXT,
     icon VARCHAR(20) COMMENT 'FontAwesome icon name',
-    notify_on_new_record BOOLEAN NOT NULL DEFAULT false COMMENT 'Notify users with page access when a new record is created',
+    notify_on_new_record BOOLEAN NOT NULL DEFAULT false COMMENT 'Notify users with access when a new record is created',
+    requires_acknowledgment BOOLEAN NOT NULL DEFAULT false COMMENT 'Require users to acknowledge records before viewing details',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id)
@@ -104,6 +105,7 @@ CREATE TABLE IF NOT EXISTS page_permissions (
     can_edit BOOLEAN NOT NULL DEFAULT false,
     can_delete BOOLEAN NOT NULL DEFAULT false,
     can_manage_fields BOOLEAN NOT NULL DEFAULT false,
+    can_view_acknowledgments BOOLEAN NOT NULL DEFAULT false,
     PRIMARY KEY (id),
     UNIQUE KEY unique_page_role (page_id, role_id),
     FOREIGN KEY (page_id) REFERENCES custom_pages (id) ON DELETE CASCADE,
@@ -136,6 +138,18 @@ CREATE TABLE IF NOT EXISTS page_record_files (
     PRIMARY KEY (id),
     FOREIGN KEY (record_id) REFERENCES page_records (id) ON DELETE CASCADE,
     FOREIGN KEY (uploaded_by) REFERENCES users (id)
+);
+
+-- Record Acknowledgments Table
+CREATE TABLE IF NOT EXISTS record_acknowledgments (
+    id INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL,
+    user_id INT UNSIGNED NOT NULL,
+    record_id INT UNSIGNED NOT NULL,
+    acknowledged_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY unique_user_record_acknowledgment (user_id, record_id),
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+    FOREIGN KEY (record_id) REFERENCES page_records (id) ON DELETE CASCADE
 );
 
 -- Notifications Table

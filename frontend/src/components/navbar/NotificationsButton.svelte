@@ -34,11 +34,14 @@
                 const data = await response.json();
                 unreadCount = data.count ?? 0;
             } else {
-                console.error(
-                    "Failed to fetch unread count:",
-                    response.statusText,
-                );
-                unreadCount = 0; // Reset on error
+                // If it's a 401, it's an auth issue, don't show an error alert, just reset count.
+                // Middleware should handle actual page redirects if session is truly invalid.
+                if (response.status !== 401) {
+                     console.error("Failed to fetch unread count:", response.statusText);
+                     // Optionally show a generic alert for non-auth errors
+                     // showAlert("Erro ao buscar contagem de notificações.", AlertType.WARNING, AlertPosition.TOP);
+                }
+                unreadCount = 0; // Reset on any error, including 401
             }
         } catch (e) {
             console.error("Error fetching unread count:", e);
@@ -64,13 +67,15 @@
                 console.log("Fetched notifications data:", fetchedData); // Log raw data
                 notifications = fetchedData; // Assign to state
             } else {
-                console.error("Failed to fetch notifications:", response.statusText);
-                notifications = [];
-                showAlert(
-                    "Erro ao carregar notificações.",
-                    AlertType.ERROR,
-                    AlertPosition.TOP,
-                );
+                if (response.status !== 401) {
+                    console.error("Failed to fetch notifications:", response.statusText);
+                    showAlert(
+                        "Erro ao carregar notificações.",
+                        AlertType.ERROR,
+                        AlertPosition.TOP,
+                    );
+                }
+                notifications = []; // Reset on any error
             }
         } catch (e) {
             console.error("Error fetching notifications:", e);

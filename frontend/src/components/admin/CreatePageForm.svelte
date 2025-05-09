@@ -1,12 +1,11 @@
 <script lang="ts">
     import { onMount, tick } from "svelte";
-    // ... other imports
     import {
         showAlert,
         AlertType,
         AlertPosition,
     } from "@components/alert/alert";
-    import FieldOptionsEditor from "./FieldOptionsEditor.svelte"; // Import the new component
+    import FieldOptionsEditor from "./FieldOptionsEditor.svelte";
     import { getFieldTypes, getValidations } from "@api/fields-api";
     import { getRoles } from "@api/roles-api";
     import type {
@@ -15,18 +14,24 @@
     } from "@lib/types/custom-page";
     import type { Role } from "@lib/types/roles";
     import type {
+        FieldType as BackendFieldType, // Renamed to avoid conflict with local FieldType if any
         CreatePageFieldRequest,
-        FieldType as BackendFieldType, // Rename to avoid clash if needed
         ValidationFunction,
     } from "@lib/types/fields";
     import { createCustomPage } from "@api/custom-pages-api";
 
     // --- State ---
-    // ... (pageData, fields, permissions, etc. - no change needed here initially)
     let pageData = $state<Partial<CreateCustomPageRequest>>({
-        is_group: false, // Default to page
+        name: "",
+        path: "",
+        parent_path: "",
+        is_group: false,
+        description: "",
+        icon: "",
+        notify_on_new_record: false, // Added
+        requires_acknowledgment: false, // Added
     });
-    let fields = $state<CreatePageFieldRequest[]>([]);
+    let fields = $state<Array<CreatePageFieldRequest & { key: Symbol }>>([]); // Added key for #each
     let permissions = $state<Record<number, RolePermissionRequest>>({});
     let fieldTypes = $state<BackendFieldType[]>([]);
     let validations = $state<ValidationFunction[]>([]);
@@ -37,7 +42,6 @@
 
     // --- Fetch Initial Data ---
     onMount(async () => {
-        // ... (fetching logic remains the same)
         try {
             const [fetchedFieldTypes, fetchedValidations, fetchedRoles] =
                 await Promise.all([
@@ -58,6 +62,7 @@
                     can_edit: false,
                     can_delete: false,
                     can_manage_fields: false,
+                    can_view_acknowledgments: false, // Added
                 };
             });
             permissions = initialPermissions;
@@ -74,18 +79,18 @@
 
     // --- Field Management ---
     function addField() {
-        // ... (addField logic remains the same, ensure options: null initially)
         fields.push({
+            key: Symbol(), // Unique key for #each block
             name: `campo_${fields.length + 1}`,
             display_name: "",
             field_type_id: fieldTypes[0]?.id || 1,
             required: false,
-            options: null, // Initialize options as null
+            options: null,
             validation_name: null,
             is_searchable: true,
             is_displayed_in_table: true,
             order_index: fields.length,
-            notification_enabled: false, // Initialize notification fields
+            notification_enabled: false,
             notification_days_before: null,
             notification_target_date_part: null,
         });
@@ -93,14 +98,12 @@
     }
 
     function removeField(index: number) {
-        // ... (removeField logic remains the same)
         fields.splice(index, 1);
         fields.forEach((field, i) => (field.order_index = i));
         fields = [...fields];
     }
 
     function handleFieldNameChange(index: number, event: Event) {
-        // ... (logic remains the same)
         const input = event.target as HTMLInputElement;
         fields[index].name = input.value
             .toLowerCase()
@@ -114,14 +117,9 @@
             fieldTypes.find((ft) => ft.id === fieldTypeId)?.name ?? "UNKNOWN"
         );
     }
-
-    // Helper to get field type object
-    function getFieldTypeById(fieldTypeId: number): BackendFieldType | undefined {
-        return fieldTypes.find((ft) => ft.id === fieldTypeId);
+    function getFieldTypeById(id: number): BackendFieldType | undefined {
+        return fieldTypes.find((ft) => ft.id === id);
     }
-
-    // --- *** REMOVE parseOptions function - logic moved to FieldOptionsEditor *** ---
-    // function parseOptions(index: number, value: string) { ... } // DELETE THIS
 
     // --- Form Submission ---
     async function handleSubmit(e: Event) {
@@ -129,11 +127,17 @@
         isSubmitting = true;
         errors = {};
 
-        // --- Validation (Simplified - full validation omitted for brevity) ---
         if (!pageData.name) errors["page_name"] = "Nome obrigatório.";
         if (!pageData.path) errors["page_path"] = "Caminho obrigatório.";
-        else if (!/^[a-z0-9\/-]+$/.test(pageData.path))
-            errors["page_path"] = "Caminho inválido.";
+        else if (
+            !/^\/?[a-z0-9]+(?:[a-z0-9-]*[a-z0-9]+)?(?:\/[a-z0-9]+(?:[a-z0-9-]*[a-z0-9]+)?)*\/?$/.test(
+                pageData.path,
+            ) &&
+            pageData.path !== "/"
+        ) {
+            errors["page_path"] =
+                "Caminho inválido. Use / ou comece com / e use letras minúsculas, números e hífen.";
+        }
 
         if (!pageData.is_group) {
             fields.forEach((field, index) => {
@@ -142,13 +146,25 @@
                 if (!field.name) errors[`field_${index}_name`] = "Obrigatório.";
                 else if (!/^[a-z0-9_]+$/.test(field.name))
                     errors[`field_${index}_name`] = "Inválido.";
-                // *** Validation for options is handled implicitly by FieldOptionsEditor ***
-                // We just need to ensure the final `field.options` is correct before sending
+
+                if (field.notification_enabled) {
+                    if (
+                        !field.notification_days_before ||
+                        field.notification_days_before <= 0
+                    ) {
+                        errors[`field_${index}_notification_days`] =
+                            "Dias para notificação deve ser maior que 0.";
+                    }
+                    if (!field.notification_target_date_part) {
+                        errors[`field_${index}_notification_target`] =
+                            "Selecione o alvo da notificação (Data Início/Fim).";
+                    }
+                }
             });
-            if (fields.length === 0)
-                errors["fields_general"] = "Pelo menos um campo é necessário.";
+            if (fields.length === 0 && !pageData.is_group)
+                errors["fields_general"] =
+                    "Pelo menos um campo é necessário para uma página.";
         }
-        // --- End Validation ---
 
         if (Object.keys(errors).length > 0) {
             showAlert(
@@ -161,12 +177,12 @@
             return;
         }
 
-        // --- Prepare Data ---
-        // Format paths (same as before)
         let formattedPath = pageData.path!.trim().toLowerCase();
         if (!formattedPath.startsWith("/")) formattedPath = "/" + formattedPath;
         if (formattedPath.length > 1 && formattedPath.endsWith("/"))
             formattedPath = formattedPath.slice(0, -1);
+        if (formattedPath === "") formattedPath = "/";
+
         let formattedParentPath =
             pageData.parent_path?.trim().toLowerCase() || null;
         if (formattedParentPath) {
@@ -177,45 +193,54 @@
                 formattedParentPath.endsWith("/")
             )
                 formattedParentPath = formattedParentPath.slice(0, -1);
+            if (formattedParentPath === "") formattedParentPath = "/";
         }
-
-        // *** IMPORTANT: Ensure field.options contains the JSON value (string array) ***
-        // The FieldOptionsEditor's binding handles converting the UI array to the correct JSON format
-        // for the `field.options` property before this point.
+        if (formattedParentPath === formattedPath) {
+            errors["page_path"] =
+                "O caminho pai não pode ser igual ao caminho da página.";
+            showAlert(
+                "Erro de validação no caminho pai.",
+                AlertType.ERROR,
+                AlertPosition.TOP,
+            );
+            isSubmitting = false;
+            return;
+        }
 
         const finalData: CreateCustomPageRequest = {
             name: pageData.name!,
             path: formattedPath,
             parent_path: formattedParentPath,
-            is_group: pageData.is_group ?? false,
-            notify_on_new_record: pageData.is_group ? false : (pageData.notify_on_new_record ?? false),
+            is_group: pageData.is_group!,
             description: pageData.description || null,
             icon: pageData.icon || null,
+            notify_on_new_record: pageData.is_group
+                ? false
+                : pageData.notify_on_new_record || false, // Added
+            requires_acknowledgment: pageData.is_group
+                ? false
+                : pageData.requires_acknowledgment || false, // Added
             fields: pageData.is_group
                 ? []
-                : fields.map((f) => ({
-                      // Ensure null options if empty
-                      ...f,
-                      options: f.options ?? null,
-                      // Ensure notification fields are null if not enabled
-                      notification_days_before: f.notification_enabled
-                          ? f.notification_days_before
+                : fields.map(({ key, ...f_rest }) => ({
+                      // Exclude key from payload
+                      ...f_rest,
+                      options: f_rest.options ?? null,
+                      notification_days_before: f_rest.notification_enabled
+                          ? f_rest.notification_days_before
                           : null,
-                      notification_target_date_part: f.notification_enabled
-                          ? f.notification_target_date_part
+                      notification_target_date_part: f_rest.notification_enabled
+                          ? f_rest.notification_target_date_part
                           : null,
                   })),
             permissions: pageData.is_group ? [] : Object.values(permissions),
         };
-        // --- End Prepare Data ---
 
-        // --- API Call ---
         try {
-            // ... (API call logic remains the same) ...
             const result = await createCustomPage(finalData);
             if (result.success) {
                 showAlert(
-                    `${pageData.is_group ? "Grupo" : "Página"} criado com sucesso!`,
+                    `${pageData.is_group ? "Grupo" : "Página"} criada com sucesso!`,
                     AlertType.SUCCESS,
                     AlertPosition.TOP,
                 );
@@ -233,7 +258,6 @@
         } finally {
             isSubmitting = false;
         }
-        // --- End API Call ---
     }
 </script>
 
@@ -247,13 +271,14 @@
         class="space-y-6 p-4 bg-base-100 rounded-lg shadow border border-base-content/10"
     >
         <!-- Page/Group Details Fieldset -->
+
+        <!-- Page/Group Details Fieldset -->
         <fieldset
             class="grid grid-cols-1 md:grid-cols-2 gap-4 border p-4 rounded-md border-base-content/20"
         >
             <legend class="text-lg font-semibold px-2"
                 >Detalhes {pageData.is_group ? "do Grupo" : "da Página"}</legend
             >
-
             <label class="form-control w-full">
                 <div class="label"><span class="label-text">Nome*</span></div>
                 <input
@@ -287,7 +312,8 @@
                     >{/if}
                 <div class="label">
                     <span class="label-text-alt"
-                        >Será formatado (minúsculas, -, /). Sem / no final.</span
+                        >Será formatado (minúsculas, -, /). Sem / no final. Use
+                        / para raiz.</span
                     >
                 </div>
             </label>
@@ -339,9 +365,9 @@
                 ></textarea>
             </label>
 
-            <!-- Is Group Checkbox -->
-            <div class="form-control md:col-span-1">
-                <label class="label cursor-pointer justify-start gap-2 pt-8">
+            <!-- Moved Toggles to the bottom of this fieldset -->
+            <div class="form-control md:col-span-1 self-end">
+                <label class="label cursor-pointer justify-start gap-2 pt-2">
                     <input
                         type="checkbox"
                         class="toggle toggle-accent"
@@ -353,32 +379,59 @@
                 </label>
                 <div class="label pt-0">
                     <span class="label-text-alt"
-                        >Marque se for uma pasta no menu para organizar outras
-                        páginas.</span
+                        >Marque se isto for apenas uma pasta no menu para
+                        organizar outras páginas.</span
                     >
                 </div>
             </div>
 
-            <!-- Notify on New Record Checkbox (Only if NOT a group) -->
             {#if !pageData.is_group}
-            <div class="form-control md:col-span-1">
-                <label class="label cursor-pointer justify-start gap-2 pt-8">
-                    <input
-                        type="checkbox"
-                        class="toggle toggle-info"
-                        bind:checked={pageData.notify_on_new_record}
-                    />
-                    <span class="label-text font-medium">Notificar em Novos Registos?</span>
-                </label>
-                <div class="label pt-0">
-                    <span class="label-text-alt">Notifica utilizadores com acesso à página quando um novo registo é criado.</span>
+                <div class="form-control md:col-span-1 self-end">
+                    <label
+                        class="label cursor-pointer justify-start gap-2 pt-2"
+                    >
+                        <input
+                            type="checkbox"
+                            class="toggle toggle-primary"
+                            bind:checked={pageData.notify_on_new_record}
+                        />
+                        <span class="label-text font-medium"
+                            >Notificar em Novos Registos?</span
+                        >
+                    </label>
+                    <div class="label pt-0">
+                        <span class="label-text-alt"
+                            >Utilizadores com acesso serão notificados.</span
+                        >
+                    </div>
                 </div>
-            </div>
+
+                <div class="form-control md:col-span-1 self-end">
+                    <label
+                        class="label cursor-pointer justify-start gap-2 pt-2"
+                    >
+                        <input
+                            type="checkbox"
+                            class="toggle toggle-secondary"
+                            bind:checked={pageData.requires_acknowledgment}
+                        />
+                        <span class="label-text font-medium"
+                            >Exigir Tomar Conhecimento?</span
+                        >
+                    </label>
+                    <div class="label pt-0">
+                        <span class="label-text-alt"
+                            >Utilizadores terão de confirmar leitura antes de
+                            ver detalhes.</span
+                        >
+                    </div>
+                </div>
             {:else}
-            <div class="md:col-span-1"></div> <!-- Placeholder to keep grid consistent -->
+                <!-- Placeholder for alignment if is_group is true -->
+                <div class="md:col-span-1"></div>
+                <div class="md:col-span-1"></div>
             {/if}
         </fieldset>
-
         {#if !pageData.is_group}
             <!-- Fields Section -->
             <fieldset
@@ -458,9 +511,13 @@
                                     onchange={() => {
                                         // Reset options and notification settings if type changes
                                         fields[index].options = null;
-                                        fields[index].notification_enabled = false;
-                                        fields[index].notification_days_before = null;
-                                        fields[index].notification_target_date_part = null;
+                                        fields[index].notification_enabled =
+                                            false;
+                                        fields[index].notification_days_before =
+                                            null;
+                                        fields[
+                                            index
+                                        ].notification_target_date_part = null;
                                         fields = [...fields]; // Trigger reactivity
                                     }}
                                 >
@@ -498,7 +555,9 @@
                                             <input
                                                 type="checkbox"
                                                 class="toggle toggle-primary toggle-sm"
-                                                bind:checked={field.notification_enabled}
+                                                bind:checked={
+                                                    field.notification_enabled
+                                                }
                                             />
                                             <span class="label-text"
                                                 >Ativar Notificação?</span
@@ -518,7 +577,9 @@
                                                 min="1"
                                                 placeholder="Ex: 7"
                                                 class="input input-sm input-bordered w-full"
-                                                bind:value={field.notification_days_before}
+                                                bind:value={
+                                                    field.notification_days_before
+                                                }
                                                 required={field.notification_enabled}
                                             />
                                         </label>
@@ -530,7 +591,9 @@
                                             </div>
                                             <select
                                                 class="select select-sm select-bordered w-full"
-                                                bind:value={field.notification_target_date_part}
+                                                bind:value={
+                                                    field.notification_target_date_part
+                                                }
                                                 required={field.notification_enabled}
                                             >
                                                 <option value={null} disabled
@@ -635,9 +698,7 @@
 
             <!-- Permissions Fieldset -->
             <fieldset class="border p-4 rounded-md border-base-content/20">
-                <legend class="text-lg font-semibold px-2"
-                    >Permissões</legend
-                >
+                <legend class="text-lg font-semibold px-2">Permissões</legend>
                 <div class="overflow-x-auto">
                     <table class="table table-sm w-full">
                         <thead>
@@ -647,6 +708,8 @@
                                 <th class="text-center">Editar</th>
                                 <th class="text-center">Eliminar</th>
                                 <th class="text-center">Gerir Campos</th>
+                                <th class="text-center">Ver Confirmações</th>
+                                <!-- New Header -->
                             </tr>
                         </thead>
                         <tbody>
@@ -726,6 +789,22 @@
                                                         role.is_admin,
                                                     (value) =>
                                                         (perm.can_manage_fields =
+                                                            value)
+                                                }
+                                                disabled={role.is_admin}
+                                            /></td
+                                        >
+                                        <!-- New Cell for can_view_acknowledgments -->
+                                        <td class="text-center"
+                                            ><input
+                                                type="checkbox"
+                                                class="checkbox checkbox-xs"
+                                                bind:checked={
+                                                    () =>
+                                                        perm.can_view_acknowledgments ||
+                                                        role.is_admin,
+                                                    (value) =>
+                                                        (perm.can_view_acknowledgments =
                                                             value)
                                                 }
                                                 disabled={role.is_admin}

@@ -24,6 +24,7 @@ pub async fn calculate_user_page_permissions(
                 can_edit: true,
                 can_delete: true,
                 can_manage_fields: true,
+                can_view_acknowledgments: true, // Admin can view acknowledgments
                 is_admin: true,
             };
             break; // No need to check other roles if admin
@@ -36,6 +37,7 @@ pub async fn calculate_user_page_permissions(
             calculated_perms.can_edit |= perm.can_edit;
             calculated_perms.can_delete |= perm.can_delete;
             calculated_perms.can_manage_fields |= perm.can_manage_fields;
+            calculated_perms.can_view_acknowledgments |= perm.can_view_acknowledgments;
         }
     }
 

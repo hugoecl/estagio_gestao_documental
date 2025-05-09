@@ -48,6 +48,8 @@
         submitButtonText = "Guardar",
         apiBaseUrl,
         readOnly = false,
+        currentUserPermissions = null,
+        pageRequiresAcknowledgment = false, // Added prop
     }: {
         formModal: HTMLDialogElement;
         title: string;
@@ -69,6 +71,8 @@
         submitButtonText?: string;
         apiBaseUrl: string;
         readOnly?: boolean;
+        currentUserPermissions?: UserPagePermissions | null;
+        pageRequiresAcknowledgment?: boolean; // Added prop type
     } = $props();
 
     // --- Internal State ---
@@ -635,9 +639,9 @@
 
             <!-- Actions -->
             <div
-                class="modal-action flex flex-col-reverse sm:flex-row justify-between pt-4 mt-4 border-t"
+                class="modal-action flex flex-col-reverse sm:flex-row justify-between items-center pt-4 mt-4 border-t"
             >
-                <div>
+                <div class="flex gap-2">
                     {#if showDeleteButton && onDelete && recordId !== null && !readOnly}
                         <button
                             type="button"
@@ -647,6 +651,15 @@
                         >
                             {deleteButtonText}
                         </button>
+                    {/if}
+
+                    {#if recordId !== null && pageRequiresAcknowledgment && currentUserPermissions && (currentUserPermissions.is_admin || currentUserPermissions.can_view_acknowledgments) && fields.length > 0}
+                        <a
+                            href={`/admin/records/${recordId}/acknowledgments/`}
+                            class="btn btn-accent w-full sm:w-auto"
+                        >
+                            <i class="fa-solid fa-list-check mr-1"></i> Ver Confirmações
+                        </a>
                     {/if}
                 </div>
                 <div
