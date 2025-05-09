@@ -6,6 +6,8 @@
 - [X] Simplificar a criação de paginas. Fazer com que o caminho seja automatico e selecionar grupo
 - [X] Traduzir campos, formatar datas em funções, e traduzir true/false em funcoes
 - [X] Meter verificações de campos apenas em TEXT
+- [ ] Settings page
+- [ ] Admin being able to edit user name, email, password
 - [ ] Ver quem tem acesso ao servidor
 
 
