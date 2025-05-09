@@ -11,22 +11,23 @@ export async function handleFetch(
 
     // Check if running in the browser before doing client-side redirects or alerts
     if (typeof window !== "undefined") {
-      if (
-        response.status === 401 &&
-        window.location.pathname !== "/iniciar-sessao/" &&
-        window.location.pathname !== "/registo/"
-      ) {
-        // Redirect to login only on the client
-        window.location.pathname = "/iniciar-sessao/";
-        // Return a dummy response or throw an error to stop further client processing
-        // Or simply let the redirect happen. Returning the original response might be confusing.
-        // Throwing an error might be better to signal interruption.
-        throw new Error("Unauthorized, redirecting to login.");
+      // Client-side specific checks
+      if (response.status === 401) {
+        // Log the 401, but do not redirect or throw an error that prevents the response from being returned.
+        // The calling code will receive the 401 response and should handle it.
+        // Middleware is responsible for page-level redirects.
+        // We only log here if it's not the login/register page itself to avoid noise during login attempts.
+        if (window.location.pathname !== "/iniciar-sessao/" && window.location.pathname !== "/registo/") {
+            console.warn(
+                `Client-side API request to ${String(url)} resulted in 401. Auth state might be invalid or expired.`
+            );
+        }
+        // IMPORTANT: Do not redirect or throw here. Let the original 401 response be returned to the caller.
       }
     } else {
       // Server-side specific checks if needed (e.g., logging 401s)
       if (response.status === 401) {
-        console.warn(`Server-side fetch to ${url} resulted in 401.`);
+        console.warn(`Server-side fetch to ${String(url)} resulted in 401.`);
       }
     }
 

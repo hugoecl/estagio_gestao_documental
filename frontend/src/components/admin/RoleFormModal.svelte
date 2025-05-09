@@ -254,7 +254,7 @@
                 ></textarea>
             </label>
 
-            <div class="form-control">
+            <div class="form-control mt-3">
                 <label class="label cursor-pointer justify-start gap-2">
                     <input
                         type="checkbox"

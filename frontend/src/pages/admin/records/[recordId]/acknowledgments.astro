@@ -1,0 +1,138 @@
+---
+import Layout from "@layouts/Layout.astro";
+import RecordAcknowledgmentList from "@components/admin/RecordAcknowledgmentList.svelte";
+import { getRecordById } from "@api/records-api";
+import { getCustomPageById } from "@api/custom-pages-api";
+import API_BASE_URL from "@api/base-url";
+
+const { recordId } = Astro.params;
+const recordIdNum = parseInt(recordId || "", 10);
+
+let recordDisplayString = `Registo #${recordIdNum}`;
+let pageId: number | null = null;
+let pageName = "Página Desconhecida";
+let pagePathForLink = "/"; // Default link for the page
+let error: string | null = null;
+
+if (isNaN(recordIdNum)) {
+    error = "ID do Registo Inválido.";
+    Astro.response.status = 400;
+} else {
+    try {
+        const recordWithFiles = await getRecordById(
+            recordIdNum,
+            Astro.request.headers.get("cookie") ?? undefined,
+        );
+
+        if (recordWithFiles) {
+            pageId = recordWithFiles.record.page_id;
+            const data =
+                recordWithFiles.record.processedData ||
+                recordWithFiles.record.data;
+
+            let foundName =
+                data?.name || data?.title || data?.nome || data?.descricao;
+            if (typeof foundName === "string" && foundName.trim() !== "") {
+                recordDisplayString = `"${foundName}" (ID: ${recordIdNum})`;
+            } else {
+                const firstStringValue = Object.values(data).find(
+                    (v) => typeof v === "string" && String(v).trim() !== "",
+                );
+                if (firstStringValue) {
+                    recordDisplayString = `"${String(firstStringValue).substring(0, 30)}..." (ID: ${recordIdNum})`;
+                }
+            }
+
+            if (pageId) {
+                const pageDetails = await getCustomPageById(
+                    pageId,
+                    Astro.request.headers.get("cookie") ?? undefined,
+                );
+                if (pageDetails) {
+                    pageName = pageDetails.page.name;
+                    pagePathForLink = pageDetails.page.path.startsWith("/")
+                        ? pageDetails.page.path
+                        : `/${pageDetails.page.path}`;
+                } else {
+                    pageName = `Página (ID: ${pageId})`;
+                }
+            }
+        } else {
+            error = `Registo #${recordIdNum} não encontrado.`;
+            Astro.response.status = 404;
+        }
+    } catch (e: any) {
+        console.error(
+            `Error fetching details for acknowledgments page (recordId: ${recordIdNum}):`,
+            e,
+        );
+        error = "Erro ao carregar detalhes do registo ou da página.";
+        if (e.message?.includes("401") || e.message?.includes("403")) {
+            Astro.response.status = 403;
+            error = "Não tem permissão para aceder a esta informação.";
+        } else if (e.message?.includes("404")) {
+            Astro.response.status = 404;
+        } else {
+            Astro.response.status = 500;
+        }
+    }
+}
+---
+
+<Layout title={`Confirmações - ${recordDisplayString}`}>
+    <div class="mb-6">
+        <div class="flex justify-between">
+            <h1 class="text-2xl font-bold">
+                Confirmações de Leitura para: <span class="text-primary"
+                    >{recordDisplayString}</span
+                >
+            </h1>
+            <a href={pagePathForLink.endsWith("/") ? pagePathForLink : `${pagePathForLink}/`} class="btn btn-sm btn-ghost">
+                <i class="fa-solid fa-arrow-left mr-2"></i> Voltar à Página do Registo
+            </a>
+        </div>
+    </div>
+
+    {
+        error && (
+            <div class="alert alert-error shadow-lg">
+                <div>
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="stroke-current flex-shrink-0 h-6 w-6"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                    </svg>
+                    <span>{error}</span>
+                </div>
+            </div>
+        )
+    }
+
+    {
+        !error && isNaN(recordIdNum) && (
+            <div class="alert alert-warning">
+                ID do registo não fornecido ou inválido.
+            </div>
+        )
+    }
+
+    {
+        !error && !isNaN(recordIdNum) && (
+            <div class="bg-base-100 rounded-lg shadow-md border border-base-content/10 overflow-hidden">
+                <RecordAcknowledgmentList
+                    recordId={recordIdNum}
+                    apiBaseUrl={API_BASE_URL}
+                    client:load
+                />
+            </div>
+        )
+    }
+</Layout>

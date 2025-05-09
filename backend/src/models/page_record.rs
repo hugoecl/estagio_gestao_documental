@@ -226,4 +226,14 @@ impl PageRecord {
 
         Ok(filtered_records)
     }
+
+    pub async fn get_page_id_for_record(pool: &sqlx::MySqlPool, record_id: u32) -> Result<u32, sqlx::Error> {
+        let result = sqlx::query_scalar!(
+            r#"SELECT page_id FROM page_records WHERE id = ?"#,
+            record_id
+        )
+        .fetch_one(pool)
+        .await?;
+        Ok(result)
+    }
 }

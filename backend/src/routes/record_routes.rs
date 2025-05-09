@@ -1,10 +1,11 @@
 use actix_web::web;
 
-use crate::handlers::record_handlers;
+use crate::handlers::{record_handlers, acknowledgment_handlers}; // Add acknowledgment_handlers
 
 pub fn init(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/records")
+            // Standard Record Routes
             .route("/{record_id}", web::get().to(record_handlers::get_record))
             .route(
                 "/{record_id}",
@@ -29,6 +30,19 @@ pub fn init(cfg: &mut web::ServiceConfig) {
             .route(
                 "/pages/{page_id}/records",
                 web::post().to(record_handlers::create_record),
+            )
+            // Acknowledgment Routes (now under the same /records scope)
+            .route(
+                "/{record_id}/acknowledge",
+                web::post().to(acknowledgment_handlers::acknowledge_record),
+            )
+            .route(
+                "/{record_id}/acknowledgment-status",
+                web::get().to(acknowledgment_handlers::check_acknowledgment_status),
+            )
+            .route(
+                "/{record_id}/acknowledgments",
+                web::get().to(acknowledgment_handlers::get_acknowledgments_for_record),
             ),
     );
 }
