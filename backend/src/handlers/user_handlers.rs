@@ -5,16 +5,15 @@ use log::error;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    State,
+    State, // For returning user details
     auth::{is_admin, user_can_manage_page, validate_session},
-    models::user::User, // For returning user details
     models::{
         role::{Role, UserRoleAssignment},
-        user::{UserRoleRow, UserWithRoles},
+        user::{User, UserRoleRow, UserWithRoles},
     },
     utils::{
         hashing_utils::{hash, verify},
-        json_utils::{Json, json_response, json_response_with_etag},
+        json_utils::{Json, json_response, json_response_with_etag}, // Removed custom Json, will use web::Json
     },
 };
 
@@ -37,6 +36,17 @@ struct RegisterRequest {
     username: String,
     email: String,
     password: String,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct AdminUpdateUserRequest {
+    pub username: Option<String>,
+    pub email: Option<String>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct AdminSetPasswordRequest {
+    pub new_password: String,
 }
 
 pub async fn register(state: web::Data<State>, request_data: web::Bytes) -> impl Responder {
@@ -609,21 +619,21 @@ pub async fn get_users_with_roles(
     let rows = sqlx::query_as!(
         UserRoleRow,
         r#"
-        SELECT
-            u.id as user_id,
-            u.username,
-            u.email,
-            r.id as role_id,
-            r.name as role_name,
-            r.description as role_description,
-            r.is_admin as "role_is_admin: bool",
-            r.created_at as "role_created_at?: chrono::DateTime<chrono::Utc>",
-            r.updated_at as "role_updated_at?: chrono::DateTime<chrono::Utc>"
-        FROM users u
-        LEFT JOIN user_roles ur ON u.id = ur.user_id
-        LEFT JOIN roles r ON ur.role_id = r.id
-        ORDER BY u.username, r.name
-        "#
+    SELECT
+        u.id as user_id,
+        u.username,
+        u.email,
+        r.id as role_id,
+        r.name as role_name,
+        r.description as role_description,
+        r.is_admin as "role_is_admin: bool",
+        r.created_at as "role_created_at?: chrono::DateTime<chrono::Utc>",
+        r.updated_at as "role_updated_at?: chrono::DateTime<chrono::Utc>"
+    FROM users u
+    LEFT JOIN user_roles ur ON u.id = ur.user_id
+    LEFT JOIN roles r ON ur.role_id = r.id
+    ORDER BY u.username, r.name
+    "#
     )
     .fetch_all(&state.db.pool)
     .await;
@@ -675,6 +685,163 @@ pub async fn get_users_with_roles(
         Err(e) => {
             error!("Database error fetching users with roles: {}", e);
             HttpResponse::InternalServerError().body("Erro ao buscar utilizadores") // Translated
+        }
+    }
+}
+
+// Admin handler to update a specific user's details (username, email)
+pub async fn admin_update_user_details(
+    state: web::Data<State>,
+    session: Session,
+    path: web::Path<u32>,                        // User ID from path
+    req_data: web::Json<AdminUpdateUserRequest>, // New request struct
+) -> impl Responder {
+    if let Err(admin_resp) = is_admin(&session) {
+        return admin_resp; // Ensure requester is admin
+    }
+
+    let target_user_id = path.into_inner();
+    let update_payload = req_data.into_inner();
+
+    // Fetch current details of the user being updated
+    let target_user = match sqlx::query!(
+        r#"SELECT username, email FROM users WHERE id = ?"#,
+        target_user_id
+    )
+    .fetch_optional(&state.db.pool)
+    .await
+    {
+        Ok(Some(user)) => user,
+        Ok(None) => return HttpResponse::NotFound().body("Utilizador alvo não encontrado."),
+        Err(e) => {
+            log::error!("Database error fetching target user: {}", e);
+            return HttpResponse::InternalServerError().body("Erro ao buscar utilizador alvo.");
+        }
+    };
+
+    // Clone original values for comparison and potential revert
+    let original_target_username = target_user.username.clone();
+    let original_target_email = target_user.email.clone();
+
+    let new_username = update_payload
+        .username
+        .filter(|s| !s.trim().is_empty()) // Keep Some only if not just whitespace
+        .unwrap_or_else(|| original_target_username.clone()); // Use cloned original if None or was empty
+
+    let new_email = update_payload
+        .email
+        .filter(|s| !s.trim().is_empty()) // Keep Some only if not just whitespace
+        .unwrap_or_else(|| original_target_email.clone()); // Use cloned original if None or was empty
+
+    // Check for username uniqueness if it's being changed
+    if new_username != original_target_username {
+        match sqlx::query(r#"SELECT id FROM users WHERE username = ? AND id != ?"#)
+            .bind(&new_username)
+            .bind(target_user_id)
+            .fetch_optional(&state.db.pool)
+            .await
+        {
+            Ok(Some(_)) => return HttpResponse::Conflict().body("Nome de utilizador já existe."),
+            Ok(None) => {} // Username is unique
+            Err(e) => {
+                error!(
+                    "Database error checking username uniqueness for admin update: {}",
+                    e
+                );
+                return HttpResponse::InternalServerError()
+                    .body("Erro ao verificar nome de utilizador.");
+            }
+        }
+    }
+
+    // Check for email uniqueness if it's being changed
+    if new_email != original_target_email {
+        match sqlx::query(r#"SELECT id FROM users WHERE email = ? AND id != ?"#)
+            .bind(&new_email)
+            .bind(target_user_id)
+            .fetch_optional(&state.db.pool)
+            .await
+        {
+            Ok(Some(_)) => return HttpResponse::Conflict().body("E-mail já existe."),
+            Ok(None) => {} // Email is unique
+            Err(e) => {
+                error!(
+                    "Database error checking email uniqueness for admin update: {}",
+                    e
+                );
+                return HttpResponse::InternalServerError().body("Erro ao verificar e-mail.");
+            }
+        }
+    }
+
+    // Update user details
+    match sqlx::query!(
+        r#"UPDATE users SET username = ?, email = ? WHERE id = ?"#,
+        new_username,
+        new_email,
+        target_user_id
+    )
+    .execute(&state.db.pool)
+    .await
+    {
+        Ok(_) => HttpResponse::Ok().body("Detalhes do utilizador atualizados com sucesso."),
+        Err(e) => {
+            error!("Database error admin updating user details: {}", e);
+            HttpResponse::InternalServerError().body("Erro ao atualizar detalhes do utilizador.")
+        }
+    }
+}
+
+// Admin handler to set/change a specific user's password
+pub async fn admin_set_user_password(
+    state: web::Data<State>,
+    session: Session,
+    path: web::Path<u32>,                         // User ID from path
+    req_data: web::Json<AdminSetPasswordRequest>, // New request struct
+) -> impl Responder {
+    if let Err(admin_resp) = is_admin(&session) {
+        return admin_resp; // Ensure requester is admin
+    }
+
+    let target_user_id = path.into_inner();
+    let set_password_payload = req_data.into_inner();
+
+    // Check if target user exists
+    match sqlx::query_scalar!(
+        r#"SELECT EXISTS(SELECT 1 FROM users WHERE id = ?)"#,
+        target_user_id
+    )
+    .fetch_one(&state.db.pool)
+    .await
+    {
+        Ok(exists) => {
+            if exists != 1 {
+                // MySQL returns 1 for true, 0 for false for EXISTS
+                return HttpResponse::NotFound().body("Utilizador alvo não encontrado.");
+            }
+        }
+        Err(e) => {
+            error!("Database error checking if target user exists: {}", e);
+            return HttpResponse::InternalServerError().body("Erro ao verificar utilizador alvo.");
+        }
+    }
+
+    // Hash new password
+    let new_password_hashed = hash(&set_password_payload.new_password);
+
+    // Update password
+    match sqlx::query!(
+        r#"UPDATE users SET password = ? WHERE id = ?"#,
+        &new_password_hashed[..],
+        target_user_id
+    )
+    .execute(&state.db.pool)
+    .await
+    {
+        Ok(_) => HttpResponse::Ok().body("Palavra-passe do utilizador definida com sucesso."),
+        Err(e) => {
+            error!("Database error admin setting user password: {}", e);
+            HttpResponse::InternalServerError().body("Erro ao definir palavra-passe do utilizador.")
         }
     }
 }

@@ -52,3 +52,17 @@ export interface ChangePasswordPayload {
   current_password: string;
   new_password: string;
 }
+
+// --- Admin User Modification Payloads ---
+
+// For admin updating a specific user's details
+export interface AdminUpdateUserPayload {
+  username?: string; // Optional: only send if changed
+  email?: string;    // Optional: only send if changed
+  // Admin does not need to provide a password to change these details
+}
+
+// For admin setting/changing a specific user's password
+export interface AdminSetPasswordPayload {
+  new_password: string;
+}

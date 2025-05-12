@@ -25,6 +25,15 @@ pub fn init(cfg: &mut web::ServiceConfig) {
             .route(
                 "/me/password",
                 web::put().to(user_handlers::change_user_password),
+            )
+            // Admin routes for specific user modification
+            .route(
+                "/admin/{user_id}/details",
+                web::put().to(user_handlers::admin_update_user_details),
+            )
+            .route(
+                "/admin/{user_id}/password",
+                web::put().to(user_handlers::admin_set_user_password),
             ),
     );
 }

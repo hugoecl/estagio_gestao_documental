@@ -12,6 +12,7 @@
 - [X] Remover console.log inuteis
 - [X] Settings page
 - [ ] Admin being able to edit user name, email, password
+- [ ] Melhorar navegação do website (botões para voltar para trás)
 - [ ] Ver quem tem acesso ao servidor
 
 

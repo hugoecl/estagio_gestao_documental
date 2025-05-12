@@ -4,8 +4,10 @@ import type {
   User, // Added User for details
   UserWithRoles,
   AssignRoleRequest,
-  UpdateUserDetailsPayload, // New
-  ChangePasswordPayload, // New
+  UpdateUserDetailsPayload,
+  ChangePasswordPayload,
+  AdminUpdateUserPayload, // New for admin
+  AdminSetPasswordPayload, // New for admin
 } from "@lib/types/user";
 import type { CreateUserRequest, CreateUserResponse } from "@lib/types/user";
 
@@ -90,6 +92,42 @@ export async function updateUserDetails(
     body: JSON.stringify(payload),
   });
   const responseText = await response.text(); // Get text for success or error message
+  return { success: response.ok, message: responseText };
+}
+
+// --- Admin User Modification API Functions ---
+
+export async function adminUpdateUserDetails(
+  userId: number,
+  payload: AdminUpdateUserPayload,
+): Promise<{ success: boolean; message: string }> {
+  const response = await handleFetch(
+    `${API_BASE_URL}/users/admin/${userId}/details`,
+    {
+      method: "PUT",
+      credentials: "include", // Admin actions require authenticated admin session
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+  );
+  const responseText = await response.text();
+  return { success: response.ok, message: responseText };
+}
+
+export async function adminSetUserPassword(
+  userId: number,
+  payload: AdminSetPasswordPayload,
+): Promise<{ success: boolean; message: string }> {
+  const response = await handleFetch(
+    `${API_BASE_URL}/users/admin/${userId}/password`,
+    {
+      method: "PUT",
+      credentials: "include", // Admin actions require authenticated admin session
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+  );
+  const responseText = await response.text();
   return { success: response.ok, message: responseText };
 }
 

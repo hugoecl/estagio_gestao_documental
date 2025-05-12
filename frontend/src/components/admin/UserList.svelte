@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onMount, tick } from "svelte"; // Import tick
     import Table from "@components/common/Table.svelte";
-    import EditUserRolesModal from "./EditUserRolesModal.svelte"; // Import the modal
+    import AdminEditUserModal from "./AdminEditUserModal.svelte"; // Import the renamed modal
     import type { UserWithRoles } from "@lib/types/user";
     import type { Role } from "@lib/types/roles";
     import type { TableColumn } from "@lib/types/table";
@@ -80,6 +80,15 @@
         }
     }
 
+    function handleUserDetailsUpdated(userId: number, newUsername: string, newEmail: string) {
+        const userIdStr = userId.toString();
+        if (users[userIdStr]) {
+            users[userIdStr].username = newUsername;
+            users[userIdStr].email = newEmail;
+            users = { ...users }; // Trigger reactivity
+        }
+    }
+
     // Function to refresh the list, exposed globally
     async function refreshUserList() {
         await loadUsersAndRoles(); // Call the renamed data loading function
@@ -106,10 +115,11 @@
 />
 
 {#if selectedUser}
-    <EditUserRolesModal
+    <AdminEditUserModal
         bind:modalRef={editModalRef}
         user={selectedUser}
         {allRoles}
         onRolesUpdated={handleRolesUpdated}
+        onUserDetailsUpdated={handleUserDetailsUpdated}
     />
 {/if}
