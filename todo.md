@@ -11,9 +11,6 @@
 - [X] Voltar a adicionar badges para funções na tabela dos utilizadores
 - [X] Remover console.log inuteis
 - [X] Settings page
-- [ ] Admin being able to edit user name, email, password
-- [ ] Melhorar navegação do website (botões para voltar para trás)
+- [X] Admin being able to edit user name, email, password
+- [X] Melhorar navegação do website (botões para voltar para trás)
 - [ ] Ver quem tem acesso ao servidor
-
-
-tambem melhorei navegação do website
