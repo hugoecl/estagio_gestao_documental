@@ -219,7 +219,7 @@
         <span class="loading loading-lg loading-spinner text-primary"></span>
     </div>
 {:else}
-    <div class="space-y-10">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-10 w-full">
         <!-- User Details Form -->
         <form
             onsubmit={handleUpdateDetails}
@@ -327,7 +327,7 @@
                 >
                     {#if isSubmittingDetails}
                         <span class="loading loading-spinner loading-sm"></span>
-                        Guardando...
+                        A guardar...
                     {:else}
                         <i class="fa-solid fa-save mr-2"></i>
                         Guardar Detalhes
@@ -409,12 +409,12 @@
             <div class="flex justify-end">
                 <button
                     type="submit"
-                    class="btn btn-secondary mt-3"
+                    class="btn btn-primary mt-3"
                     disabled={isSubmittingPassword}
                 >
                     {#if isSubmittingPassword}
                         <span class="loading loading-spinner loading-sm"></span>
-                        Alterando...
+                        A alterar...
                     {:else}
                         <i class="fa-solid fa-key mr-2"></i>
                         Alterar Palavra-passe

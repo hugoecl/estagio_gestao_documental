@@ -4,9 +4,13 @@ import UserSettingsForm from "@components/settings/UserSettingsForm.svelte";
 ---
 
 <Layout title="Definições do Utilizador | Gestão Documental">
-    <div class="container mx-auto max-w-2xl py-8 px-4">
-        <h1 class="text-3xl font-bold mb-6 text-center">Definições do Utilizador</h1>
-        <div class="bg-base-100 p-6 sm:p-8 rounded-xl shadow-xl border border-base-content/10">
+    <div class="container mx-auto py-8 px-4 w-full">
+        <h1 class="text-3xl font-bold mb-6 text-center">
+            Definições do Utilizador
+        </h1>
+        <div
+            class="bg-base-100 p-6 sm:p-8 rounded-xl shadow-xl border border-base-content/10"
+        >
             <UserSettingsForm client:load />
         </div>
     </div>
