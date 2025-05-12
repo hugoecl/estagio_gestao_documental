@@ -85,7 +85,6 @@
                 }
                 return result;
             } else if (typeof value === "string" && value) {
-                console.log("range:", range);
                 if (!range) {
                     const firstYMD = DMYToYMD(value, "-");
                     const year = value.substring(6, 10);
@@ -110,7 +109,6 @@
                         calendar.focusedDate = result;
                         previousCallyValue = result;
                     }
-                    console.log("result:", result);
                     return result;
                 }
             }
@@ -470,7 +468,6 @@
         // await tick();
 
         if (disabled || !calendar) return;
-        console.log("focusedDate:", calendar.focusedDate);
 
         if (calendar.focusedDate === undefined) {
             calendar.focusedDate = nowISOString.replace(

@@ -82,7 +82,6 @@
 
     // Function to refresh the list, exposed globally
     async function refreshUserList() {
-        // console.log("Refreshing user list..."); // Optional log
         await loadUsersAndRoles(); // Call the renamed data loading function
     }
     if (typeof window !== "undefined") {

@@ -36,11 +36,14 @@
                 const newUnreadCount = data.count ?? 0;
                 unreadCount = newUnreadCount;
 
-                if (newUnreadCount > 0 && newUnreadCount > lastShownUnreadCount) {
+                if (
+                    newUnreadCount > 0 &&
+                    newUnreadCount > lastShownUnreadCount
+                ) {
                     showAlert(
                         "Tem novas notificações por ler.",
                         AlertType.INFO,
-                        AlertPosition.BOTTOM_RIGHT
+                        AlertPosition.BOTTOM_RIGHT,
                     );
                     lastShownUnreadCount = newUnreadCount;
                 } else if (newUnreadCount === 0) {
@@ -50,9 +53,12 @@
                 // If it's a 401, it's an auth issue, don't show an error alert, just reset count.
                 // Middleware should handle actual page redirects if session is truly invalid.
                 if (response.status !== 401) {
-                     console.error("Failed to fetch unread count:", response.statusText);
-                     // Optionally show a generic alert for non-auth errors
-                     // showAlert("Erro ao buscar contagem de notificações.", AlertType.WARNING, AlertPosition.TOP);
+                    console.error(
+                        "Failed to fetch unread count:",
+                        response.statusText,
+                    );
+                    // Optionally show a generic alert for non-auth errors
+                    // showAlert("Erro ao buscar contagem de notificações.", AlertType.WARNING, AlertPosition.TOP);
                 }
                 unreadCount = 0; // Reset on any error, including 401
             }
@@ -77,11 +83,13 @@
             );
             if (response.ok) {
                 const fetchedData = await response.json();
-                console.log("Fetched notifications data:", fetchedData); // Log raw data
                 notifications = fetchedData; // Assign to state
             } else {
                 if (response.status !== 401) {
-                    console.error("Failed to fetch notifications:", response.statusText);
+                    console.error(
+                        "Failed to fetch notifications:",
+                        response.statusText,
+                    );
                     showAlert(
                         "Erro ao carregar notificações.",
                         AlertType.ERROR,
@@ -238,8 +246,11 @@
             aria-labelledby="notifications-button"
         >
             {#if isLoadingList}
-                <div class="card bg-base-100 shadow-lg border border-base-content/10 w-80 p-4">
-                    <span class="loading loading-spinner loading-md mx-auto"></span>
+                <div
+                    class="card bg-base-100 shadow-lg border border-base-content/10 w-80 p-4"
+                >
+                    <span class="loading loading-spinner loading-md mx-auto"
+                    ></span>
                 </div>
             {:else}
                 <NotificationDropdown

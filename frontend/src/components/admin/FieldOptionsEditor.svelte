@@ -86,7 +86,6 @@
 
             // --- Crucial Check: Only update if arrays are different ---
             if (!arraysAreEqual(uiOptions, newUiOptions)) {
-                // console.log("optionsJson changed, updating uiOptions"); // Debug
                 uiOptions = newUiOptions;
                 errors = null; // Clear errors on successful sync
             }

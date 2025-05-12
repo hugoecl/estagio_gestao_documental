@@ -92,7 +92,6 @@
 
     // --- **UPDATED Effect to Initialize/Reset Form Values** ---
     $effect(() => {
-        // console.log("FormModal $effect running, recordData:", recordData); // Debugging
         const initialValues: Record<string, any> = {};
         if (fields && Array.isArray(fields)) {
             fields.forEach((field) => {
@@ -146,7 +145,6 @@
                 initialValues[field.id] = valueToSet;
             });
         }
-        // console.log("Setting formValues to:", initialValues); // Debugging
         formValues = initialValues; // Set the state *once* after processing all fields
         validationErrors = {}; // Reset errors when data changes
         showValidationErrors = false;

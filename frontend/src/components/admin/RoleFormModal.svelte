@@ -50,7 +50,6 @@
 
     // --- Form Setup ---
     function setupForm(currentRole: Role | null) {
-        // console.log('Setting up form for role:', currentRole); // Debugging
         if (currentRole) {
             formData = structuredClone({
                 name: currentRole.name,
@@ -74,7 +73,6 @@
         const currentRole = role; // Capture current prop value
         // Check if role identity actually changed (null -> object, object -> null, or different object)
         if (previousRoleRef !== currentRole) {
-            //   console.log('Role prop changed identity, setting up form.'); // Debugging
             setupForm(currentRole);
             previousRoleRef = currentRole; // Update the reference tracker
         }

@@ -56,9 +56,7 @@
             // We probably need to trigger the modal open for the specific recordId here
             // instead of just navigating. This requires more complex state management or
             // potentially URL parameters. Let's just log for now.
-            console.log(
-                `Navigate to record ${notification.recordId} on page ${targetPath}`,
-            );
+
             // Example of a possible future navigation (might need refinement):
             // window.location.href = `${targetPath}?record=${notification.recordId}`;
             if (typeof window !== "undefined") {
@@ -76,7 +74,6 @@
     function formatTimeAgo(
         dateString: string | Date | undefined | null,
     ): string {
-        console.log("dateString: ", dateString);
         if (!dateString) {
             // console.warn("formatTimeAgo received invalid input:", dateString);
             return "Data inválida";

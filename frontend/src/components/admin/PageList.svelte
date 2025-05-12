@@ -48,7 +48,6 @@
         if (typeof window !== "undefined") {
             window.location.href = `/admin/pages/edit/${id}/`;
         }
-        // console.log("Edit page:", id, row); // Keep for debugging if needed
     }
 </script>
 

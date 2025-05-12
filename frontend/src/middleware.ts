@@ -90,7 +90,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
   }
 
   // 2. Admin Route Protection (handles various /admin/ paths)
-  if (isAdminRoute) { // This is only hit if it's NOT an edit page route (which is handled above)
+  if (isAdminRoute) {
+    // This is only hit if it's NOT an edit page route (which is handled above)
     // All /admin/ routes (not covered by more specific checks above) require authentication.
     if (!checkPerformed && !cookie) return context.redirect("/iniciar-sessao/");
     if (!isAuthenticated) return context.redirect("/iniciar-sessao/");
@@ -98,23 +99,27 @@ export const onRequest = defineMiddleware(async (context, next) => {
     // Specific handling for /admin/records/.../acknowledgments
     // These routes rely on backend API permission checks (e.g., can_view_acknowledgments)
     // Normalize pathname to remove trailing slash for this specific check
-    const normalizedPathname = pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
-    const isAdminRecordAcksPage = normalizedPathname.startsWith("/admin/records/") && normalizedPathname.endsWith("/acknowledgments");
+    const normalizedPathname = pathname.endsWith("/")
+      ? pathname.slice(0, -1)
+      : pathname;
+    const isAdminRecordAcksPage =
+      normalizedPathname.startsWith("/admin/records/") &&
+      normalizedPathname.endsWith("/acknowledgments");
 
     if (isAdminRecordAcksPage) {
-        // For this specific page, being authenticated is enough for the middleware layer.
-        // The backend API handler will perform the more fine-grained permission check.
-        console.log(`Middleware: Allowing authenticated access to record acknowledgments page: ${pathname}. Backend will verify specific permission.`);
-        return next(); // Explicitly return after calling next()
+      // For this specific page, being authenticated is enough for the middleware layer.
+      // The backend API handler will perform the more fine-grained permission check.
+      return next(); // Explicitly return after calling next()
     }
     // IMPORTANT: Only proceed to the general admin check if it's NOT the acknowledgments page
-    else if (!isSessionAdmin) { // Check for all other /admin/ routes
+    else if (!isSessionAdmin) {
+      // Check for all other /admin/ routes
       console.warn(
-        `Non-admin user denied access to general admin route: ${pathname}. User isSessionAdmin: ${isSessionAdmin}`
+        `Non-admin user denied access to general admin route: ${pathname}. User isSessionAdmin: ${isSessionAdmin}`,
       );
       return context.redirect("/");
     }
-    
+
     // If authenticated and isSessionAdmin (for general admin routes), or handled by specific conditions above.
     return next();
   }
