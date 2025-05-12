@@ -199,4 +199,21 @@ impl Role {
 
         Ok(())
     }
+
+    pub async fn get_user_ids_by_role_id(
+        pool: &sqlx::MySqlPool,
+        role_id: u32,
+    ) -> Result<Vec<u32>, sqlx::Error> {
+        log::debug!("Role::get_user_ids_by_role_id: Called for role_id: {}", role_id);
+        let user_ids = sqlx::query_scalar!(
+            r#"
+            SELECT user_id FROM user_roles WHERE role_id = ?
+            "#,
+            role_id
+        )
+        .fetch_all(pool)
+        .await?;
+        log::debug!("Role::get_user_ids_by_role_id: Found user_ids: {:?} for role_id: {}", user_ids, role_id);
+        Ok(user_ids)
+    }
 }

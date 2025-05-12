@@ -156,10 +156,10 @@ CREATE TABLE IF NOT EXISTS record_acknowledgments (
 CREATE TABLE IF NOT EXISTS notifications (
     id INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL,
     user_id INT UNSIGNED NOT NULL COMMENT 'The user receiving the notification',
-    record_id INT UNSIGNED NOT NULL COMMENT 'The record the notification relates to',
-    page_id INT UNSIGNED NOT NULL COMMENT 'The page the record belongs to (denormalized for easier linking)',
+    record_id INT UNSIGNED DEFAULT NULL COMMENT 'The record the notification relates to, NULL if general broadcast',
+    page_id INT UNSIGNED DEFAULT NULL COMMENT 'The page the record belongs to (denormalized for easier linking), NULL if general broadcast',
     field_id INT UNSIGNED NULL COMMENT 'The specific field triggering the notification (if applicable)',
-    notification_type VARCHAR(50) NOT NULL COMMENT 'Type of notification (e.g., DATE_EXPIRY, SIGNATURE_REQUIRED)',
+    notification_type VARCHAR(50) NOT NULL COMMENT 'Type of notification (e.g., DATE_EXPIRY, SIGNATURE_REQUIRED, ADMIN_BROADCAST)',
     message TEXT NOT NULL COMMENT 'Notification message content',
     due_date DATE NULL COMMENT 'The relevant date from the record (e.g., expiry date)',
     is_read BOOLEAN NOT NULL DEFAULT false,

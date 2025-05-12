@@ -149,17 +149,25 @@ pub async fn create_record(
                         if page_details.page.notify_on_new_record {
                             log::info!(
                                 "Page {} is configured to notify on new records. Attempting to notify for record {}.",
-                                page_id, new_record_id
+                                page_id,
+                                new_record_id
                             );
                             match get_user_ids_with_view_permission(&pool_clone, page_id).await {
                                 Ok(user_ids_to_notify) => {
                                     if user_ids_to_notify.is_empty() {
-                                        log::info!("No users found with view permission for page {} to notify.", page_id);
+                                        log::info!(
+                                            "No users found with view permission for page {} to notify.",
+                                            page_id
+                                        );
                                     }
                                     for notified_user_id in user_ids_to_notify {
                                         // Avoid notifying the user who created the record about their own action
                                         if notified_user_id == user_id as u32 {
-                                            log::trace!("Skipping notification for user {} (creator) for record {}", notified_user_id, new_record_id);
+                                            log::trace!(
+                                                "Skipping notification for user {} (creator) for record {}",
+                                                notified_user_id,
+                                                new_record_id
+                                            );
                                             continue;
                                         }
 
@@ -173,8 +181,8 @@ pub async fn create_record(
                                         match Notification::create(
                                             &pool_clone,
                                             notified_user_id,
-                                            new_record_id,
-                                            page_id,
+                                            Some(new_record_id),
+                                            Some(page_id),
                                             None, // No specific field for a general "new record" notification
                                             NOTIFICATION_TYPE_NEW_RECORD,
                                             &message,
@@ -184,11 +192,15 @@ pub async fn create_record(
                                         {
                                             Ok(_) => log::info!(
                                                 "Created NEW_RECORD notification for user {} for record {} on page {}.",
-                                                notified_user_id, new_record_id, page_id
+                                                notified_user_id,
+                                                new_record_id,
+                                                page_id
                                             ),
                                             Err(e) => log::error!(
                                                 "Failed to create NEW_RECORD notification for user {} for record {}: {}",
-                                                notified_user_id, new_record_id, e
+                                                notified_user_id,
+                                                new_record_id,
+                                                e
                                             ),
                                         }
                                     }
@@ -200,7 +212,10 @@ pub async fn create_record(
                                 ),
                             }
                         } else {
-                            log::trace!("Page {} is not configured to notify on new records.", page_id);
+                            log::trace!(
+                                "Page {} is not configured to notify on new records.",
+                                page_id
+                            );
                         }
                     }
                     Err(e) => log::error!(

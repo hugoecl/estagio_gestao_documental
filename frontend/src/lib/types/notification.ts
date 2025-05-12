@@ -2,8 +2,8 @@
 export interface NotificationResponse {
   id: number;
   userId: number;
-  recordId: number;
-  pageId: number;
+  recordId?: number | null; // Can be null for broadcasts
+  pageId?: number | null;   // Can be null for broadcasts
   fieldId?: number | null; // Optional number or null
   notificationType: string;
   message: string;

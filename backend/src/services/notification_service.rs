@@ -51,12 +51,15 @@ pub async fn check_expiring_date_ranges(pool: &MySqlPool) {
                             log::trace!("Processing record ID: {}", record.id);
 
                             // Extract the relevant date from the record's data JSON
-                            let due_date_opt = extract_target_date(
-                                &record.data,
-                                &field.name,
+                            let due_date_opt =
+                                extract_target_date(&record.data, &field.name, target_part);
+                            log::debug!(
+                                "Record ID: {}, Field: '{}', Target Part: '{}', Extracted Date: {:?}",
+                                record.id,
+                                field.name,
                                 target_part,
+                                due_date_opt
                             );
-                            log::debug!("Record ID: {}, Field: '{}', Target Part: '{}', Extracted Date: {:?}", record.id, field.name, target_part, due_date_opt);
 
                             let due_date = match due_date_opt {
                                 Some(date) => date,
@@ -88,9 +91,12 @@ pub async fn check_expiring_date_ranges(pool: &MySqlPool) {
                             };
 
                             // Check if today is the day to notify (or if we missed it slightly)
-                             log::debug!(
+                            log::debug!(
                                 "Comparing dates for Record ID {}: today = {}, trigger_date = {}, due_date = {}",
-                                record.id, today, notification_trigger_date, due_date
+                                record.id,
+                                today,
+                                notification_trigger_date,
+                                due_date
                             );
                             if today >= notification_trigger_date && today < due_date {
                                 log::debug!(
@@ -127,8 +133,8 @@ pub async fn check_expiring_date_ranges(pool: &MySqlPool) {
                                                         match Notification::create(
                                                             pool,
                                                             user_id,
-                                                            record.id,
-                                                            field.page_id,
+                                                            Some(record.id),
+                                                            Some(field.page_id),
                                                             Some(field.id),
                                                             NOTIFICATION_TYPE_DATE_EXPIRY,
                                                             &message,
@@ -212,7 +218,11 @@ fn extract_target_date(
         .and_then(|date_range_str| {
             let parts: Vec<&str> = date_range_str.splitn(2, " - ").collect();
             if parts.len() != 2 {
-                log::warn!("Invalid date range format for field '{}': {}", field_name, date_range_str);
+                log::warn!(
+                    "Invalid date range format for field '{}': {}",
+                    field_name,
+                    date_range_str
+                );
                 return None; // Invalid format
             }
 

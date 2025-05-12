@@ -19,7 +19,11 @@ pub fn init(cfg: &mut web::ServiceConfig) {
             .route(
                 "/read/all",
                 web::post().to(notification_handlers::mark_all_notifications_read),
-            ), // Mark all as read
+            ) // Mark all as read
+            .route(
+                "/broadcast", // New route for broadcasting
+                web::post().to(notification_handlers::broadcast_notification_to_roles),
+            ),
                // Add more notification-related routes here if needed in the future
     );
 }

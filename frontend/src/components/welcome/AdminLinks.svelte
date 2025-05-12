@@ -4,6 +4,7 @@
         { title: "Gerir Páginas", href: "/admin/pages/", icon: "file-lines" },
         { title: "Gerir Utilizadores", href: "/admin/users/", icon: "users" },
         { title: "Gerir Funções", href: "/admin/roles/", icon: "user-tag" },
+        { title: "Enviar Notificações", href: "/admin/notifications/broadcast/", icon: "bullhorn" },
         // Add more admin links here if needed
     ];
 </script>

@@ -32,9 +32,9 @@ pub struct NotificationResponse {
     #[serde(rename = "userId")]
     pub user_id: u32,
     #[serde(rename = "recordId")]
-    pub record_id: u32,
+    pub record_id: Option<u32>,
     #[serde(rename = "pageId")]
-    pub page_id: u32,
+    pub page_id: Option<u32>,
     #[serde(rename = "fieldId")]
     pub field_id: Option<u32>,
     #[serde(rename = "notificationType")]
@@ -73,7 +73,7 @@ impl Notification {
                 n.is_read as "is_read: bool", n.created_at as "created_at!",
                 cp.path as page_path, cp.name as page_name
             FROM notifications n
-            JOIN custom_pages cp ON n.page_id = cp.id
+            LEFT JOIN custom_pages cp ON n.page_id = cp.id -- Changed to LEFT JOIN
             WHERE n.user_id = ? AND n.is_read = false
             ORDER BY n.created_at DESC
             "#,
@@ -189,8 +189,8 @@ impl Notification {
     pub async fn create(
         pool: &sqlx::MySqlPool,
         user_id: u32,
-        record_id: u32,
-        page_id: u32,
+        record_id: Option<u32>, // Changed to Option<u32>
+        page_id: Option<u32>,   // Changed to Option<u32>
         field_id: Option<u32>,
         notification_type: &str,
         message: &str,
