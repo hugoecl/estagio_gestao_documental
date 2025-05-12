@@ -8,7 +8,7 @@
 - [X] Meter verificações de campos apenas em TEXT
 - [X] Quando tem novas notificações criar toast azul canto inferior direito
 - [X] Adicionar maneira de admin conseguir enviar uma mensagem para certos cargos, essa mensagem aparece nas notificações
-- [ ] Voltar a adicionar badges para funções na tabela dos utilizadores
+- [X] Voltar a adicionar badges para funções na tabela dos utilizadores
 - [ ] Remover console.log inuteis
 - [ ] Settings page
 - [ ] Admin being able to edit user name, email, password

@@ -25,6 +25,7 @@
         { header: "ID", field: "id" },
         { header: "Nome Utilizador", field: "username" },
         { header: "Email", field: "email" },
+        { header: "Funções", field: "roles" }, // Added Roles column
     ];
 
     // --- Renamed Function to Load Data ---
