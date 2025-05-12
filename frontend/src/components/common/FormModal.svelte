@@ -681,7 +681,7 @@
                         >
                             {#if isSubmitting}
                                 <span class="loading loading-spinner loading-sm"
-                                ></span> Guardando...
+                                ></span> A Guardar...
                             {:else}
                                 {submitButtonText}
                             {/if}
@@ -730,7 +730,7 @@
                 disabled={isDeleteSubmitting}
             >
                 {#if isDeleteSubmitting}
-                    <span class="loading loading-spinner loading-sm"></span> Eliminando...
+                    <span class="loading loading-spinner loading-sm"></span> A Apagar...
                 {:else}
                     Sim, Eliminar
                 {/if}

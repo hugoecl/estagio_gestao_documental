@@ -916,7 +916,7 @@
             >
                 {#if isSubmitting}<span
                         class="loading loading-spinner loading-sm"
-                    ></span> Guardando...{:else}Criar {pageData.is_group
+                    ></span> A Guardar...{:else}Criar {pageData.is_group
                         ? "Grupo"
                         : "Página"}{/if}
             </button>

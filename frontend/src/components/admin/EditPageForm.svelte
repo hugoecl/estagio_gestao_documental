@@ -1101,7 +1101,7 @@
             >
                 {#if isSubmitting}<span
                         class="loading loading-spinner loading-sm"
-                    ></span> Atualizando...{:else}Guardar Alterações{/if}
+                    ></span> A Atualizar...{:else}Guardar Alterações{/if}
             </button>
         </div>
     </form>

@@ -133,22 +133,31 @@
                     // Refresh the list even if role assignment failed
                     if (window.refreshUserList) window.refreshUserList();
                     return; // Exit function
-               }
-           }
+                }
+            }
 
-           showAlert(`Utilizador ${formData.username} criado com sucesso!`, AlertType.SUCCESS, AlertPosition.TOP);
+            showAlert(
+                `Utilizador ${formData.username} criado com sucesso!`,
+                AlertType.SUCCESS,
+                AlertPosition.TOP,
+            );
 
-           // Refresh the parent list
+            // Refresh the parent list
             if (window.refreshUserList) {
                 window.refreshUserList();
             } else {
-                console.warn("refreshUserList function not found, cannot update table automatically.");
+                console.warn(
+                    "refreshUserList function not found, cannot update table automatically.",
+                );
             }
 
-           closeModal();
-
-       } catch (e: any) {
-           showAlert(`Erro ao criar utilizador: ${e.message}`, AlertType.ERROR, AlertPosition.TOP);
+            closeModal();
+        } catch (e: any) {
+            showAlert(
+                `Erro ao criar utilizador: ${e.message}`,
+                AlertType.ERROR,
+                AlertPosition.TOP,
+            );
         } finally {
             isSubmitting = false;
         }
@@ -321,7 +330,7 @@
                 >
                     {#if isSubmitting}
                         <span class="loading loading-spinner loading-sm"></span>
-                        Criando...
+                        A Criar...
                     {:else}
                         Criar Utilizador
                     {/if}

@@ -361,7 +361,7 @@
                         >
                             {#if isSubmittingRoles}
                                 <span class="loading loading-spinner loading-sm"
-                                ></span> Guardando Funções...
+                                ></span> A Guardar Funções...
                             {:else}
                                 Guardar Funções
                             {/if}
@@ -420,7 +420,7 @@
                         >
                             {#if isSubmittingDetails}
                                 <span class="loading loading-spinner loading-sm"
-                                ></span> Guardando Detalhes...
+                                ></span> A Guardar Detalhes...
                             {:else}
                                 Guardar Detalhes
                             {/if}

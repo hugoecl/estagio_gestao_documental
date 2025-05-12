@@ -190,7 +190,7 @@
         >
             {#if isSubmitting}
                 <span class="loading loading-spinner loading-sm"></span>
-                Enviando...
+                A Enviar...
             {:else}
                 <i class="fa-solid fa-paper-plane mr-2"></i>
                 Enviar Mensagem
