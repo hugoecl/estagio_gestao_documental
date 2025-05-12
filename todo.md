@@ -7,7 +7,7 @@
 - [X] Traduzir campos, formatar datas em funções, e traduzir true/false em funcoes
 - [X] Meter verificações de campos apenas em TEXT
 - [ ] Adicionar maneira de admin conseguir enviar uma mensagem para certos cargos, essa mensagem aparece nas notificações
-- [ ] Quando tem novas notificações criar toast azul canto inferior direito
+- [X] Quando tem novas notificações criar toast azul canto inferior direito
 - [ ] Settings page
 - [ ] Admin being able to edit user name, email, password
 - [ ] Ver quem tem acesso ao servidor
