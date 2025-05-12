@@ -91,7 +91,7 @@ async fn main() -> std::io::Result<()> {
     // --- Spawn Notification Check Task ---
     let state_clone = state.clone(); // Clone state for the background task
     spawn(async move {
-        let mut timer = interval(TokioDuration::from_secs(3600)); // 1 hour interval
+        let mut timer = interval(TokioDuration::from_secs(10)); // 1 hour interval
         log::info!("Notification check service started.");
         loop {
             timer.tick().await; // Wait for the next interval

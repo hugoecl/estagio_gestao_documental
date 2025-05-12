@@ -12,6 +12,7 @@
 
     // --- State ---
     let unreadCount = $state(0);
+    let lastShownUnreadCount = $state(0); // To avoid spamming alerts
     let notifications = $state<NotificationResponse[]>([]);
     let showDropdown = $state(false);
     let isLoadingCount = $state(true);
@@ -32,7 +33,19 @@
             );
             if (response.ok) {
                 const data = await response.json();
-                unreadCount = data.count ?? 0;
+                const newUnreadCount = data.count ?? 0;
+                unreadCount = newUnreadCount;
+
+                if (newUnreadCount > 0 && newUnreadCount > lastShownUnreadCount) {
+                    showAlert(
+                        "Tem novas notificações por ler.",
+                        AlertType.INFO,
+                        AlertPosition.BOTTOM_RIGHT
+                    );
+                    lastShownUnreadCount = newUnreadCount;
+                } else if (newUnreadCount === 0) {
+                    lastShownUnreadCount = 0; // Reset if all are read
+                }
             } else {
                 // If it's a 401, it's an auth issue, don't show an error alert, just reset count.
                 // Middleware should handle actual page redirects if session is truly invalid.
