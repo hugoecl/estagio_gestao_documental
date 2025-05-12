@@ -202,8 +202,8 @@
     /* Add any specific styles if needed */
     li > a {
         border-radius: 0; /* Remove default radius for tighter list */
-        /* padding-top: 0.6rem; */ /* Removed custom padding */
-        /* padding-bottom: 0.6rem; */ /* Removed custom padding */
+        padding-top: 0.6rem;
+        padding-bottom: 0.6rem;
     }
     li:not(:last-child) > a {
         border-bottom: 1px solid oklch(var(--b2) / 0.4);
