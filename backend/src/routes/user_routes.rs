@@ -15,6 +15,16 @@ pub fn init(cfg: &mut web::ServiceConfig) {
                 web::get().to(user_handlers::get_user_analytics),
             )
             .route("/all", web::get().to(user_handlers::get_users_with_roles))
-            .route("/roles", web::post().to(user_handlers::assign_roles)),
+            .route("/roles", web::post().to(user_handlers::assign_roles))
+            // New routes for user settings
+            .route("/me", web::get().to(user_handlers::get_current_user_details))
+            .route(
+                "/me/details",
+                web::put().to(user_handlers::update_user_details),
+            )
+            .route(
+                "/me/password",
+                web::put().to(user_handlers::change_user_password),
+            ),
     );
 }

@@ -1,6 +1,12 @@
 import API_BASE_URL from "@api/base-url";
 import { handleFetch } from "@api/fetch-handler";
-import type { UserWithRoles, AssignRoleRequest } from "@lib/types/user";
+import type {
+  User, // Added User for details
+  UserWithRoles,
+  AssignRoleRequest,
+  UpdateUserDetailsPayload, // New
+  ChangePasswordPayload, // New
+} from "@lib/types/user";
 import type { CreateUserRequest, CreateUserResponse } from "@lib/types/user";
 
 export async function getUsersWithRoles(
@@ -54,4 +60,48 @@ export async function assignRolesToUser(
     body: JSON.stringify(assignment),
   });
   return response.ok;
+}
+
+// --- User Settings API Functions ---
+
+export async function getCurrentUserDetails(): Promise<User | null> {
+  const response = await handleFetch(`${API_BASE_URL}/users/me`, {
+    method: "GET",
+    credentials: "include",
+  });
+  if (response.ok) {
+    return (await response.json()) as User;
+  }
+  if (response.status === 404) {
+    return null;
+  }
+  // Log other errors or let handleFetch potentially show an alert
+  console.error("Failed to fetch current user details:", response.statusText);
+  return null;
+}
+
+export async function updateUserDetails(
+  payload: UpdateUserDetailsPayload,
+): Promise<{ success: boolean; message: string }> {
+  const response = await handleFetch(`${API_BASE_URL}/users/me/details`, {
+    method: "PUT",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const responseText = await response.text(); // Get text for success or error message
+  return { success: response.ok, message: responseText };
+}
+
+export async function changePassword(
+  payload: ChangePasswordPayload,
+): Promise<{ success: boolean; message: string }> {
+  const response = await handleFetch(`${API_BASE_URL}/users/me/password`, {
+    method: "PUT",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const responseText = await response.text(); // Get text for success or error message
+  return { success: response.ok, message: responseText };
 }

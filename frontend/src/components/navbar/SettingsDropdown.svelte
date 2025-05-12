@@ -76,7 +76,7 @@
         {#if $isAdmin}
             <li><a href="/admin/">Painel de Administração</a></li>
         {/if}
-        <li><a href="/settings/">Definições</a></li>
+        <li><a href="/settings/">Definições da Conta</a></li>
         <li>
             <button onclick={handleLogout}>Terminar Sessão</button>
         </li>

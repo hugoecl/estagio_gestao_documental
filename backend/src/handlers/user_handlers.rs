@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     State,
     auth::{is_admin, user_can_manage_page, validate_session},
+    models::user::User, // For returning user details
     models::{
         role::{Role, UserRoleAssignment},
         user::{UserRoleRow, UserWithRoles},
@@ -16,6 +17,20 @@ use crate::{
         json_utils::{Json, json_response, json_response_with_etag},
     },
 };
+
+// Structs for User Settings
+#[derive(Deserialize, Debug)]
+pub struct UpdateUserDetailsRequest {
+    username: Option<String>,
+    email: Option<String>,
+    current_password: String,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct ChangePasswordRequest {
+    current_password: String,
+    new_password: String,
+}
 
 #[derive(Deserialize)]
 struct RegisterRequest {
@@ -44,7 +59,7 @@ pub async fn register(state: web::Data<State>, request_data: web::Bytes) -> impl
 
     // Check if user already exists within the transaction
     let existing_user = sqlx::query!(
-        "SELECT id FROM users WHERE username = ? OR email = ?",
+        r#"SELECT id FROM users WHERE username = ? OR email = ?"#,
         user.username,
         user.email
     )
@@ -69,7 +84,7 @@ pub async fn register(state: web::Data<State>, request_data: web::Bytes) -> impl
 
     // Insert user within the transaction
     let insert_result = sqlx::query!(
-        "INSERT INTO users (username, email, password) VALUES (?, ?, ?)",
+        r#"INSERT INTO users (username, email, password) VALUES (?, ?, ?)"#,
         user.username,
         user.email,
         &password_bytes[..]
@@ -87,7 +102,7 @@ pub async fn register(state: web::Data<State>, request_data: web::Bytes) -> impl
     };
 
     // Fetch the default "Colaborador" role ID within the transaction
-    let default_role = sqlx::query!("SELECT id FROM roles WHERE name = 'Colaborador' LIMIT 1")
+    let default_role = sqlx::query!(r#"SELECT id FROM roles WHERE name = 'Colaborador' LIMIT 1"#)
         .fetch_one(&mut *tx) // Use transaction
         .await;
 
@@ -102,7 +117,7 @@ pub async fn register(state: web::Data<State>, request_data: web::Bytes) -> impl
 
     // Assign the default role to the new user within the transaction
     let assign_result = sqlx::query!(
-        "INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)",
+        r#"INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)"#,
         user_id,
         default_role_id
     )
@@ -144,9 +159,12 @@ pub async fn login(
     };
 
     // Find user by email
-    let user = sqlx::query!("SELECT id, password FROM users WHERE email = ?", req.email)
-        .fetch_optional(&state.db.pool)
-        .await;
+    let user = sqlx::query!(
+        r#"SELECT id, password FROM users WHERE email = ?"#,
+        req.email
+    )
+    .fetch_optional(&state.db.pool)
+    .await;
 
     let user = match user {
         Ok(Some(user)) => user,
@@ -256,7 +274,7 @@ pub async fn check(state: web::Data<State>, session: Session, data: web::Bytes) 
         let analytics = sqlx::query!(
             r#"SELECT visit_count FROM user_page_analytics WHERE user_id = ? AND page_path = ?"#,
             user_id_u32,
-            &page_path_clone // Use cloned path
+            &page_path_clone
         )
         .fetch_optional(&pool_clone) // Use cloned pool
         .await;
@@ -268,14 +286,14 @@ pub async fn check(state: web::Data<State>, session: Session, data: web::Bytes) 
                     r#"UPDATE user_page_analytics SET visit_count = ?, last_visited_at = ? WHERE user_id = ? AND page_path = ?"#,
                     new_count, now, user_id_u32, page_path_clone
                 )
-                .execute(&pool_clone).await.ok(); // Use cloned pool
+                .execute(&pool_clone).await.ok();
             }
             Ok(None) => {
                 sqlx::query!(
                     r#"INSERT INTO user_page_analytics (user_id, page_path, visit_count, last_visited_at) VALUES (?, ?, ?, ?)"#,
                     user_id_u32, page_path_clone, 1, now
                 )
-                .execute(&pool_clone).await.ok(); // Use cloned pool
+                .execute(&pool_clone).await.ok();
             }
             Err(e) => {
                 error!("Database error checking analytics: {}", e);
@@ -386,7 +404,193 @@ pub async fn assign_roles(
         Ok(_) => HttpResponse::Ok().body("Roles assigned successfully"),
         Err(e) => {
             error!("Database error assigning roles: {}", e);
-            HttpResponse::InternalServerError().body("Error assigning roles")
+            HttpResponse::InternalServerError().body("Erro ao atribuir funções") // Translated
+        }
+    }
+}
+
+// Handler to get current user's details (username and email)
+pub async fn get_current_user_details(state: web::Data<State>, session: Session) -> impl Responder {
+    let user_id = match validate_session(&session) {
+        Ok(id) => id,
+        Err(response) => return response,
+    };
+
+    match sqlx::query_as!(
+        User, // Using the User model from models/user.rs
+        r#"SELECT id, username, email FROM users WHERE id = ?"#,
+        user_id
+    )
+    .fetch_one(&state.db.pool)
+    .await
+    {
+        Ok(user) => json_response(&user),
+        Err(sqlx::Error::RowNotFound) => {
+            HttpResponse::NotFound().body("Utilizador não encontrado.")
+        }
+        Err(e) => {
+            error!("Database error fetching user details: {}", e);
+            HttpResponse::InternalServerError().body("Erro ao buscar detalhes do utilizador.")
+        }
+    }
+}
+
+// Handler to update current user's username and/or email
+pub async fn update_user_details(
+    state: web::Data<State>,
+    session: Session,
+    req_data: web::Json<UpdateUserDetailsRequest>, // Changed to use actix_web::web::Json
+) -> impl Responder {
+    let user_id = match validate_session(&session) {
+        Ok(id) => id,
+        Err(response) => return response,
+    };
+
+    // req_data is now web::Json<UpdateUserDetailsRequest>, access inner value with .into_inner() or by destructuring
+    let update_payload = req_data.into_inner();
+
+    // Fetch current user to verify password and check for changes
+    let current_user = match sqlx::query!(
+        r#"SELECT username, email, password FROM users WHERE id = ?"#,
+        user_id
+    )
+    .fetch_one(&state.db.pool)
+    .await
+    {
+        Ok(user) => user,
+        Err(_) => {
+            return HttpResponse::InternalServerError().body("Erro ao buscar utilizador atual.");
+        }
+    };
+
+    // Verify current password
+    if !verify(&update_payload.current_password, &current_user.password) {
+        return HttpResponse::Unauthorized().body("Palavra-passe atual incorreta.");
+    }
+
+    let mut new_username = update_payload
+        .username
+        .unwrap_or_else(|| current_user.username.clone());
+    let mut new_email = update_payload
+        .email
+        .unwrap_or_else(|| current_user.email.clone());
+
+    if new_username.trim().is_empty() {
+        new_username = current_user.username.clone(); // Revert if only spaces provided
+    }
+    if new_email.trim().is_empty() {
+        new_email = current_user.email.clone(); // Revert if only spaces provided
+    }
+
+    // Check for username uniqueness if it's being changed
+    if new_username != current_user.username {
+        match sqlx::query(r#"SELECT id FROM users WHERE username = ? AND id != ?"#)
+            .bind(&new_username)
+            .bind(user_id)
+            .fetch_optional(&state.db.pool)
+            .await
+        {
+            Ok(Some(_)) => return HttpResponse::Conflict().body("Nome de utilizador já existe."),
+            Ok(None) => {} // Username is unique
+            Err(e) => {
+                error!("Database error checking username uniqueness: {}", e);
+                return HttpResponse::InternalServerError()
+                    .body("Erro ao verificar nome de utilizador.");
+            }
+        }
+    }
+
+    // Check for email uniqueness if it's being changed
+    if new_email != current_user.email {
+        // Basic email format check (more robust validation via `validator` crate)
+        if !new_email.contains('@') {
+            // Simple check, rely on validator for proper check
+            return HttpResponse::BadRequest().body("Formato de e-mail inválido.");
+        }
+        match sqlx::query(r#"SELECT id FROM users WHERE email = ? AND id != ?"#)
+            .bind(&new_email)
+            .bind(user_id)
+            .fetch_optional(&state.db.pool)
+            .await
+        {
+            Ok(Some(_)) => return HttpResponse::Conflict().body("E-mail já existe."),
+            Ok(None) => {} // Email is unique
+            Err(e) => {
+                error!("Database error checking email uniqueness: {}", e);
+                return HttpResponse::InternalServerError().body("Erro ao verificar e-mail.");
+            }
+        }
+    }
+
+    // Update user details
+    match sqlx::query!(
+        r#"UPDATE users SET username = ?, email = ? WHERE id = ?"#,
+        new_username,
+        new_email,
+        user_id
+    )
+    .execute(&state.db.pool)
+    .await
+    {
+        Ok(_) => HttpResponse::Ok().body("Detalhes do utilizador atualizados com sucesso."),
+        Err(e) => {
+            error!("Database error updating user details: {}", e);
+            return HttpResponse::InternalServerError()
+                .body("Erro ao atualizar detalhes do utilizador.");
+        }
+    }
+}
+
+// Handler to change current user's password
+pub async fn change_user_password(
+    state: web::Data<State>,
+    session: Session,
+    req_data: web::Json<ChangePasswordRequest>, // Changed to use actix_web::web::Json
+) -> impl Responder {
+    let user_id = match validate_session(&session) {
+        Ok(id) => id,
+        Err(response) => return response,
+    };
+
+    let change_payload = req_data.into_inner();
+
+    // Fetch current user's password
+    let user_password_hash =
+        match sqlx::query_scalar!(r#"SELECT password FROM users WHERE id = ?"#, user_id)
+            .fetch_one(&state.db.pool)
+            .await
+        {
+            Ok(hash) => hash,
+            Err(_) => {
+                return HttpResponse::InternalServerError().body("Erro ao buscar utilizador.");
+            }
+        };
+
+    // Verify current password
+    if !verify(&change_payload.current_password, &user_password_hash) {
+        return HttpResponse::Unauthorized().body("Palavra-passe atual incorreta.");
+    }
+
+    // Hash new password
+    let new_password_hashed = hash(&change_payload.new_password);
+
+    // Update password
+    match sqlx::query!(
+        r#"UPDATE users SET password = ? WHERE id = ?"#,
+        &new_password_hashed[..],
+        user_id
+    )
+    .execute(&state.db.pool)
+    .await
+    {
+        Ok(_) => HttpResponse::Ok().body("Palavra-passe alterada com sucesso."),
+        Err(e) => {
+            log::error!(
+                "Database error changing password for user_id {}: {}",
+                user_id,
+                e
+            );
+            HttpResponse::InternalServerError().body("Erro ao alterar palavra-passe.")
         }
     }
 }
@@ -470,7 +674,7 @@ pub async fn get_users_with_roles(
         }
         Err(e) => {
             error!("Database error fetching users with roles: {}", e);
-            HttpResponse::InternalServerError().body("Error fetching users")
+            HttpResponse::InternalServerError().body("Erro ao buscar utilizadores") // Translated
         }
     }
 }
