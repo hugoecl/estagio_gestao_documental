@@ -153,7 +153,7 @@
         </div>
     </div>
 
-    <ul class="menu menu-sm p-0 overflow-y-auto flex-grow">
+    <ul class="menu menu-sm p-0 overflow-y-auto flex-grow w-full">
         {#if notifications.length === 0}
             <li class="p-4 text-center text-base-content/60">
                 Nenhuma notificação nova.
@@ -202,8 +202,8 @@
     /* Add any specific styles if needed */
     li > a {
         border-radius: 0; /* Remove default radius for tighter list */
-        padding-top: 0.6rem;
-        padding-bottom: 0.6rem;
+        /* padding-top: 0.6rem; */ /* Removed custom padding */
+        /* padding-bottom: 0.6rem; */ /* Removed custom padding */
     }
     li:not(:last-child) > a {
         border-bottom: 1px solid oklch(var(--b2) / 0.4);
