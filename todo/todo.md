@@ -18,10 +18,17 @@
 
 ## PT 2
 
-- [ ] Administrador ao criar utilizador submete num date picker quando é que o trabalhador nasceu.
+- [ ] Meter alert de notificações bem destacado no centro da tela
+- [ ] Corrigir bug na seleção unica
+- [ ] Corrigir bug quando se abre um datepicker o modal muda de posição
+- [ ] Adicionar Feature para apagar paginas
+- [ ] Fazer com que o caminho de uma página seja editavel
+
+- [ ] Lista drag and drop para o administrador ordenar páginas
+
 - [ ] Adicionar sistema de maração de férias administrador ao criar utilizador define dias por ano que o trabalhador ainda pode gozar.
   - [ ] Página especial (Sempre no menu) para férias
-  - [ ] Na página de marcação de férias vai ter um unico calendar (que tem varios anos) em que utilizadores podem ver, mas não selecionar dias em que outras pessoas do mesmo cargo já tenham selecionado. Ou seja um trabalhador só pode ver ferias de pessoas com o mesmo cargo.
+  - [ ] Na página de marcação de férias vai ter um unico anual calendar (em que da para alterar o ano) em que utilizadores podem ver, mas não selecionar dias em que outras pessoas do mesmo cargo já tenham selecionado. Ou seja um trabalhador só pode ver ferias de pessoas com o mesmo cargo.
   - [ ] Adicionar um campo nos cargos que é "é cargo de férias?", pessoas com cargos que tem este campo só podem ver/influenciar outra pessoas com o mesmo cargo
   - [ ] Dias selecionados tem 3 tipos: Hover (ou seja não guardado), Solicitado (ou seja guardado mas não confirmado) e concedido (ou seja ferias que o administrador já verificou e aprovou)
   - [ ] Administrador tem que ter uma página para a a gestão de férias, em que tem uma tabela inicial com todos os cargos de férias. Depois de clicar um cargo de férias, tem todos as solicitações de férias ordenadas por data.
@@ -29,10 +36,7 @@
   - [ ] Notificar administrador quando há novas solicitações de férias
   - [ ] Notificar colegas do mesmo cargo de férias quando há novas férias aprovadas
 
-- [ ] Lista drag and drop para o administrador ordenar páginas
-- [ ] Meter alert de notificações bem destacado no centro da tela
-- [ ] Corrigir bug na seleção unica
-- [ ] Corrigir bug quando se abre um datepicker o modal muda de posição
+- [ ] Administrador ao criar utilizador submete num date picker quando é que o trabalhador nasceu.
 - [ ] Ver coisas giras para se meter na pagina inicial (editor de markdown para o admin, aniversários)
 
 - [ ] Página especial (Sempre no menu) para o inicio
