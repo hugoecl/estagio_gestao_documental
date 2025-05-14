@@ -22,10 +22,9 @@
 - [X] Corrigir bug na seleção unica
 - [X] Fazer com que se possa apagar paginas
 - [X] Fazer com que o caminho do grupo pai seja mais facilmente editavel ao editar paginas
-- [ ] Fazer com que ao editar uma pagina novos campos tenham um nome interno decente
+- [X] Corrigir bug quando se abre um datepicker o modal muda de posição
 - [ ] Ver possivel bug quando o admin enviar uma mensagem/notifica utilizadores que o alert nao sai automaticamente
 - [ ] Meter alert de notificações bem destacado no centro da tela
-- [ ] Corrigir bug quando se abre um datepicker o modal muda de posição
 
 - [ ] Lista drag and drop para o administrador ordenar páginas
 
@@ -39,11 +38,12 @@
   - [ ] Notificar administrador quando há novas solicitações de férias
   - [ ] Notificar colegas do mesmo cargo de férias quando há novas férias aprovadas
 
+- [ ] Página especial (Sempre no menu) para o inicio
 - [ ] Make inputs have the same hover effects
 - [ ] Administrador ao criar utilizador submete num date picker quando é que o trabalhador nasceu.
 - [ ] Ver coisas giras para se meter na pagina inicial (editor de markdown para o admin, aniversários)
+- [ ] Fazer com que ao editar uma pagina novos campos tenham um nome interno decente
 
-- [ ] Página especial (Sempre no menu) para o inicio
 - [ ] Logotipo para notificações
 
 

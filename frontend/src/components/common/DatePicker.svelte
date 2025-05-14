@@ -307,64 +307,79 @@
             !detailsDropdown.open ||
             !callyContainerDiv ||
             !dropdownContent
-        )
+        ) {
             return;
+        }
 
         await tick();
 
-        dropdownContent.style.opacity = "0";
+        // Ensure dropdown is styled for fixed positioning and measurement
+        // This should ideally be set when it's moved to the portal
+        dropdownContent.style.position = "fixed";
+        dropdownContent.style.display = "block";
         dropdownContent.style.visibility = "hidden";
-        dropdownContent.style.display = "block"; // Ensure it's rendered for measurement
-        await tick();
-        const dropdownRect = dropdownContent.getBoundingClientRect();
-        dropdownContent.style.display = "";
-        dropdownContent.style.visibility = "";
+        dropdownContent.style.opacity = "0";
+        // Temporarily position off-screen for clean measurement if not already done
+        // dropdownContent.style.top = "-9999px";
+        // dropdownContent.style.left = "-9999px";
 
-        if (dropdownRect.width === 0 || dropdownRect.height === 0) return; // Bail if no dimensions yet
+        await tick();
+
+        const dropdownRect = dropdownContent.getBoundingClientRect();
+
+        if (dropdownRect.width === 0 || dropdownRect.height === 0) {
+            dropdownContent.style.display = "none";
+            console.warn(
+                "DatePicker: Could not measure dropdown content for fixed positioning.",
+            );
+            return;
+        }
 
         const inputRect = callyContainerDiv.getBoundingClientRect();
-        const spaceBelow = window.innerHeight - inputRect.bottom - 10;
-        const spaceAbove = inputRect.top - 10;
-
         let top: number;
-        let left = inputRect.left; // Default alignment
-        let position: "fixed" | "absolute" = "fixed";
-        const modalParent = findModalParent(callyContainerDiv);
+        let left: number;
 
-        // Vertical placement
-        if (spaceBelow >= dropdownRect.height || spaceBelow >= spaceAbove) {
-            top = inputRect.bottom + 5; // Place below
+        // Calculate available space (relative to viewport)
+        const spaceBelow = window.innerHeight - inputRect.bottom;
+        const spaceAbove = inputRect.top;
+
+        // Vertical placement: Prefer below, then above
+        if (spaceBelow >= dropdownRect.height + 5) {
+            // +5 for margin
+            top = inputRect.bottom + 5;
+        } else if (spaceAbove >= dropdownRect.height + 5) {
+            top = inputRect.top - dropdownRect.height - 5;
         } else {
-            top = inputRect.top - dropdownRect.height - 5; // Place above
+            // Fallback: if not enough space above or below, align with top or bottom of viewport edge
+            if (spaceBelow > spaceAbove) {
+                top = inputRect.bottom + 5; // Try below and let it be clamped
+            } else {
+                top = inputRect.top - dropdownRect.height - 5; // Try above and let it be clamped
+            }
         }
 
-        // Horizontal placement (try to center, then align left/right)
-        left = inputRect.left + inputRect.width / 2 - dropdownRect.width / 2;
+        // Horizontal placement: Start aligned with left of input
+        left = inputRect.left;
 
-        // Clamp to viewport
-        left = Math.max(10, left);
-        left = Math.min(left, window.innerWidth - dropdownRect.width - 10);
-        top = Math.max(10, top);
-        top = Math.min(top, window.innerHeight - dropdownRect.height - 10);
-
-        // Adjust for modal context
-        if (modalParent) {
-            const modalBounds = modalParent.getBoundingClientRect();
-            position = "absolute";
-            // Calculate relative positions, considering modal scroll
-            top = top - modalBounds.top + modalParent.scrollTop;
-            left = left - modalBounds.left + modalParent.scrollLeft;
-
-            // Re-clamp within modal (approximate)
-            left = Math.max(5, left);
-            top = Math.max(5, top);
-            left = Math.min(left, modalBounds.width - dropdownRect.width - 5);
-            top = Math.min(top, modalBounds.height - dropdownRect.height - 5); // Less reliable if modal isn't full height
+        // Adjust if it goes off-screen to the right
+        if (left + dropdownRect.width > window.innerWidth - 10) {
+            // 10px margin
+            left = window.innerWidth - dropdownRect.width - 10;
         }
+        // Ensure it doesn't go off-screen to the left
+        left = Math.max(10, left); // 10px margin from left viewport edge
 
-        dropdownContent.style.position = position;
+        // Clamp top position to viewport
+        top = Math.max(10, top); // 10px margin from top viewport edge
+        top = Math.min(top, window.innerHeight - dropdownRect.height - 10); // 10px margin from bottom
+
+        // Apply calculated fixed position
         dropdownContent.style.top = `${top}px`;
         dropdownContent.style.left = `${left}px`;
+
+        // Make it visible
+        // dropdownContent.style.display = "block"; // Already set for measurement
+        dropdownContent.style.visibility = "visible";
         dropdownContent.style.opacity = "1";
     };
 
@@ -379,7 +394,8 @@
             originalParent = dropdownContent.parentElement;
             if (!dropdownContainer) {
                 dropdownContainer = document.createElement("div");
-                dropdownContainer.className = "datepicker-portal z-[10001]"; // High z-index
+                dropdownContainer.className =
+                    "datepicker-portal z-[10001] absolute"; // High z-index
                 const modalCtx = findModalParent(callyContainerDiv);
                 (modalCtx || document.body).appendChild(dropdownContainer);
             }
