@@ -21,7 +21,7 @@
 - [X] Traduzir mensagem de alert de broadcast
 - [X] Corrigir bug na seleção unica
 - [X] Fazer com que se possa apagar paginas
-- [ ] Fazer com que o caminho de uma página seja editavel
+- [X] Fazer com que o caminho do grupo pai seja mais facilmente editavel ao editar paginas
 - [ ] Fazer com que ao editar uma pagina novos campos tenham um nome interno decente
 - [ ] Ver possivel bug quando o admin enviar uma mensagem/notifica utilizadores que o alert nao sai automaticamente
 - [ ] Meter alert de notificações bem destacado no centro da tela

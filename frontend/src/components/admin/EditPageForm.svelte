@@ -11,7 +11,9 @@
         getCustomPageById,
         updateCustomPage,
         updatePagePermissions,
-        deleteCustomPage, // Added
+        deleteCustomPage,
+        getGroupPages, // Added for parent group selector
+        type CustomPage, // Added for type info
     } from "@api/custom-pages-api";
     import {
         addPageField,
@@ -53,6 +55,9 @@
     let fieldTypes = $state<BackendFieldType[]>([]);
     let validations = $state<ValidationFunction[]>([]);
     let roles = $state<Role[]>([]);
+    let availableGroups = $state<CustomPage[]>([]); // For parent group selector
+    let selectedParentGroupId = $state<string | null>(null); // Store ID of selected parent group
+
     let isLoading = $state(true);
     let isSubmitting = $state(false);
     let errors = $state<Record<string, string>>({});
@@ -86,13 +91,16 @@
                 fetchedValidations,
                 fetchedRoles,
                 fetchedPageData,
+                fetchedGroups, // Added fetchedGroups here
             ] = await Promise.all([
                 getFieldTypes(),
                 getValidations(),
                 getRoles(),
                 getCustomPageById(pageId),
+                getGroupPages(), // Call to fetch groups
             ]);
             fieldTypes = fetchedFieldTypes;
+            availableGroups = fetchedGroups; // Now fetchedGroups is defined
             validations = fetchedValidations;
             roles = fetchedRoles;
             if (!fetchedPageData) throw new Error("Página não encontrada.");
@@ -267,6 +275,21 @@
         return fieldTypes.find((ft) => ft.id === fieldTypeId);
     }
     // --- REMOVE parseOptions ---
+
+    // Effect to update pageData.parent_path when selectedParentGroupId changes
+    $effect(() => {
+        if (isLoading) return; // Don't run on initial load until data is ready
+
+        const selectedGroup = availableGroups.find(g => g.id.toString() === selectedParentGroupId);
+        const newParentPath = selectedGroup ? selectedGroup.path : null;
+
+        // Only update if it's actually different from the initial loaded parent_path
+        // This prevents an immediate "change" detection on load if the selectedParentGroupId
+        // correctly matches the initial pageData.parent_path
+        if (newParentPath !== (pageData.parent_path ?? null) ) { // Ensure comparison with null if pageData.parent_path is undefined
+             pageData.parent_path = newParentPath;
+        }
+    });
 
     // --- Delete Page Logic (for non-groups) ---
     function handleDeletePageClick() {
@@ -672,17 +695,22 @@
             </label>
             <label class="form-control w-full">
                 <div class="label">
-                    <span class="label-text">Caminho Pai (Opcional)</span>
+                    <span class="label-text">Grupo Pai (Opcional)</span>
                 </div>
-                <input
-                    type="text"
-                    placeholder="Ex: /gestao ou deixe em branco"
-                    class="input input-bordered w-full"
-                    bind:value={pageData.parent_path}
-                />
+                <select
+                    class="select select-bordered w-full"
+                    bind:value={selectedParentGroupId}
+                    disabled={isLoading}
+                >
+                    <option value={null}>Nenhum (Nível Raiz)</option>
+                    {#each availableGroups.filter(g => g.path !== pagePath) as group (group.id)} 
+                        <!-- Prevent selecting itself or its own current path as parent -->
+                        <option value={group.id.toString()}>{group.name} ({group.path})</option>
+                    {/each}
+                </select>
                 <div class="label">
                     <span class="label-text-alt"
-                        >Para menus aninhados. Será formatado.</span
+                        >Selecione um grupo para aninhar esta página/grupo.</span
                     >
                 </div>
             </label>
