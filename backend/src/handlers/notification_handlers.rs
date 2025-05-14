@@ -117,7 +117,7 @@ pub async fn broadcast_notification_to_roles(
     }
 
     HttpResponse::Ok().body(format!(
-        "Broadcast notification sent to {} users.",
+        "Notificação enviada a {} utilizadores.",
         notified_user_count
     ))
 }
