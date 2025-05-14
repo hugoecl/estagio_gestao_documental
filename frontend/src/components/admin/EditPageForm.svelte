@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onMount, tick } from "svelte";
+    import { onDestroy, onMount, tick } from "svelte";
     // ... other imports
     import {
         showAlert,
@@ -11,6 +11,7 @@
         getCustomPageById,
         updateCustomPage,
         updatePagePermissions,
+        deleteCustomPage, // Added
     } from "@api/custom-pages-api";
     import {
         addPageField,
@@ -56,6 +57,16 @@
     let isSubmitting = $state(false);
     let errors = $state<Record<string, string>>({});
     let pagePath = $state("");
+
+    // State for delete confirmation
+    let confirmDeleteModalRef: HTMLDialogElement; // For deleting individual pages
+    let isDeletingPage = $state(false);
+
+    // State for delete group confirmation
+    let confirmDeleteGroupModalRef: HTMLDialogElement; // For deleting groups
+    let isDeletingGroup = $state(false);
+    let canConfirmGroupDelete = $state(false);
+    let deleteGroupTimerId: number | null = $state(null);
 
     const fieldTypeTranslations: Record<string, string> = {
         TEXT: "Texto Curto",
@@ -173,6 +184,12 @@
         }
     });
 
+    onDestroy(() => {
+        if (deleteGroupTimerId) {
+            clearTimeout(deleteGroupTimerId);
+        }
+    });
+
     // --- Field Management (identical to Create form) ---
     function addField() {
         // ... (same as Create form, ensure options: null)
@@ -250,6 +267,96 @@
         return fieldTypes.find((ft) => ft.id === fieldTypeId);
     }
     // --- REMOVE parseOptions ---
+
+    // --- Delete Page Logic (for non-groups) ---
+    function handleDeletePageClick() {
+        if (confirmDeleteModalRef) {
+            confirmDeleteModalRef.showModal();
+        }
+    }
+
+    async function handleDeletePageConfirm(e: Event) {
+        e.preventDefault();
+        isDeletingPage = true;
+        try {
+            const success = await deleteCustomPage(pageId);
+            if (success) {
+                showAlert(
+                    `Página "${pageData.name || `#${pageId}`}" eliminada com sucesso!`,
+                    AlertType.SUCCESS,
+                    AlertPosition.TOP,
+                );
+                if (typeof window !== "undefined") {
+                    window.location.href = "/admin/pages/"; // Redirect to page list
+                }
+            } else {
+                throw new Error("Falha ao eliminar a página no backend.");
+            }
+        } catch (e: any) {
+            showAlert(
+                `Erro ao eliminar página: ${e.message}`,
+                AlertType.ERROR,
+                AlertPosition.TOP,
+            );
+        } finally {
+            isDeletingPage = false;
+            if (confirmDeleteModalRef) {
+                confirmDeleteModalRef.close();
+            }
+        }
+    }
+
+    // --- Delete Group Logic ---
+    function handleDeleteGroupClick() {
+        if (confirmDeleteGroupModalRef) {
+            canConfirmGroupDelete = false; // Reset button state
+            confirmDeleteGroupModalRef.showModal();
+            // Disable confirm button for a few seconds
+            if (deleteGroupTimerId) clearTimeout(deleteGroupTimerId); // Clear existing timer
+            deleteGroupTimerId = window.setTimeout(() => {
+                canConfirmGroupDelete = true;
+            }, 3000); // 3 seconds delay
+        }
+    }
+
+    async function handleDeleteGroupConfirm(e: Event) {
+        e.preventDefault();
+        isDeletingGroup = true;
+        canConfirmGroupDelete = false; // Prevent double click
+        if (deleteGroupTimerId) {
+            clearTimeout(deleteGroupTimerId);
+            deleteGroupTimerId = null;
+        }
+        try {
+            // The same deleteCustomPage API is used.
+            // The backend should ideally handle recursive deletion if ON DELETE CASCADE is set,
+            // or be enhanced to do so if deleting a group.
+            const success = await deleteCustomPage(pageId);
+            if (success) {
+                showAlert(
+                    `Grupo \"${pageData.name || `#${pageId}`}\" e todo o seu conteúdo foram eliminados com sucesso!`,
+                    AlertType.SUCCESS,
+                    AlertPosition.TOP,
+                );
+                if (typeof window !== "undefined") {
+                    window.location.href = "/admin/pages/"; // Redirect to page list
+                }
+            } else {
+                throw new Error("Falha ao eliminar o grupo no backend.");
+            }
+        } catch (e: any) {
+            showAlert(
+                `Erro ao eliminar grupo: ${e.message}`,
+                AlertType.ERROR,
+                AlertPosition.TOP,
+            );
+        } finally {
+            isDeletingGroup = false;
+            if (confirmDeleteGroupModalRef) {
+                confirmDeleteGroupModalRef.close();
+            }
+        }
+    }
 
     // --- Form Submission ---
     async function handleSubmit(e: Event) {
@@ -1092,17 +1199,164 @@
         {/if}
 
         <!-- Actions -->
-        <div class="flex justify-end gap-4">
-            <a href="/admin/pages/" class="btn btn-ghost">Cancelar</a>
-            <button
-                type="submit"
-                class="btn btn-primary"
-                disabled={isSubmitting || isLoading}
-            >
-                {#if isSubmitting}<span
-                        class="loading loading-spinner loading-sm"
-                    ></span> A Atualizar...{:else}Guardar Alterações{/if}
-            </button>
+        <div class="flex justify-between items-center gap-4 pt-4 border-t">
+            <div>
+                {#if !isGroup}
+                    <button
+                        type="button"
+                        class="btn btn-error"
+                        onclick={handleDeletePageClick}
+                        disabled={isSubmitting || isLoading || isDeletingPage}
+                    >
+                        {#if isDeletingPage}
+                            <span class="loading loading-spinner loading-sm"
+                            ></span> Eliminando Página...
+                        {:else}
+                            <i class="fa-solid fa-trash-can mr-2"></i> Eliminar Página
+                        {/if}
+                    </button>
+                {:else if isGroup}
+                    <button
+                        type="button"
+                        class="btn btn-error btn-outline"
+                        onclick={handleDeleteGroupClick}
+                        disabled={isSubmitting || isLoading || isDeletingGroup}
+                    >
+                        {#if isDeletingGroup}
+                            <span class="loading loading-spinner loading-sm"
+                            ></span> Eliminando Grupo...
+                        {:else}
+                            <i class="fa-solid fa-bomb mr-2"></i> Eliminar Grupo
+                            e Conteúdo
+                        {/if}
+                    </button>
+                {/if}
+            </div>
+            <div class="flex justify-end gap-4">
+                <a href="/admin/pages/" class="btn btn-ghost">Cancelar</a>
+                <button
+                    type="submit"
+                    class="btn btn-primary"
+                    disabled={isSubmitting || isLoading}
+                >
+                    {#if isSubmitting}<span
+                            class="loading loading-spinner loading-sm"
+                        ></span> Atualizando...{:else}Guardar Alterações{/if}
+                </button>
+            </div>
         </div>
     </form>
+
+    <!-- Delete Confirmation Modal -->
+    <dialog bind:this={confirmDeleteModalRef} class="modal">
+        <div class="modal-box">
+            <h3 class="font-bold text-lg">Confirmar Eliminação de Página</h3>
+            <p class="py-4">
+                Tem a certeza que deseja eliminar a página <strong
+                    >{pageData.name || `#${pageId}`}</strong
+                >? Esta ação não pode ser desfeita. Todos os campos e registos
+                associados a esta página serão também eliminados.
+            </p>
+            <p class="text-xs text-error font-semibold">
+                Atenção: Grupos com páginas filhas não devem ser eliminados por
+                aqui diretamente. Elimine as páginas filhas primeiro.
+            </p>
+            <div class="modal-action">
+                <form method="dialog" class="flex gap-2">
+                    <button class="btn btn-ghost" disabled={isDeletingPage}
+                        >Cancelar</button
+                    >
+                    <button
+                        class="btn btn-error"
+                        onclick={handleDeletePageConfirm}
+                        disabled={isDeletingPage}
+                    >
+                        {#if isDeletingPage}
+                            <span class="loading loading-spinner loading-sm"
+                            ></span> Eliminando...
+                        {:else}
+                            Sim, Eliminar
+                        {/if}
+                    </button>
+                </form>
+            </div>
+        </div>
+        <form method="dialog" class="modal-backdrop">
+            <button
+                disabled={isDeletingPage}
+                onclick={() => {
+                    confirmDeleteModalRef.close();
+                }}>close</button
+            >
+        </form>
+    </dialog>
+
+    <!-- Delete Group Confirmation Modal -->
+    <dialog bind:this={confirmDeleteGroupModalRef} class="modal">
+        <div class="modal-box">
+            <h3 class="font-bold text-lg">Confirmar Eliminação de GRUPO</h3>
+            <p class="py-2">
+                Tem a CERTEZA ABSOLUTA que deseja eliminar o GRUPO <strong
+                    class="text-error">{pageData.name || `#${pageId}`}</strong
+                >?
+            </p>
+            <p class="font-semibold text-error py-2">
+                <i class="fa-solid fa-triangle-exclamation mr-1"></i> ATENÇÃO: Esta
+                ação NÃO PODE SER DESFEITA!
+            </p>
+            <p class="py-2">
+                Todas as páginas, campos, registos e ficheiros associados DENTRO
+                deste grupo (e quaisquer sub-grupos) serão <strong
+                    class="text-error">permanentemente eliminados</strong
+                >.
+            </p>
+            <p class="text-sm mt-2">
+                O botão de confirmação será ativado em alguns segundos.
+            </p>
+
+            <div class="modal-action mt-6">
+                <form method="dialog" class="w-full flex justify-between">
+                    <button
+                        class="btn btn-ghost"
+                        disabled={isDeletingGroup}
+                        onclick={() => {
+                            if (deleteGroupTimerId)
+                                clearTimeout(deleteGroupTimerId);
+                            canConfirmGroupDelete = false;
+                        }}>Cancelar</button
+                    >
+                    <button
+                        class="btn btn-error"
+                        onclick={handleDeleteGroupConfirm}
+                        disabled={isDeletingGroup || !canConfirmGroupDelete}
+                    >
+                        {#if isDeletingGroup}
+                            <span class="loading loading-spinner loading-sm"
+                            ></span>
+                            Eliminando...
+                            {#if !canConfirmGroupDelete}
+                                <!-- Show countdown text while disabled -->
+                                (Aguarde...)
+                            {/if}
+                        {:else if !canConfirmGroupDelete}
+                            <i class="fa-solid fa-hourglass-half mr-2"></i> Sim,
+                            Eliminar Grupo (Aguarde...)
+                        {:else}
+                            <i class="fa-solid fa-bomb mr-2"></i> Sim, Eliminar Grupo
+                        {/if}
+                    </button>
+                </form>
+            </div>
+        </div>
+        <form method="dialog" class="modal-backdrop">
+            <button
+                disabled={isDeletingGroup}
+                onclick={() => {
+                    if (deleteGroupTimerId) clearTimeout(deleteGroupTimerId);
+                    canConfirmGroupDelete = false;
+                    confirmDeleteGroupModalRef.close();
+                }}>close</button
+            >
+        </form>
+    </dialog>
 {/if}

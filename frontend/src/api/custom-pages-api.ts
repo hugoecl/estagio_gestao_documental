@@ -177,4 +177,16 @@ export async function updateCustomPage(
   return response.ok;
 }
 
+export async function deleteCustomPage(pageId: number): Promise<boolean> {
+  const response = await handleFetch(
+    `${API_BASE_URL}/custom_pages/${pageId}`,
+    {
+      method: "DELETE",
+      credentials: "include",
+    },
+  );
+  // Backend returns 200 OK or 204 No Content on successful deletion
+  return response.ok || response.status === 204;
+}
+
 // Add deleteCustomPage later

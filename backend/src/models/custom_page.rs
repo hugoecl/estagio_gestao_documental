@@ -2,11 +2,19 @@ use ahash::{HashMap, HashMapExt, HashSet};
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
+use sqlx::{FromRow, Transaction, MySql}; // Added Transaction and MySql
 
 use crate::auth;
 
 use super::field::PageField;
+
+// Helper struct for recursive deletion
+#[derive(FromRow, Debug)]
+struct PageIdAndPath {
+    id: u32,
+    path: String,
+    is_group: bool,
+}
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct CustomPage {
@@ -376,13 +384,56 @@ impl CustomPage {
         Ok(())
     }
 
-    pub async fn delete(pool: &sqlx::MySqlPool, page_id: u32) -> Result<(), sqlx::Error> {
-        // Consider deleting children recursively if needed, or preventing deletion if children exist.
-        // For now, just deletes the single entry.
-        sqlx::query!(r#"DELETE FROM custom_pages WHERE id = ?"#, page_id)
-            .execute(pool)
-            .await?;
+    pub async fn delete(pool: &sqlx::MySqlPool, page_id_to_delete: u32) -> Result<(), sqlx::Error> {
+        let mut tx = pool.begin().await?;
 
+        // Call the recursive delete helper within the transaction
+        // Pass a mutable reference to the transaction
+        Self::delete_recursive(&mut tx, page_id_to_delete).await?;
+
+        tx.commit().await
+    }
+
+    // New recursive helper function
+    async fn delete_recursive(
+        tx: &mut Transaction<'_, MySql>, // Correct type for transaction
+        current_page_id: u32,
+    ) -> Result<(), sqlx::Error> {
+        // Fetch the current page/group details to check if it's a group and get its path
+        let current_page_info = sqlx::query_as!(
+            PageIdAndPath,
+            r#"SELECT id, path, is_group as "is_group: bool" FROM custom_pages WHERE id = ?"#,
+            current_page_id
+        )
+        .fetch_optional(&mut **tx) // Pass executor correctly
+        .await?;
+
+        if let Some(info) = current_page_info {
+            if info.is_group {
+                // If it's a group, find all direct children by parent_path
+                let children = sqlx::query_as!(
+                    PageIdAndPath,
+                    r#"SELECT id, path, is_group as "is_group: bool" FROM custom_pages WHERE parent_path = ?"#,
+                    info.path // Find children whose parent_path matches this group's path
+                )
+                .fetch_all(&mut **tx) // Pass executor correctly
+                .await?;
+
+                for child in children {
+                    // Recursively delete each child - BOX THE FUTURE HERE
+                    Box::pin(Self::delete_recursive(tx, child.id)).await?;
+                }
+            }
+
+            // Now delete the current page/group itself.
+            // ON DELETE CASCADE in the schema should handle page_fields, page_permissions, page_records,
+            // and notifications directly associated with this current_page_id.
+            log::debug!("Deleting custom_pages entry with id: {}", current_page_id);
+            sqlx::query!(r#"DELETE FROM custom_pages WHERE id = ?"#, current_page_id)
+                .execute(&mut **tx) // Pass executor correctly
+                .await?;
+        }
+        // If current_page_info is None, the page/group was already deleted (e.g., by a previous recursive call)
         Ok(())
     }
 

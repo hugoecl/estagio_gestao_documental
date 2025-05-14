@@ -70,6 +70,7 @@ CREATE TABLE IF NOT EXISTS page_fields (
     PRIMARY KEY (id),
     FOREIGN KEY (page_id) REFERENCES custom_pages (id) ON DELETE CASCADE,
     FOREIGN KEY (field_type_id) REFERENCES field_types (id)
+    -- No ON DELETE CASCADE for field_type_id as field_types are static definitions
 );
 
 -- Roles Table
@@ -122,7 +123,7 @@ CREATE TABLE IF NOT EXISTS page_records (
     created_by INT UNSIGNED NOT NULL,
     updated_by INT UNSIGNED,
     PRIMARY KEY (id),
-    FOREIGN KEY (page_id) REFERENCES custom_pages (id),
+    FOREIGN KEY (page_id) REFERENCES custom_pages (id) ON DELETE CASCADE,
     FOREIGN KEY (created_by) REFERENCES users (id),
     FOREIGN KEY (updated_by) REFERENCES users (id)
 );
@@ -166,8 +167,8 @@ CREATE TABLE IF NOT EXISTS notifications (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-    FOREIGN KEY (record_id) REFERENCES page_records (id) ON DELETE CASCADE,
-    FOREIGN KEY (page_id) REFERENCES custom_pages (id) ON DELETE CASCADE,
-    FOREIGN KEY (field_id) REFERENCES page_fields (id) ON DELETE SET NULL, -- Set NULL if field is deleted
-    INDEX idx_user_unread (user_id, is_read) -- Index for efficiently fetching unread notifications
+    FOREIGN KEY (record_id) REFERENCES page_records (id) ON DELETE CASCADE, 
+    FOREIGN KEY (page_id) REFERENCES custom_pages (id) ON DELETE CASCADE, 
+    FOREIGN KEY (field_id) REFERENCES page_fields (id) ON DELETE SET NULL,
+    INDEX idx_user_unread (user_id, is_read)
 );
