@@ -39,6 +39,7 @@
   - [ ] Notificar administrador quando há novas solicitações de férias
   - [ ] Notificar colegas do mesmo cargo de férias quando há novas férias aprovadas
 
+- [ ] Make inputs have the same hover effects
 - [ ] Administrador ao criar utilizador submete num date picker quando é que o trabalhador nasceu.
 - [ ] Ver coisas giras para se meter na pagina inicial (editor de markdown para o admin, aniversários)
 

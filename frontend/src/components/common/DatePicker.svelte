@@ -595,7 +595,7 @@
     }
     /* General Component Styles */
     .input {
-        min-height: 3rem;
+        min-height: 2.5rem;
         height: auto;
         padding-left: 0.75rem;
         padding-right: 0.75rem;
