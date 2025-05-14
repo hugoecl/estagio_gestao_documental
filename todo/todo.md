@@ -23,8 +23,7 @@
 - [X] Fazer com que se possa apagar paginas
 - [X] Fazer com que o caminho do grupo pai seja mais facilmente editavel ao editar paginas
 - [X] Corrigir bug quando se abre um datepicker o modal muda de posição
-- [ ] Ver possivel bug quando o admin enviar uma mensagem/notifica utilizadores que o alert nao sai automaticamente
-- [ ] Meter alert de notificações bem destacado no centro da tela
+- [X] Meter alert de notificações bem destacado no centro da tela
 
 - [ ] Lista drag and drop para o administrador ordenar páginas
 
@@ -46,6 +45,7 @@
 
 - [ ] Logotipo para notificações
 
+- [ ] Ver possivel bug quando o admin enviar uma mensagem/notifica utilizadores que o alert nao sai automaticamente
 
 ## Referencias:
 - [Bizneo](https://www.bizneo.com/pt-pt/gestao-ferias/)
