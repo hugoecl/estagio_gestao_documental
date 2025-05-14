@@ -1,128 +1,86 @@
 <script lang="ts">
-    // Accept the options data via bind:optionsJson
-    // It expects the JSON string array format or null from the parent
     let { optionsJson = $bindable(null) }: { optionsJson?: string[] | null } =
         $props();
 
-    // Internal UI state: an array of strings
     let uiOptions = $state<string[]>([]);
     let errors = $state<string | null>(null);
+    let internalUpdate = false; // Flag to prevent effect recursion
 
-    // Sync internal UI state when the bound prop changes (e.g., loading existing data)
+    // Effect 1: Sync from parent (optionsJson) to local (uiOptions)
     $effect(() => {
+        // Only update from prop if not an internal update and actual change
+        if (internalUpdate) {
+            internalUpdate = false; // Reset flag
+            return;
+        }
         try {
-            // If optionsJson is already an array (likely from initial state), use it directly
+            let newUiOptions: string[] = [];
             if (Array.isArray(optionsJson)) {
-                uiOptions = [...optionsJson]; // Create a copy
+                newUiOptions = [...optionsJson];
+            } else {
+                newUiOptions = [];
             }
-            // If it's a string (likely from DB load), parse it
-            else if (
-                typeof optionsJson === "string" &&
-                optionsJson.trim().startsWith("[")
-            ) {
-                const parsed = JSON.parse(optionsJson);
-                if (
-                    Array.isArray(parsed) &&
-                    parsed.every((item) => typeof item === "string")
-                ) {
-                    uiOptions = parsed;
-                } else {
-                    throw new Error("Invalid format in optionsJson prop.");
-                }
+
+            if (!arraysAreEqual(uiOptions, newUiOptions)) {
+                console.log(
+                    "FieldOptionsEditor: Syncing optionsJson to uiOptions",
+                    newUiOptions,
+                );
+                uiOptions = newUiOptions;
+                errors = null;
             }
-            // If it's null or undefined, reset to empty
-            else {
-                uiOptions = [];
-            }
-            errors = null; // Clear errors on successful sync
         } catch (e) {
             console.error(
-                "Error parsing initial options JSON:",
+                "FieldOptionsEditor: Error parsing optionsJson prop:",
                 optionsJson,
                 e,
             );
-            errors =
-                "Erro ao carregar opções existentes (formato JSON inválido).";
-            uiOptions = []; // Reset on error
+            errors = "Erro ao carregar opções (formato inválido).";
+            if (!arraysAreEqual(uiOptions, [])) {
+                uiOptions = [];
+            }
         }
     });
 
-    // REMOVED the $effect that syncs uiOptions -> optionsJson
+    // Effect 2: Sync from local (uiOptions) to parent (optionsJson)
+    $effect(() => {
+        console.log(
+            "FieldOptionsEditor: uiOptions changed, preparing to update optionsJson",
+            uiOptions,
+        );
+        internalUpdate = true; // Signal that the next optionsJson change is from here
+        optionsJson = uiOptions.length > 0 ? [...uiOptions] : null;
+        // No need to clear errors here unless this effect itself causes an error
+    });
 
-    // Helper for deep array comparison
     function arraysAreEqual(
         arr1: string[] | null | undefined,
         arr2: string[] | null | undefined,
     ): boolean {
-        if (arr1 === arr2) return true; // Same reference or both null/undefined
-        if (!arr1 || !arr2 || arr1.length !== arr2.length) return false; // Different lengths or one is null/undefined
+        if (arr1 === arr2) return true;
+        if (!arr1 || !arr2 || arr1.length !== arr2.length) return false;
         for (let i = 0; i < arr1.length; i++) {
             if (arr1[i] !== arr2[i]) return false;
         }
         return true;
     }
 
-    // Sync internal UI state ONLY when the bound prop actually changes value
-    $effect(() => {
-        try {
-            let newUiOptions: string[] = [];
-            // If optionsJson is already an array (likely from initial state), use it directly
-            if (Array.isArray(optionsJson)) {
-                newUiOptions = [...optionsJson]; // Create a copy
-            }
-            // // If it's a string (less likely now with direct binding), parse it
-            // else if (typeof optionsJson === 'string' && optionsJson.trim().startsWith('[')) {
-            //     const parsed = JSON.parse(optionsJson);
-            //     if (Array.isArray(parsed) && parsed.every(item => typeof item === 'string')) {
-            //          newUiOptions = parsed;
-            //     } else {
-            //         throw new Error("Invalid format in optionsJson prop string.");
-            //     }
-            // }
-            // If it's null or undefined, reset to empty
-            else {
-                newUiOptions = [];
-            }
-
-            // --- Crucial Check: Only update if arrays are different ---
-            if (!arraysAreEqual(uiOptions, newUiOptions)) {
-                uiOptions = newUiOptions;
-                errors = null; // Clear errors on successful sync
-            }
-        } catch (e) {
-            console.error("Error parsing optionsJson prop:", optionsJson, e);
-            errors = "Erro ao carregar opções (formato inválido).";
-            if (!arraysAreEqual(uiOptions, [])) {
-                // Avoid infinite loop if error happens repeatedly
-                uiOptions = []; // Reset on error
-            }
-        }
-    });
-
-    // --- Update optionsJson directly when UI changes ---
-    function updateParentOptions() {
-        optionsJson = uiOptions.length > 0 ? [...uiOptions] : null;
-        errors = null; // Clear errors on successful update
-    }
-
     function addOption() {
+        // This will mutate uiOptions, triggering Effect 2
         uiOptions.push("");
-        uiOptions = [...uiOptions]; // Ensure reactivity
-        updateParentOptions(); // Update parent state
+        uiOptions = [...uiOptions]; // Ensure reactivity for Svelte 5 if .push isn't enough
+        console.log("FieldOptionsEditor: addOption, uiOptions:", uiOptions);
     }
 
     function removeOption(index: number) {
+        // This will mutate uiOptions, triggering Effect 2
         uiOptions.splice(index, 1);
         uiOptions = [...uiOptions]; // Ensure reactivity
-        updateParentOptions(); // Update parent state
+        console.log("FieldOptionsEditor: removeOption, uiOptions:", uiOptions);
     }
 
-    // Update function simplified as direct binding handles state change
-    // Just need to update the parent state after the input event
-    function handleInput(index: number, event: Event) {
-        // Svelte's bind:value handles updating uiOptions[index]
-        updateParentOptions(); // Update parent state after input changes
-    }
+    // The bind:value on the input will directly update uiOptions[index].
+    // Effect 2 will then pick up this change to uiOptions and propagate it to optionsJson.
 </script>
 
 <div
@@ -147,7 +105,6 @@
                     placeholder={`Opção ${index + 1}`}
                     class="input input-sm input-bordered flex-grow"
                     bind:value={uiOptions[index]}
-                    oninput={(e) => handleInput(index, e)}
                     required
                 />
                 <button

@@ -19,8 +19,8 @@
 ## PT 2
 
 - [X] Traduzir mensagem de alert de broadcast
+- [X] Corrigir bug na seleção unica
 - [ ] Meter alert de notificações bem destacado no centro da tela
-- [ ] Corrigir bug na seleção unica
 - [ ] Corrigir bug quando se abre um datepicker o modal muda de posição
 - [ ] Ver possivel bug quando o admin enviar uma mensagem/notifica utilizadores que o alert nao sai automaticamente
 - [ ] Adicionar Feature para apagar paginas
