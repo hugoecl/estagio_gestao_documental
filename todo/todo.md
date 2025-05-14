@@ -18,6 +18,7 @@
 
 ## PT 2
 
+- [X] Traduzir mensagem de alert de broadcast
 - [ ] Meter alert de notificações bem destacado no centro da tela
 - [ ] Corrigir bug na seleção unica
 - [ ] Corrigir bug quando se abre um datepicker o modal muda de posição
