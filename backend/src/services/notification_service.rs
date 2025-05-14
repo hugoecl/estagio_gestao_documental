@@ -25,13 +25,6 @@ pub async fn check_expiring_date_ranges(pool: &MySqlPool) {
             let today = Utc::now().date_naive();
 
             for field in fields {
-                log::debug!(
-                    "Checking field '{}' (ID: {}) on page {}",
-                    field.display_name,
-                    field.id,
-                    field.page_id
-                );
-
                 // Ensure required notification config is present
                 let (Some(days_before), Some(target_part)) = (
                     field.notification_days_before,
@@ -53,23 +46,10 @@ pub async fn check_expiring_date_ranges(pool: &MySqlPool) {
                             // Extract the relevant date from the record's data JSON
                             let due_date_opt =
                                 extract_target_date(&record.data, &field.name, target_part);
-                            log::debug!(
-                                "Record ID: {}, Field: '{}', Target Part: '{}', Extracted Date: {:?}",
-                                record.id,
-                                field.name,
-                                target_part,
-                                due_date_opt
-                            );
 
                             let due_date = match due_date_opt {
                                 Some(date) => date,
                                 None => {
-                                    log::trace!(
-                                        "Record ID {} does not have a valid or parsable \'{}\' date for field \'{}\'.",
-                                        record.id,
-                                        target_part,
-                                        field.name
-                                    );
                                     continue; // Skip record if date is not found or invalid
                                 }
                             };
@@ -91,21 +71,7 @@ pub async fn check_expiring_date_ranges(pool: &MySqlPool) {
                             };
 
                             // Check if today is the day to notify (or if we missed it slightly)
-                            log::debug!(
-                                "Comparing dates for Record ID {}: today = {}, trigger_date = {}, due_date = {}",
-                                record.id,
-                                today,
-                                notification_trigger_date,
-                                due_date
-                            );
                             if today >= notification_trigger_date && today < due_date {
-                                log::debug!(
-                                    "Notification due for record ID {} (due: {}, trigger: {})",
-                                    record.id,
-                                    due_date,
-                                    notification_trigger_date
-                                );
-
                                 // Find users who can view this page
                                 match get_user_ids_with_view_permission(pool, field.page_id).await {
                                     Ok(user_ids) => {

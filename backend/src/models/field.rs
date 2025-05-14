@@ -63,20 +63,20 @@ impl PageField {
         sqlx::query_as!(
             PageField,
             r#"
-            SELECT 
-                f.id, f.page_id, f.name, f.display_name, 
-                f.field_type_id, t.name as field_type_name, 
-                f.required as "required: bool", 
+            SELECT
+                f.id, f.page_id, f.name, f.display_name,
+                f.field_type_id, t.name as field_type_name,
+                f.required as "required: bool",
                 f.options as "options: _", f.validation_name,
                 f.is_searchable as "is_searchable: bool", f.is_displayed_in_table as "is_displayed_in_table: bool", f.order_index,
-                f.notification_enabled as "notification_enabled: bool", 
-                f.notification_days_before, 
+                f.notification_enabled as "notification_enabled: bool",
+                f.notification_days_before,
                 f.notification_target_date_part
             FROM page_fields f
             JOIN field_types t ON f.field_type_id = t.id
-            WHERE f.notification_enabled = true 
-              AND t.name = 'DATE_RANGE' 
-              AND f.notification_days_before IS NOT NULL 
+            WHERE f.notification_enabled = true
+              AND t.name = 'DATE_RANGE'
+              AND f.notification_days_before IS NOT NULL
               AND f.notification_target_date_part IS NOT NULL
             "#
         )
@@ -91,10 +91,10 @@ impl PageField {
         sqlx::query_as!(
             PageField,
             r#"
-            SELECT 
-                f.id, f.page_id, f.name, f.display_name, 
-                f.field_type_id, t.name as field_type_name, 
-                f.required as "required: bool", 
+            SELECT
+                f.id, f.page_id, f.name, f.display_name,
+                f.field_type_id, t.name as field_type_name,
+                f.required as "required: bool",
                 f.options as "options: _", f.validation_name,
                 f.is_searchable as "is_searchable: bool", f.is_displayed_in_table as "is_displayed_in_table: bool", f.order_index,
                 f.notification_enabled as "notification_enabled: bool", f.notification_days_before, f.notification_target_date_part
@@ -114,19 +114,10 @@ impl PageField {
         page_id: u32,
         field: &crate::models::custom_page::CreatePageFieldRequest,
     ) -> Result<u32, sqlx::Error> {
-        log::debug!(
-            "PageField::create_with_tx for page_id: {}, field_name: '{}', received notification_enabled: {:?}, days_before: {:?}, target_part: {:?}",
-            page_id,
-            field.name,
-            field.notification_enabled,
-            field.notification_days_before,
-            field.notification_target_date_part
-        );
-
         let result = sqlx::query!(
             r#"
             INSERT INTO page_fields (
-                page_id, name, display_name, field_type_id, required, 
+                page_id, name, display_name, field_type_id, required,
                 options, validation_name, is_searchable, is_displayed_in_table, order_index,
                 notification_enabled, notification_days_before, notification_target_date_part
             )
@@ -157,19 +148,10 @@ impl PageField {
         page_id: u32,
         field: &crate::models::custom_page::CreatePageFieldRequest,
     ) -> Result<u32, sqlx::Error> {
-        log::debug!(
-            "PageField::create for page_id: {}, field_name: '{}', received notification_enabled: {:?}, days_before: {:?}, target_part: {:?}",
-            page_id,
-            field.name,
-            field.notification_enabled,
-            field.notification_days_before,
-            field.notification_target_date_part
-        );
-
         let result = sqlx::query!(
             r#"
             INSERT INTO page_fields (
-                page_id, name, display_name, field_type_id, required, 
+                page_id, name, display_name, field_type_id, required,
                 options, validation_name, is_searchable, is_displayed_in_table, order_index,
                 notification_enabled, notification_days_before, notification_target_date_part
             )
@@ -202,15 +184,15 @@ impl PageField {
     ) -> Result<(), sqlx::Error> {
         sqlx::query!(
             r#"
-            UPDATE page_fields 
-            SET 
-                display_name = ?, 
-                field_type_id = ?, 
+            UPDATE page_fields
+            SET
+                display_name = ?,
+                field_type_id = ?,
                 required = ?,
-                options = ?, 
-                validation_name = ?, 
+                options = ?,
+                validation_name = ?,
                 is_searchable = ?,
-                is_displayed_in_table = ?, 
+                is_displayed_in_table = ?,
                 order_index = ?,
                 notification_enabled = ?,
                 notification_days_before = ?,

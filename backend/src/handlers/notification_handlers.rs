@@ -1,5 +1,5 @@
 use actix_session::Session;
-use actix_web::{web, HttpResponse, Responder};
+use actix_web::{HttpResponse, Responder, web};
 use serde::Deserialize;
 use std::collections::HashSet; // For unique user IDs
 
@@ -163,14 +163,7 @@ pub async fn mark_notifications_read(
     }
 
     match Notification::mark_as_read(&state.db.pool, user_id, &body.ids).await {
-        Ok(rows_affected) => {
-            log::debug!(
-                "Marked {} notifications as read for user {}",
-                rows_affected,
-                user_id
-            );
-            HttpResponse::Ok().finish()
-        }
+        Ok(rows_affected) => HttpResponse::Ok().finish(),
         Err(e) => {
             log::error!(
                 "Error marking notifications as read for user {}: {}",
@@ -193,14 +186,7 @@ pub async fn mark_all_notifications_read(
     };
 
     match Notification::mark_all_as_read(&state.db.pool, user_id).await {
-        Ok(rows_affected) => {
-            log::debug!(
-                "Marked all ({}) notifications as read for user {}",
-                rows_affected,
-                user_id
-            );
-            HttpResponse::Ok().finish()
-        }
+        Ok(rows_affected) => HttpResponse::Ok().finish(),
         Err(e) => {
             log::error!(
                 "Error marking all notifications as read for user {}: {}",

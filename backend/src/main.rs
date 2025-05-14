@@ -95,10 +95,8 @@ async fn main() -> std::io::Result<()> {
         log::info!("Notification check service started.");
         loop {
             timer.tick().await; // Wait for the next interval
-            log::debug!("Running hourly notification check...");
             // Execute the check logic, passing the cloned pool
             check_expiring_date_ranges(&state_clone.db.pool).await;
-            log::debug!("Hourly notification check finished.");
         }
     });
     // --- End Notification Check Task ---

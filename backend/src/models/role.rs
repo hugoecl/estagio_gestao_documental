@@ -86,7 +86,7 @@ impl Role {
     ) -> Result<(), sqlx::Error> {
         sqlx::query!(
             r#"
-            UPDATE roles 
+            UPDATE roles
             SET name = ?, description = ?, is_admin = ?
             WHERE id = ?
             "#,
@@ -177,7 +177,7 @@ impl Role {
             sqlx::query!(
                 r#"
                 INSERT INTO page_permissions (
-                    page_id, role_id, can_view, can_create, can_edit, 
+                    page_id, role_id, can_view, can_create, can_edit,
                     can_delete, can_manage_fields, can_view_acknowledgments
                 )
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -204,7 +204,6 @@ impl Role {
         pool: &sqlx::MySqlPool,
         role_id: u32,
     ) -> Result<Vec<u32>, sqlx::Error> {
-        log::debug!("Role::get_user_ids_by_role_id: Called for role_id: {}", role_id);
         let user_ids = sqlx::query_scalar!(
             r#"
             SELECT user_id FROM user_roles WHERE role_id = ?
@@ -213,7 +212,6 @@ impl Role {
         )
         .fetch_all(pool)
         .await?;
-        log::debug!("Role::get_user_ids_by_role_id: Found user_ids: {:?} for role_id: {}", user_ids, role_id);
         Ok(user_ids)
     }
 }
