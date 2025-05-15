@@ -219,4 +219,19 @@ impl Role {
         .await?;
         Ok(user_ids)
     }
+
+    // Add this function inside the impl Role block in src/models/role.rs
+    pub async fn get_holiday_roles(pool: &sqlx::MySqlPool) -> Result<Vec<Role>, sqlx::Error> {
+        sqlx::query_as!(
+                Role,
+                r#"
+                SELECT id, name, description, is_admin as "is_admin: bool", is_holiday_role as "is_holiday_role: bool", created_at as "created_at!", updated_at as "updated_at!"
+                FROM roles
+                WHERE is_holiday_role = true
+                ORDER BY name
+                "#
+            )
+            .fetch_all(pool)
+            .await
+    }
 }
