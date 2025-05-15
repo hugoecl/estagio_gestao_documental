@@ -95,9 +95,6 @@
         return day === 0 ? 6 : day - 1; // Adjust to Monday: 0, ..., Sunday: 6
     }
 
-    // estagio_gestao_documental/frontend/src/components/vacations/VacationCalendar.svelte
-    // Replace your existing getDayClasses function with this one:
-
     function getDayClasses(day: CalendarDay): string {
         let classes =
             "p-0.5 h-7 w-full flex items-center justify-center text-xs border border-transparent focus:outline-none focus:ring-1 focus:ring-primary"; // Base, no default rounding here
@@ -114,6 +111,7 @@
                 hoveredDate >= selectionStartDate;
 
             let isInHoverPreviewRange = false;
+
             if (
                 isPreviewing &&
                 hoveredDate &&
@@ -125,92 +123,124 @@
             }
 
             let hasExplicitBg = false;
+
             let hasSpecificRounding = false;
 
             // 1. User's actual vacation status (highest priority for background and rounding)
+
             if (day.status === "user_approved") {
                 classes += " bg-success text-success-content rounded";
+
                 hasExplicitBg = true;
+
                 hasSpecificRounding = true;
             } else if (day.status === "user_pending") {
                 classes += " bg-warning text-warning-content rounded";
+
                 hasExplicitBg = true;
+
                 hasSpecificRounding = true;
             } else if (day.status === "colleague_approved") {
                 classes +=
                     " bg-neutral text-neutral-content opacity-70 cursor-not-allowed rounded";
+
                 hasExplicitBg = true;
+
                 hasSpecificRounding = true;
             }
 
             // 2. If no vacation status, apply selection or hover preview styling
+
             if (!hasExplicitBg) {
                 if (day.isSelected) {
                     // day.isSelected is true if it's part of *any* selection (confirmed or preview)
+
                     if (selectionEndDate) {
                         // --- Confirmed Selection ---
+
                         classes += " text-primary-content";
+
                         if (day.isRangeStart && day.isRangeEnd) {
                             // Single selected day
+
                             classes += " bg-primary rounded"; // Fully rounded
                         } else if (day.isRangeStart) {
                             // Head of selected range
+
                             classes += " bg-accent rounded-l rounded-r-none";
                         } else if (day.isRangeEnd) {
                             // Tail of selected range
+
                             classes += " bg-accent rounded-r rounded-l-none";
                         } else {
                             // In-between selected range
+
                             classes += " bg-secondary rounded-none";
                         }
+
                         hasExplicitBg = true;
+
                         hasSpecificRounding = true; // Selection logic dictates rounding
                     } else if (isInHoverPreviewRange) {
                         // --- Hover Preview ---
+
                         classes += " text-info-content";
+
                         if (
                             day.date.getTime() ===
                                 selectionStartDate!.getTime() &&
                             day.date.getTime() === hoveredDate!.getTime()
                         ) {
                             // Single day hover
+
                             classes += " bg-info rounded";
                         } else if (
                             day.date.getTime() === selectionStartDate!.getTime()
                         ) {
                             // Start of hover preview
+
                             classes += " bg-accent rounded-l rounded-r-none";
                         } else if (
                             day.date.getTime() === hoveredDate!.getTime()
                         ) {
                             // End of hover preview
+
                             classes += " bg-accent rounded-r rounded-l-none";
                         } else {
                             // In-between hover preview
+
                             classes +=
                                 " bg-neutral/40 text-neutral-content rounded-none";
                         }
+
                         hasExplicitBg = true;
+
                         hasSpecificRounding = true; // Hover preview logic dictates rounding
                     } else if (
                         selectionStartDate &&
                         day.date.getTime() === selectionStartDate.getTime()
                     ) {
                         // Only start date is selected, no hover, no end date (anchor point)
+
                         classes += " bg-primary text-primary-content rounded";
+
                         hasExplicitBg = true;
+
                         hasSpecificRounding = true;
                     }
                 }
             }
 
             // 3. Today's date styling (if not styled by status or selection/hover)
+
             if (!hasExplicitBg && day.isToday) {
                 classes += " !border-primary text-primary rounded";
+
                 // hasExplicitBg is not set here because only border/text changes, background might still be needed for hover
             }
 
             // 4. Default hover for available, non-selected, non-status, non-preview days
+
             if (
                 !hasExplicitBg &&
                 !day.isSelected &&
@@ -225,7 +255,9 @@
             }
 
             // Apply default full rounding if no specific rounding has been applied yet
+
             // and it's a current month day (non-current month days already get rounded).
+
             if (day.isCurrentMonth && !hasSpecificRounding) {
                 classes += " rounded";
             }
@@ -349,38 +381,56 @@
     }
 
     function applyVisualsToCalendar(
-        baseStructure: CalendarMonth[],
+        baseStructureInput: CalendarMonth[],
         userRequests: VacationRequestDisplay[],
         colleagueDateRanges: Array<{ start_date: string; end_date: string }>,
         currentSelectionStart: Date | null,
         currentSelectionEnd: Date | null,
         currentHoveredDate: Date | null,
     ): CalendarMonth[] {
-        if (!baseStructure || !baseStructure.length) return [];
+        if (!baseStructureInput || !baseStructureInput.length) return [];
 
-        let effectiveRangeEnd = currentSelectionEnd;
-        if (
-            currentSelectionStart &&
-            !currentSelectionEnd &&
-            currentHoveredDate &&
-            currentHoveredDate >= currentSelectionStart
-        ) {
-            effectiveRangeEnd = currentHoveredDate;
-        }
+        // console.log('applyVisualsToCalendar called with:', { userRequestsLen: userRequests.length, colleagueRangesLen: colleagueDateRanges.length, currentSelectionStart, currentSelectionEnd, currentHoveredDate });
+
+        // IMPORTANT: Create deep copies to avoid mutating original baseStructure or shared day objects.
+        // This is often a source of reactivity issues if not handled carefully.
+        const baseStructure = JSON.parse(
+            JSON.stringify(baseStructureInput),
+        ) as CalendarMonth[];
+
+        const colleagueBookedPeriods = colleagueDateRanges.map((range) => ({
+            start: new Date(range.start_date + "T00:00:00Z"),
+            end: new Date(range.end_date + "T00:00:00Z"),
+        }));
 
         return baseStructure.map((month) => ({
             ...month,
             weeks: month.weeks.map((week) =>
-                week.map((baseDay) => {
-                    const day = { ...baseDay };
+                week.map((day) => {
+                    // Ensure day.date is a Date object
+                    day.date = new Date(day.date);
 
+                    // Reset visual properties for each day on each run
                     day.status = null;
                     day.tooltip = null;
                     day.isSelected = false;
                     day.isRangeStart = false;
                     day.isRangeEnd = false;
 
-                    for (const req of requests) {
+                    // --- 1. Apply Colleague's Approved Vacations ---
+                    for (const colleaguePeriod of colleagueBookedPeriods) {
+                        if (
+                            day.date >= colleaguePeriod.start &&
+                            day.date <= colleaguePeriod.end
+                        ) {
+                            day.status = "colleague_approved";
+                            day.tooltip = "Férias Colega";
+                            break;
+                        }
+                    }
+
+                    // --- 2. Apply User's Actual Vacation Request Statuses (Can override colleague for user's own display) ---
+                    for (const req of userRequests) {
                         const reqStartDate = new Date(
                             req.start_date + "T00:00:00Z",
                         );
@@ -400,11 +450,25 @@
                                 day.status = "user_approved";
                                 day.tooltip = `Meu Pedido (Aprovado): ${req.startDateDisplay} - ${req.endDateDisplay}`;
                             }
-                            break;
+                            // No break here if user's status should always override colleague's for display purposes
                         }
                     }
 
-                    if (!day.status) {
+                    // --- 3. Apply Selection / Hover Preview Visuals ---
+                    // Only apply if the day doesn't have a blocking status like 'colleague_approved'
+                    // User's own 'user_approved' or 'user_pending' might still allow selection visuals if desired,
+                    // but typically selection is for available days.
+                    if (day.status !== "colleague_approved") {
+                        const isPreviewing =
+                            currentSelectionStart &&
+                            !currentSelectionEnd &&
+                            currentHoveredDate &&
+                            currentHoveredDate >= currentSelectionStart;
+                        let effectiveRangeEnd = currentSelectionEnd;
+                        if (isPreviewing && currentHoveredDate) {
+                            effectiveRangeEnd = currentHoveredDate;
+                        }
+
                         if (currentSelectionStart && effectiveRangeEnd) {
                             if (
                                 day.date >= currentSelectionStart &&
@@ -417,9 +481,19 @@
                                 ) {
                                     day.isRangeStart = true;
                                 }
+                                // For the tail, check against actual selectionEndDate if it exists (confirmed selection),
+                                // otherwise, if in preview, the hoveredDate is the temporary end.
                                 if (
+                                    currentSelectionEnd &&
                                     day.date.getTime() ===
-                                    effectiveRangeEnd.getTime()
+                                        currentSelectionEnd.getTime()
+                                ) {
+                                    day.isRangeEnd = true;
+                                } else if (
+                                    isPreviewing &&
+                                    currentHoveredDate &&
+                                    day.date.getTime() ===
+                                        currentHoveredDate.getTime()
                                 ) {
                                     day.isRangeEnd = true;
                                 }
@@ -506,37 +580,37 @@
         }
     });
 
-    // Effect to update displayed calendar when year, requests, or selection change
+    // Effect to update displayed calendar when year, myRequests, colleagueVacations, selection, or hover changes
     $effect(() => {
-        // Capture dependencies for the effect
         const year = currentYear;
-        const userReqs = myRequests; // CORRECT: Use myRequests for user's own vacation data
-        const colleagueReqs = colleagueVacations; // CORRECT: Use colleagueVacations for shared data
-        const startSel = selectionStartDate;
-        const endSel = selectionEndDate;
-        const hDate = hoveredDate;
+        const _myRequests = myRequests;
+        const _colleagueVacations = colleagueVacations;
+        const _selectionStartDate = selectionStartDate;
+        const _selectionEndDate = selectionEndDate;
+        const _hoveredDate = hoveredDate;
+
+        // Log to see if effect is running and with what data
+        // console.log('Effect triggered:', { year, numMyRequests: _myRequests.length, numColleagueVacations: _colleagueVacations.length, start: _selectionStartDate, end: _selectionEndDate, hover: _hoveredDate });
 
         let currentBase = baseCalendarStructure;
-        // Rebuild base structure only if year changes or it's not initialized
         if (
             !currentBase.length ||
             (currentBase[0] && currentBase[0].year !== year)
         ) {
+            // console.log('Generating new base structure for year:', year);
             currentBase = generateBaseCalendarStructure(year);
             baseCalendarStructure = currentBase;
         }
 
         if (currentBase.length > 0) {
-            // Ensure applyVisualsToCalendar uses these correct variable names internally as well
-            // The parameters in the function definition should be:
-            // applyVisualsToCalendar(baseStructure, userRequests, colleagueDateRanges, ...)
+            // console.log('Applying visuals...');
             displayedCalendarData = applyVisualsToCalendar(
                 currentBase,
-                userReqs,
-                colleagueReqs,
-                startSel,
-                endSel,
-                hDate,
+                _myRequests,
+                _colleagueVacations,
+                _selectionStartDate,
+                _selectionEndDate,
+                _hoveredDate,
             );
         } else {
             displayedCalendarData = [];
