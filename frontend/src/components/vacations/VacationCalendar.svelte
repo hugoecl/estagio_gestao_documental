@@ -4,6 +4,7 @@
         getMyRemainingVacationDays,
         getMyVacationRequests,
         submitVacationRequest,
+        getSharedCalendarVacations, // Import new API function
     } from "@api/vacation-api";
     import type {
         RemainingVacationDaysResponse,
@@ -20,9 +21,13 @@
 
     // --- State ---
     let remainingDaysInfo = $state<RemainingVacationDaysResponse | null>(null);
-    let myRequests = $state<VacationRequestDisplay[]>([]);
+    let myRequests = $state<VacationRequestDisplay[]>([]); // Store processed requests
+    let colleagueVacations = $state<
+        Array<{ start_date: string; end_date: string }>
+    >([]);
     let isLoadingDays = $state(true);
     let isLoadingRequests = $state(true);
+    let isLoadingShared = $state(false); // New loading state for shared data
     let error = $state<string | null>(null);
 
     // --- Custom Calendar State & Logic ---
@@ -345,7 +350,8 @@
 
     function applyVisualsToCalendar(
         baseStructure: CalendarMonth[],
-        requests: VacationRequestDisplay[],
+        userRequests: VacationRequestDisplay[],
+        colleagueDateRanges: Array<{ start_date: string; end_date: string }>,
         currentSelectionStart: Date | null,
         currentSelectionEnd: Date | null,
         currentHoveredDate: Date | null,
@@ -436,9 +442,44 @@
     }
 
     // --- Fetch Initial Data ---
-    onMount(async () => {
+    async function fetchAllCalendarData(year: number) {
         isLoadingDays = true;
         isLoadingRequests = true;
+        isLoadingShared = true; // Set loading for shared data
+        error = null;
+        try {
+            // Fetch all three data points in parallel
+            const [daysData, requestsData, sharedColleagueData] =
+                await Promise.all([
+                    getMyRemainingVacationDays(),
+                    getMyVacationRequests(),
+                    getSharedCalendarVacations(year), // Fetch colleague data
+                ]);
+
+            if (daysData) {
+                remainingDaysInfo = daysData;
+            } else {
+                showAlert(
+                    "Não foi possível carregar os seus dias de férias.",
+                    AlertType.WARNING,
+                    AlertPosition.TOP,
+                );
+            }
+            myRequests = processVacationRequestsForDisplay(requestsData || []);
+            colleagueVacations = sharedColleagueData || []; // Store colleague data
+        } catch (e: any) {
+            console.error("Error fetching vacation data for year:", year, e);
+            error = `Erro ao carregar dados: ${e.message}`;
+            showAlert(error, AlertType.ERROR, AlertPosition.TOP);
+        } finally {
+            isLoadingDays = false;
+            isLoadingRequests = false;
+            isLoadingShared = false;
+        }
+    }
+
+    onMount(async () => {
+        await fetchAllCalendarData(currentYear);
         try {
             const [daysData, requestsData] = await Promise.all([
                 getMyRemainingVacationDays(),
@@ -465,14 +506,18 @@
         }
     });
 
+    // Effect to update displayed calendar when year, requests, or selection change
     $effect(() => {
+        // Capture dependencies for the effect
         const year = currentYear;
-        const requests = myRequests;
+        const userReqs = myRequests; // CORRECT: Use myRequests for user's own vacation data
+        const colleagueReqs = colleagueVacations; // CORRECT: Use colleagueVacations for shared data
         const startSel = selectionStartDate;
         const endSel = selectionEndDate;
         const hDate = hoveredDate;
 
         let currentBase = baseCalendarStructure;
+        // Rebuild base structure only if year changes or it's not initialized
         if (
             !currentBase.length ||
             (currentBase[0] && currentBase[0].year !== year)
@@ -482,9 +527,13 @@
         }
 
         if (currentBase.length > 0) {
+            // Ensure applyVisualsToCalendar uses these correct variable names internally as well
+            // The parameters in the function definition should be:
+            // applyVisualsToCalendar(baseStructure, userRequests, colleagueDateRanges, ...)
             displayedCalendarData = applyVisualsToCalendar(
                 currentBase,
-                requests,
+                userReqs,
+                colleagueReqs,
                 startSel,
                 endSel,
                 hDate,

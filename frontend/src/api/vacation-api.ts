@@ -97,3 +97,32 @@ export async function submitVacationRequest(
 
 // --- Admin specific vacation API calls would go here in a later phase ---
 // e.g., getPendingRequestsForRole, actionVacationRequest
+
+/**
+ * Fetches approved vacation date ranges for colleagues in shared holiday roles for a given year.
+ * @param year The year for which to fetch shared calendar data.
+ * @returns A promise that resolves to an array of [startDate, endDate] string tuples.
+ */
+export async function getSharedCalendarVacations(year: number): Promise<[string, string][]> {
+  const response = await handleFetch(
+    `${API_BASE_URL}/vacation-requests/shared-calendar?year=${year}`,
+    {
+      method: "GET",
+      credentials: "include",
+    },
+  );
+
+  if (response.ok) {
+    return (await response.json()) as [string, string][];
+  }
+
+  if (response.status === 401) {
+    console.warn("getSharedCalendarVacations: Unauthorized (401). Returning empty array.");
+    return [];
+  }
+
+  console.error(
+    `Failed to fetch shared calendar vacations for year ${year}: ${response.statusText}`,
+  );
+  return []; // Or throw an error if preferred
+}

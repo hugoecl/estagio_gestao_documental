@@ -233,5 +233,54 @@ impl Role {
             )
             .fetch_all(pool)
             .await
+        }
+
+        pub async fn get_colleague_user_ids_in_shared_holiday_roles(
+            pool: &sqlx::MySqlPool,
+            user_id: u32,
+        ) -> Result<Vec<u32>, sqlx::Error> {
+            // Step 1: Find the holiday role IDs for the given user
+            let user_holiday_role_ids = sqlx::query_scalar!(
+                r#"
+                SELECT r.id
+                FROM roles r
+                JOIN user_roles ur ON r.id = ur.role_id
+                WHERE ur.user_id = ? AND r.is_holiday_role = true
+                "#,
+                user_id
+            )
+            .fetch_all(pool)
+            .await?;
+
+            if user_holiday_role_ids.is_empty() {
+                return Ok(Vec::new()); // User is not in any holiday roles
+            }
+
+            // Step 2: Find all other users who are in any of these holiday roles
+            // We need to construct the IN clause for role_ids dynamically.
+            let role_id_placeholders = user_holiday_role_ids
+                .iter()
+                .map(|_| "?")
+                .collect::<Vec<_>>()
+                .join(",");
+        
+            let query_str = format!(
+                r#"
+                SELECT DISTINCT ur.user_id
+                FROM user_roles ur
+                WHERE ur.role_id IN ({}) AND ur.user_id != ?
+                "#,
+                role_id_placeholders
+            );
+
+            let mut query_builder = sqlx::query_scalar(&query_str);
+            for role_id in user_holiday_role_ids {
+                query_builder = query_builder.bind(role_id);
+            }
+            query_builder = query_builder.bind(user_id); // For the ur.user_id != ?
+
+            let colleague_ids = query_builder.fetch_all(pool).await?;
+        
+            Ok(colleague_ids)
+        }
     }
-}

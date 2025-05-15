@@ -1,17 +1,26 @@
 use actix_session::Session;
-use actix_web::{web, HttpResponse, Responder};
+use actix_web::{HttpResponse, Responder, web};
 use chrono::Datelike; // For year extraction
 use serde::Serialize;
 
 use crate::{
+    State,
     auth::validate_session, // Assuming user_can_view_page might be relevant later
     models::{
+        role::Role, // Added for shared calendar logic
         user::User, // Assuming User model exists to fetch vacation_days_current_year
         vacation_request::{CreateVacationRequest, VacationRequest, VacationRequestStatus},
     },
-    utils::json_utils::json_response,
-    State,
+    utils::json_utils::{json_response, json_response_with_etag},
 };
+use actix_web::HttpRequest; // Added for HttpRequest
+use serde::Deserialize;
+
+// Struct for parsing query parameters for shared calendar
+#[derive(Deserialize, Debug)]
+pub struct SharedCalendarQuery {
+    year: i32,
+}
 
 // Handler for a user to submit a new vacation request
 pub async fn submit_vacation_request(
@@ -28,7 +37,8 @@ pub async fn submit_vacation_request(
 
     // --- Basic Validations ---
     if request_data.start_date > request_data.end_date {
-        return HttpResponse::BadRequest().body("A data de início não pode ser posterior à data de fim.");
+        return HttpResponse::BadRequest()
+            .body("A data de início não pode ser posterior à data de fim.");
     }
     // Optional: Check if dates are in the past (allow for some flexibility or be strict)
     let today = chrono::Utc::now().date_naive();
@@ -51,7 +61,9 @@ pub async fn submit_vacation_request(
     .await
     {
         Ok(user) => user,
-        Err(sqlx::Error::RowNotFound) => return HttpResponse::NotFound().body("Utilizador não encontrado."),
+        Err(sqlx::Error::RowNotFound) => {
+            return HttpResponse::NotFound().body("Utilizador não encontrado.");
+        }
         Err(e) => {
             log::error!("Error fetching user details for vacation check: {}", e);
             return HttpResponse::InternalServerError().finish();
@@ -62,24 +74,23 @@ pub async fn submit_vacation_request(
 
     // Calculate already approved days for the current year
     let current_year = today.year();
-    let approved_days_count =
-        match VacationRequest::count_approved_vacation_days_for_year(
-            &state.db.pool,
-            user_id,
-            current_year,
-        )
-        .await
-        {
-            Ok(count) => count,
-            Err(e) => {
-                log::error!(
-                    "Error counting approved vacation days for user {}: {}",
-                    user_id,
-                    e
-                );
-                return HttpResponse::InternalServerError().finish();
-            }
-        };
+    let approved_days_count = match VacationRequest::count_approved_vacation_days_for_year(
+        &state.db.pool,
+        user_id,
+        current_year,
+    )
+    .await
+    {
+        Ok(count) => count,
+        Err(e) => {
+            log::error!(
+                "Error counting approved vacation days for user {}: {}",
+                user_id,
+                e
+            );
+            return HttpResponse::InternalServerError().finish();
+        }
+    };
 
     if (approved_days_count + requested_days_count) as u32 > available_days as u32 {
         return HttpResponse::BadRequest().body(format!(
@@ -94,7 +105,11 @@ pub async fn submit_vacation_request(
     let existing_requests = match VacationRequest::get_by_user_id(&state.db.pool, user_id).await {
         Ok(reqs) => reqs,
         Err(e) => {
-            log::error!("Error fetching existing requests for user {}: {}", user_id, e);
+            log::error!(
+                "Error fetching existing requests for user {}: {}",
+                user_id,
+                e
+            );
             return HttpResponse::InternalServerError().finish();
         }
     };
@@ -124,10 +139,7 @@ pub async fn submit_vacation_request(
 }
 
 // Handler for a user to fetch their own vacation requests
-pub async fn get_my_vacation_requests(
-    state: web::Data<State>,
-    session: Session,
-) -> impl Responder {
+pub async fn get_my_vacation_requests(state: web::Data<State>, session: Session) -> impl Responder {
     let user_id = match validate_session(&session) {
         Ok(id) => id as u32,
         Err(resp) => return resp,
@@ -136,7 +148,11 @@ pub async fn get_my_vacation_requests(
     match VacationRequest::get_by_user_id(&state.db.pool, user_id).await {
         Ok(requests) => json_response(&requests),
         Err(e) => {
-            log::error!("Error fetching vacation requests for user {}: {}", user_id, e);
+            log::error!(
+                "Error fetching vacation requests for user {}: {}",
+                user_id,
+                e
+            );
             HttpResponse::InternalServerError().finish()
         }
     }
@@ -168,7 +184,9 @@ pub async fn get_my_remaining_vacation_days(
     .await
     {
         Ok(user) => user,
-        Err(sqlx::Error::RowNotFound) => return HttpResponse::NotFound().body("Utilizador não encontrado."),
+        Err(sqlx::Error::RowNotFound) => {
+            return HttpResponse::NotFound().body("Utilizador não encontrado.");
+        }
         Err(e) => {
             log::error!("Error fetching user's allocated vacation days: {}", e);
             return HttpResponse::InternalServerError().finish();
@@ -178,24 +196,23 @@ pub async fn get_my_remaining_vacation_days(
     let total_allocated_days = user_details.vacation_days_current_year.unwrap_or(0);
     let current_year = chrono::Utc::now().year();
 
-    let approved_days_taken =
-        match VacationRequest::count_approved_vacation_days_for_year(
-            &state.db.pool,
-            user_id,
-            current_year,
-        )
-        .await
-        {
-            Ok(count) => count,
-            Err(e) => {
-                log::error!(
-                    "Error counting approved vacation days for user {}: {}",
-                    user_id,
-                    e
-                );
-                return HttpResponse::InternalServerError().finish();
-            }
-        };
+    let approved_days_taken = match VacationRequest::count_approved_vacation_days_for_year(
+        &state.db.pool,
+        user_id,
+        current_year,
+    )
+    .await
+    {
+        Ok(count) => count,
+        Err(e) => {
+            log::error!(
+                "Error counting approved vacation days for user {}: {}",
+                user_id,
+                e
+            );
+            return HttpResponse::InternalServerError().finish();
+        }
+    };
 
     // Calculate pending days (optional, but good for user info)
     let all_user_requests = match VacationRequest::get_by_user_id(&state.db.pool, user_id).await {
@@ -215,11 +232,17 @@ pub async fn get_my_remaining_vacation_days(
         if req.status == VacationRequestStatus::Pending {
             // Ensure the request is for the current year before counting
             if req.start_date.year() == current_year || req.end_date.year() == current_year {
-                 let start_date = std::cmp::max(req.start_date, chrono::NaiveDate::from_ymd_opt(current_year, 1, 1).unwrap());
-                 let end_date = std::cmp::min(req.end_date, chrono::NaiveDate::from_ymd_opt(current_year, 12, 31).unwrap());
-                 if start_date <= end_date {
+                let start_date = std::cmp::max(
+                    req.start_date,
+                    chrono::NaiveDate::from_ymd_opt(current_year, 1, 1).unwrap(),
+                );
+                let end_date = std::cmp::min(
+                    req.end_date,
+                    chrono::NaiveDate::from_ymd_opt(current_year, 12, 31).unwrap(),
+                );
+                if start_date <= end_date {
                     pending_days_requested += (end_date - start_date).num_days() + 1;
-                 }
+                }
             }
         }
     }
@@ -232,4 +255,50 @@ pub async fn get_my_remaining_vacation_days(
         pending_days_requested,
         remaining_days,
     })
+}
+
+// Add this handler to the end of src/handlers/vacation_handlers.rs
+
+pub async fn get_shared_calendar_vacations(
+    state: web::Data<State>,
+    session: Session,
+    query: web::Query<SharedCalendarQuery>,
+    req: HttpRequest, // Added for ETag
+) -> impl Responder {
+    let user_id = match validate_session(&session) {
+        Ok(id) => id as u32,
+        Err(resp) => return resp,
+    };
+
+    let year = query.year;
+
+    match Role::get_colleague_user_ids_in_shared_holiday_roles(&state.db.pool, user_id).await {
+        Ok(colleague_user_ids) => {
+            if colleague_user_ids.is_empty() {
+                // No colleagues in shared holiday roles, or user is not in any holiday role
+                return json_response_with_etag(
+                    &Vec::<(chrono::NaiveDate, chrono::NaiveDate)>::new(),
+                    &req,
+                );
+            }
+
+            match VacationRequest::get_approved_dates_for_users_in_year(
+                &state.db.pool,
+                &colleague_user_ids,
+                year,
+            )
+            .await
+            {
+                Ok(dates) => json_response_with_etag(&dates, &req),
+                Err(e) => {
+                    log::error!("Error fetching approved dates for colleagues: {}", e);
+                    HttpResponse::InternalServerError().finish()
+                }
+            }
+        }
+        Err(e) => {
+            log::error!("Error fetching colleague user IDs: {}", e);
+            HttpResponse::InternalServerError().finish()
+        }
+    }
 }

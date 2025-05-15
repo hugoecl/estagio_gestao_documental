@@ -10,17 +10,57 @@ pub enum VacationRequestStatus {
     Rejected,
 }
 
-#[derive(Debug, Serialize, Deserialize, FromRow, Clone)]
+// Intermediate struct for fetching from DB, with status as String
+#[derive(Debug, FromRow, Clone)]
+struct VacationRequestDbRow {
+    pub id: u32,
+    pub user_id: u32,
+    pub start_date: NaiveDate,
+    pub end_date: NaiveDate,
+    pub status: String, // Fetched as String
+    pub notes: Option<String>,
+    pub requested_at: DateTime<Utc>,
+    pub approved_by: Option<u32>,
+    pub actioned_at: Option<DateTime<Utc>>,
+}
+
+// Main struct with proper enum, used in application logic and API responses
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct VacationRequest {
     pub id: u32,
     pub user_id: u32,
-    pub start_date: NaiveDate, // SQL DATE
-    pub end_date: NaiveDate,   // SQL DATE
-    pub status: VacationRequestStatus,
-    pub notes: Option<String>, // User's notes on request, or admin's notes on action
+    pub start_date: NaiveDate,
+    pub end_date: NaiveDate,
+    pub status: VacationRequestStatus, // Proper enum
+    pub notes: Option<String>,
     pub requested_at: DateTime<Utc>,
-    pub approved_by: Option<u32>, // User ID of the admin who actioned the request
-    pub actioned_at: Option<DateTime<Utc>>, // Timestamp of approval/rejection
+    pub approved_by: Option<u32>,
+    pub actioned_at: Option<DateTime<Utc>>,
+}
+
+impl From<VacationRequestDbRow> for VacationRequest {
+    fn from(db_row: VacationRequestDbRow) -> Self {
+        let status_enum = match db_row.status.as_str() {
+            "PENDING" => VacationRequestStatus::Pending,
+            "APPROVED" => VacationRequestStatus::Approved,
+            "REJECTED" => VacationRequestStatus::Rejected,
+            _ => {
+                log::warn!("Unknown vacation status string '{}', defaulting to Pending", db_row.status);
+                VacationRequestStatus::Pending // Default or handle error
+            }
+        };
+        VacationRequest {
+            id: db_row.id,
+            user_id: db_row.user_id,
+            start_date: db_row.start_date,
+            end_date: db_row.end_date,
+            status: status_enum,
+            notes: db_row.notes,
+            requested_at: db_row.requested_at,
+            approved_by: db_row.approved_by,
+            actioned_at: db_row.actioned_at,
+        }
+    }
 }
 
 // DTO for creating a new vacation request by a user
@@ -38,20 +78,63 @@ pub struct ActionVacationRequest {
     pub admin_notes: Option<String>,   // Admin's notes for the action
 }
 
-// DTO for returning vacation requests along with user information
-#[derive(Debug, Serialize, Deserialize, FromRow, Clone)]
-pub struct VacationRequestWithUser {
+// Intermediate struct for fetching from DB, with status as String
+#[derive(Debug, FromRow, Clone)]
+struct VacationRequestWithUserDbRow {
     pub id: u32,
     pub user_id: u32,
-    pub username: String, // Joined from users table
-    pub email: String,    // Joined from users table
+    pub username: String,
+    pub email: String,
     pub start_date: NaiveDate,
     pub end_date: NaiveDate,
-    pub status: VacationRequestStatus,
+    pub status: String, // Fetched as String
     pub notes: Option<String>,
     pub requested_at: DateTime<Utc>,
     pub approved_by: Option<u32>,
     pub actioned_at: Option<DateTime<Utc>>,
+}
+
+// Main struct for API responses, with proper enum
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct VacationRequestWithUser {
+    pub id: u32,
+    pub user_id: u32,
+    pub username: String,
+    pub email: String,
+    pub start_date: NaiveDate,
+    pub end_date: NaiveDate,
+    pub status: VacationRequestStatus, // Proper enum
+    pub notes: Option<String>,
+    pub requested_at: DateTime<Utc>,
+    pub approved_by: Option<u32>,
+    pub actioned_at: Option<DateTime<Utc>>,
+}
+
+impl From<VacationRequestWithUserDbRow> for VacationRequestWithUser {
+    fn from(db_row: VacationRequestWithUserDbRow) -> Self {
+        let status_enum = match db_row.status.as_str() {
+            "PENDING" => VacationRequestStatus::Pending,
+            "APPROVED" => VacationRequestStatus::Approved,
+            "REJECTED" => VacationRequestStatus::Rejected,
+            _ => {
+                log::warn!("Unknown vacation status string '{}', defaulting to Pending", db_row.status);
+                VacationRequestStatus::Pending // Default or handle error
+            }
+        };
+        VacationRequestWithUser {
+            id: db_row.id,
+            user_id: db_row.user_id,
+            username: db_row.username,
+            email: db_row.email,
+            start_date: db_row.start_date,
+            end_date: db_row.end_date,
+            status: status_enum,
+            notes: db_row.notes,
+            requested_at: db_row.requested_at,
+            approved_by: db_row.approved_by,
+            actioned_at: db_row.actioned_at,
+        }
+    }
 }
 
 impl VacationRequest {
@@ -80,12 +163,12 @@ impl VacationRequest {
         pool: &MySqlPool,
         request_id: u32,
     ) -> Result<Option<VacationRequest>, sqlx::Error> {
-        sqlx::query_as!(
-            VacationRequest,
+        let row_opt = sqlx::query_as!(
+            VacationRequestDbRow, // Fetch as DbRow first
             r#"
             SELECT
                 id, user_id, start_date, end_date,
-                status AS "status: _",
+                status,
                 notes,
                 requested_at AS "requested_at!",
                 approved_by,
@@ -96,19 +179,21 @@ impl VacationRequest {
             request_id
         )
         .fetch_optional(pool)
-        .await
+        .await?;
+
+        Ok(row_opt.map(VacationRequest::from)) // Convert to VacationRequest
     }
 
     pub async fn get_by_user_id(
         pool: &MySqlPool,
         user_id: u32,
     ) -> Result<Vec<VacationRequest>, sqlx::Error> {
-        sqlx::query_as!(
-            VacationRequest,
+        let rows = sqlx::query_as!(
+            VacationRequestDbRow, // Fetch as DbRow first
             r#"
             SELECT
                 id, user_id, start_date, end_date,
-                status AS "status: _",
+                status,
                 notes,
                 requested_at AS "requested_at!",
                 approved_by,
@@ -120,7 +205,9 @@ impl VacationRequest {
             user_id
         )
         .fetch_all(pool)
-        .await
+        .await?;
+
+        Ok(rows.into_iter().map(VacationRequest::from).collect()) // Convert each row
     }
 
     /// Fetches all PENDING vacation requests, optionally filtered by a list of user IDs (for a specific role),
@@ -133,7 +220,7 @@ impl VacationRequest {
             SELECT
                 vr.id, vr.user_id, u.username, u.email,
                 vr.start_date, vr.end_date,
-                vr.status AS "status: _",
+                vr.status, // Fetch status as String
                 vr.notes,
                 vr.requested_at AS "requested_at!",
                 vr.approved_by,
@@ -157,9 +244,11 @@ impl VacationRequest {
             format!("{} ORDER BY vr.requested_at ASC", base_query)
         };
         
-        sqlx::query_as(&query_str) // This maps to VacationRequestWithUser
+        let rows = sqlx::query_as::<_, VacationRequestWithUserDbRow>(&query_str) // Fetch as DbRow
             .fetch_all(pool)
-            .await
+            .await?;
+
+        Ok(rows.into_iter().map(VacationRequestWithUser::from).collect()) // Convert
     }
 
     /// Admin actions a vacation request (approve or reject), and deducts days if approved.

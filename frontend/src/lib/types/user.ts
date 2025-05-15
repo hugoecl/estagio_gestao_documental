@@ -22,6 +22,7 @@ export interface CreateUserRequest {
   username: string;
   email: string;
   password: string;
+  vacation_days_current_year?: number; // Optional: For admin setting initial days
   // role_ids could be added here if backend /register endpoint is enhanced
   // to allow specifying roles on creation by an admin.
   // For now, role assignment is a separate step via assignRolesToUser.
