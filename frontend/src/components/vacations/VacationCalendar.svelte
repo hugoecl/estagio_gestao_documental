@@ -95,180 +95,138 @@
         return day === 0 ? 6 : day - 1; // Adjust to Monday: 0, ..., Sunday: 6
     }
 
+    // estagio_gestao_documental/frontend/src/components/vacations/VacationCalendar.svelte
+    // Replace your existing getDayClasses function with this:
+
     function getDayClasses(day: CalendarDay): string {
-        let classes =
-            "p-0.5 h-7 w-full flex items-center justify-center text-xs border border-transparent focus:outline-none focus:ring-1 focus:ring-primary"; // Base, no default rounding here
+        const base =
+            "p-0.5 h-7 w-full flex items-center justify-center text-xs border border-transparent focus:outline-none focus:ring-1 focus:ring-primary";
+        let styleClasses = ""; // Accumulate specific styles here
+        let roundingClasses = "rounded"; // Default to fully rounded
+        let hoverClasses = "hover:bg-base-300"; // Default hover
 
         if (!day.isCurrentMonth) {
-            classes += " opacity-40 cursor-not-allowed rounded"; // Non-current month days are fully rounded and faded
-        } else {
-            classes += " font-semibold";
+            return `${base} opacity-40 cursor-not-allowed rounded`;
+        }
 
-            const isPreviewing =
-                selectionStartDate &&
-                !selectionEndDate &&
-                hoveredDate &&
-                hoveredDate >= selectionStartDate;
+        styleClasses += " font-semibold";
 
-            let isInHoverPreviewRange = false;
+        const isPreviewing =
+            selectionStartDate &&
+            !selectionEndDate &&
+            hoveredDate &&
+            hoveredDate >= selectionStartDate;
+        let isPartOfHoverPreview = false;
+        if (
+            isPreviewing &&
+            hoveredDate &&
+            selectionStartDate &&
+            day.date >= selectionStartDate &&
+            day.date <= hoveredDate
+        ) {
+            isPartOfHoverPreview = true;
+        }
 
-            if (
-                isPreviewing &&
-                hoveredDate &&
-                selectionStartDate &&
-                day.date >= selectionStartDate &&
-                day.date <= hoveredDate
-            ) {
-                isInHoverPreviewRange = true;
-            }
+        let hasStatusStyle = false;
 
-            let hasExplicitBg = false;
+        // 1. Apply vacation status styles (highest priority for background/text)
+        if (day.status === "user_approved") {
+            styleClasses += " bg-success text-success-content";
+            hasStatusStyle = true;
+        } else if (day.status === "user_pending") {
+            styleClasses += " bg-warning text-warning-content"; // THIS IS FOR PENDING
+            hasStatusStyle = true;
+        } else if (day.status === "colleague_approved") {
+            styleClasses +=
+                " bg-neutral/60 text-neutral-content opacity-80 cursor-not-allowed";
+            hoverClasses = ""; // No hover on colleague days
+            hasStatusStyle = true;
+        }
 
-            let hasSpecificRounding = false;
-
-            // 1. User's actual vacation status (highest priority for background and rounding)
-
-            if (day.status === "user_approved") {
-                classes += " bg-success text-success-content rounded";
-
-                hasExplicitBg = true;
-
-                hasSpecificRounding = true;
-            } else if (day.status === "user_pending") {
-                classes += " bg-warning text-warning-content rounded";
-
-                hasExplicitBg = true;
-
-                hasSpecificRounding = true;
-            } else if (day.status === "colleague_approved") {
-                classes +=
-                    " bg-neutral text-neutral-content opacity-70 cursor-not-allowed rounded";
-
-                hasExplicitBg = true;
-
-                hasSpecificRounding = true;
-            }
-
-            // 2. If no vacation status, apply selection or hover preview styling
-
-            if (!hasExplicitBg) {
-                if (day.isSelected) {
-                    // day.isSelected is true if it's part of *any* selection (confirmed or preview)
-
-                    if (selectionEndDate) {
-                        // --- Confirmed Selection ---
-
-                        classes += " text-primary-content";
-
-                        if (day.isRangeStart && day.isRangeEnd) {
-                            // Single selected day
-
-                            classes += " bg-primary rounded"; // Fully rounded
-                        } else if (day.isRangeStart) {
-                            // Head of selected range
-
-                            classes += " bg-accent rounded-l rounded-r-none";
-                        } else if (day.isRangeEnd) {
-                            // Tail of selected range
-
-                            classes += " bg-accent rounded-r rounded-l-none";
-                        } else {
-                            // In-between selected range
-
-                            classes += " bg-secondary rounded-none";
-                        }
-
-                        hasExplicitBg = true;
-
-                        hasSpecificRounding = true; // Selection logic dictates rounding
-                    } else if (isInHoverPreviewRange) {
-                        // --- Hover Preview ---
-
-                        classes += " text-info-content";
-
-                        if (
-                            day.date.getTime() ===
-                                selectionStartDate!.getTime() &&
-                            day.date.getTime() === hoveredDate!.getTime()
-                        ) {
-                            // Single day hover
-
-                            classes += " bg-info rounded";
-                        } else if (
-                            day.date.getTime() === selectionStartDate!.getTime()
-                        ) {
-                            // Start of hover preview
-
-                            classes += " bg-accent rounded-l rounded-r-none";
-                        } else if (
-                            day.date.getTime() === hoveredDate!.getTime()
-                        ) {
-                            // End of hover preview
-
-                            classes += " bg-accent rounded-r rounded-l-none";
-                        } else {
-                            // In-between hover preview
-
-                            classes +=
-                                " bg-neutral/40 text-neutral-content rounded-none";
-                        }
-
-                        hasExplicitBg = true;
-
-                        hasSpecificRounding = true; // Hover preview logic dictates rounding
-                    } else if (
-                        selectionStartDate &&
-                        day.date.getTime() === selectionStartDate.getTime()
+        // 2. Apply selection and hover preview styles
+        // These will primarily affect days *without* an overriding vacation status,
+        // or could add borders/text styles to days that already have a status background.
+        if (day.isSelected) {
+            if (selectionEndDate) {
+                // --- Confirmed Selection ---
+                if (!hasStatusStyle) {
+                    // Only set background if no status style already did
+                    // styleClasses += " bg-primary text-primary-content";
+                } else {
+                    // If has status, maybe just change text or add border to indicate selection
+                    styleClasses += " text-primary-content"; // Ensure text contrasts with status bg
+                }
+                if (day.isRangeStart && day.isRangeEnd) {
+                    styleClasses += " bg-accent";
+                    roundingClasses = "rounded";
+                } else if (day.isRangeStart) {
+                    styleClasses += " bg-accent";
+                    roundingClasses = "rounded-l rounded-r-none";
+                } else if (day.isRangeEnd) {
+                    styleClasses += " bg-accent";
+                    roundingClasses = "rounded-r rounded-l-none";
+                } else {
+                    styleClasses += " bg-secondary";
+                    roundingClasses = "rounded-none";
+                }
+                hoverClasses = ""; // No default hover on selected items
+            } else if (isPartOfHoverPreview) {
+                // --- Hover Preview ---
+                if (!hasStatusStyle) {
+                    // Using your preferred hover colors (assumed to be info-based)
+                    styleClasses += " text-info-content";
+                    if (
+                        day.date.getTime() === selectionStartDate!.getTime() &&
+                        day.date.getTime() === hoveredDate!.getTime()
                     ) {
-                        // Only start date is selected, no hover, no end date (anchor point)
-
-                        classes += " bg-primary text-primary-content rounded";
-
-                        hasExplicitBg = true;
-
-                        hasSpecificRounding = true;
+                        styleClasses += " bg-info";
+                        roundingClasses = "rounded";
+                    } else if (
+                        day.date.getTime() === selectionStartDate!.getTime()
+                    ) {
+                        styleClasses += " bg-info";
+                        roundingClasses = "rounded-l rounded-r-none";
+                    } else if (day.date.getTime() === hoveredDate!.getTime()) {
+                        styleClasses += " bg-accent";
+                        roundingClasses = "rounded-r rounded-l-none";
+                    } else {
+                        styleClasses += " bg-neutral/40 text-neutral-content";
+                        roundingClasses = "rounded-none";
                     }
                 }
-            }
-
-            // 3. Today's date styling (if not styled by status or selection/hover)
-
-            if (!hasExplicitBg && day.isToday) {
-                classes += " !border-primary text-primary rounded";
-
-                // hasExplicitBg is not set here because only border/text changes, background might still be needed for hover
-            }
-
-            // 4. Default hover for available, non-selected, non-status, non-preview days
-
-            if (
-                !hasExplicitBg &&
-                !day.isSelected &&
-                !isInHoverPreviewRange &&
-                day.isCurrentMonth
+                hoverClasses = "";
+            } else if (
+                selectionStartDate &&
+                day.date.getTime() === selectionStartDate.getTime()
             ) {
-                if (day.isToday && classes.includes("!border-primary")) {
-                    classes += " hover:bg-primary/10";
+                // Only start date selected (anchor point)
+                if (!hasStatusStyle) {
+                    styleClasses += " bg-primary text-primary-content";
                 } else {
-                    classes += " hover:bg-base-300";
+                    styleClasses += " text-primary-content";
                 }
-            }
-
-            // Apply default full rounding if no specific rounding has been applied yet
-
-            // and it's a current month day (non-current month days already get rounded).
-
-            if (day.isCurrentMonth && !hasSpecificRounding) {
-                classes += " rounded";
+                roundingClasses = "rounded";
+                hoverClasses = "";
             }
         }
 
-        if (!day.isCurrentMonth || day.status === "colleague_approved") {
-            if (!classes.includes(" cursor-not-allowed"))
-                classes += " cursor-not-allowed";
+        // 3. Today's date styling (if not styled by status or active selection)
+        if (!hasStatusStyle && !day.isSelected && day.isToday) {
+            styleClasses += " !border-primary text-primary"; // Ensure it's rounded by default
+            if (hoverClasses === "hover:bg-base-300") {
+                hoverClasses = "hover:bg-primary/10";
+            }
         }
 
-        return classes.trim().replace(/\s+/g, " "); // Clean up multiple spaces
+        // Construct final classes
+        let finalClasses = `${base} ${styleClasses} ${roundingClasses} ${hoverClasses}`;
+
+        if (day.status === "colleague_approved" || !day.isCurrentMonth) {
+            if (!finalClasses.includes(" cursor-not-allowed"))
+                finalClasses += " cursor-not-allowed";
+        }
+
+        return finalClasses.trim().replace(/\s+/g, " ");
     }
 
     function generateBaseCalendarStructure(year: number): CalendarMonth[] {
@@ -380,6 +338,12 @@
         return newBaseData;
     }
 
+    // estagio_gestao_documental/frontend/src/components/vacations/VacationCalendar.svelte
+    // Replace your existing applyVisualsToCalendar function (around L341-L477) with this:
+
+    // estagio_gestao_documental/frontend/src/components/vacations/VacationCalendar.svelte
+    // Replace your existing applyVisualsToCalendar function (around L340-L492)
+
     function applyVisualsToCalendar(
         baseStructureInput: CalendarMonth[],
         userRequests: VacationRequestDisplay[],
@@ -388,131 +352,147 @@
         currentSelectionEnd: Date | null,
         currentHoveredDate: Date | null,
     ): CalendarMonth[] {
-        if (!baseStructureInput || !baseStructureInput.length) return [];
+        if (!baseStructureInput || !baseStructureInput.length) {
+            // console.log('ApplyVisuals: baseStructureInput is empty or null, returning empty.');
+            return [];
+        }
 
-        // console.log('applyVisualsToCalendar called with:', { userRequestsLen: userRequests.length, colleagueRangesLen: colleagueDateRanges.length, currentSelectionStart, currentSelectionEnd, currentHoveredDate });
-
-        // IMPORTANT: Create deep copies to avoid mutating original baseStructure or shared day objects.
-        // This is often a source of reactivity issues if not handled carefully.
-        const baseStructure = JSON.parse(
+        const newCalendarStructure = JSON.parse(
             JSON.stringify(baseStructureInput),
         ) as CalendarMonth[];
 
         const colleagueBookedPeriods = colleagueDateRanges.map((range) => ({
-            start: new Date(range.start_date + "T00:00:00Z"),
-            end: new Date(range.end_date + "T00:00:00Z"),
+            start: new Date(range.start_date + "T00:00:00Z").getTime(),
+            end: new Date(range.end_date + "T00:00:00Z").getTime(),
         }));
 
-        return baseStructure.map((month) => ({
-            ...month,
-            weeks: month.weeks.map((week) =>
-                week.map((day) => {
-                    // Ensure day.date is a Date object
-                    day.date = new Date(day.date);
+        newCalendarStructure.forEach((month) => {
+            month.weeks.forEach((week) => {
+                week.forEach((day) => {
+                    day.date = new Date(day.date); // Ensure it's a Date object
+                    const dayTime = day.date.getTime();
 
-                    // Reset visual properties for each day on each run
+                    // Reset visual properties
                     day.status = null;
                     day.tooltip = null;
                     day.isSelected = false;
                     day.isRangeStart = false;
                     day.isRangeEnd = false;
 
+                    // --- Debugging Loop for userRequests ---
+                    // console.log(`Processing Day: ${day.date.toISOString().slice(0,10)}`);
+
                     // --- 1. Apply Colleague's Approved Vacations ---
                     for (const colleaguePeriod of colleagueBookedPeriods) {
                         if (
-                            day.date >= colleaguePeriod.start &&
-                            day.date <= colleaguePeriod.end
+                            dayTime >= colleaguePeriod.start &&
+                            dayTime <= colleaguePeriod.end
                         ) {
                             day.status = "colleague_approved";
                             day.tooltip = "Férias Colega";
+                            // console.log(` -> Status set to colleague_approved`);
                             break;
                         }
                     }
 
-                    // --- 2. Apply User's Actual Vacation Request Statuses (Can override colleague for user's own display) ---
-                    for (const req of userRequests) {
-                        const reqStartDate = new Date(
-                            req.start_date + "T00:00:00Z",
-                        );
-                        const reqEndDate = new Date(
-                            req.end_date + "T00:00:00Z",
-                        );
-                        if (
-                            day.date >= reqStartDate &&
-                            day.date <= reqEndDate
-                        ) {
-                            if (req.status === VacationRequestStatus.Pending) {
-                                day.status = "user_pending";
-                                day.tooltip = `Meu Pedido (Pendente): ${req.startDateDisplay} - ${req.endDateDisplay}`;
-                            } else if (
-                                req.status === VacationRequestStatus.Approved
+                    // --- 2. Apply User's Actual Vacation Request Statuses ---
+                    if (day.status !== "colleague_approved") {
+                        for (const req of userRequests) {
+                            // console.log(`  Comparing with User Request ID: ${req.id}, Status: ${req.status}, Start: ${req.start_date}, End: ${req.end_date}`);
+                            const reqStartTime = new Date(
+                                req.start_date + "T00:00:00Z",
+                            ).getTime();
+                            const reqEndTime = new Date(
+                                req.end_date + "T00:00:00Z",
+                            ).getTime();
+
+                            // console.log(`    DayTime: ${dayTime}, ReqStartTime: ${reqStartTime}, ReqEndTime: ${reqEndTime}`);
+
+                            if (
+                                dayTime >= reqStartTime &&
+                                dayTime <= reqEndTime
                             ) {
-                                day.status = "user_approved";
-                                day.tooltip = `Meu Pedido (Aprovado): ${req.startDateDisplay} - ${req.endDateDisplay}`;
+                                // console.log(`    -> DAY IS WITHIN REQUEST RANGE.`);
+                                if (
+                                    req.status === VacationRequestStatus.Pending
+                                ) {
+                                    day.status = "user_pending";
+                                    day.tooltip = `Meu Pedido (Pendente): ${req.startDateDisplay} - ${req.endDateDisplay}`;
+                                } else if (
+                                    req.status ===
+                                    VacationRequestStatus.Approved
+                                ) {
+                                    day.status = "user_approved";
+                                    day.tooltip = `Meu Pedido (Aprovado): ${req.startDateDisplay} - ${req.endDateDisplay}`;
+                                } else if (
+                                    req.status ===
+                                    VacationRequestStatus.Rejected
+                                ) {
+                                    // Optionally handle rejected for tooltip or a very subtle style, but typically not a strong background
+                                    // day.status = 'user_rejected';
+                                    // day.tooltip = `Meu Pedido (Rejeitado): ${req.startDateDisplay} - ${req.endDateDisplay}`;
+                                    // console.log(`LOG: Day ${day.date.toISOString().slice(0,10)} status: user_rejected (Raw req.status: ${req.status})`);
+                                }
+                                break;
                             }
-                            // No break here if user's status should always override colleague's for display purposes
                         }
                     }
 
                     // --- 3. Apply Selection / Hover Preview Visuals ---
-                    // Only apply if the day doesn't have a blocking status like 'colleague_approved'
-                    // User's own 'user_approved' or 'user_pending' might still allow selection visuals if desired,
-                    // but typically selection is for available days.
                     if (day.status !== "colleague_approved") {
                         const isPreviewing =
                             currentSelectionStart &&
                             !currentSelectionEnd &&
                             currentHoveredDate &&
-                            currentHoveredDate >= currentSelectionStart;
-                        let effectiveRangeEnd = currentSelectionEnd;
+                            currentHoveredDate.getTime() >=
+                                currentSelectionStart.getTime();
+                        let effectiveRangeEndForSelection = currentSelectionEnd;
                         if (isPreviewing && currentHoveredDate) {
-                            effectiveRangeEnd = currentHoveredDate;
+                            effectiveRangeEndForSelection = currentHoveredDate;
                         }
 
-                        if (currentSelectionStart && effectiveRangeEnd) {
+                        if (
+                            currentSelectionStart &&
+                            effectiveRangeEndForSelection
+                        ) {
+                            const selStartTime =
+                                currentSelectionStart.getTime();
+                            const selEndTime =
+                                effectiveRangeEndForSelection.getTime();
+
                             if (
-                                day.date >= currentSelectionStart &&
-                                day.date <= effectiveRangeEnd
+                                dayTime >= selStartTime &&
+                                dayTime <= selEndTime
                             ) {
                                 day.isSelected = true;
-                                if (
-                                    day.date.getTime() ===
-                                    currentSelectionStart.getTime()
-                                ) {
+                                if (dayTime === selStartTime)
                                     day.isRangeStart = true;
-                                }
-                                // For the tail, check against actual selectionEndDate if it exists (confirmed selection),
-                                // otherwise, if in preview, the hoveredDate is the temporary end.
+
                                 if (
                                     currentSelectionEnd &&
-                                    day.date.getTime() ===
-                                        currentSelectionEnd.getTime()
+                                    dayTime === currentSelectionEnd.getTime()
                                 ) {
                                     day.isRangeEnd = true;
                                 } else if (
                                     isPreviewing &&
                                     currentHoveredDate &&
-                                    day.date.getTime() ===
-                                        currentHoveredDate.getTime()
+                                    dayTime === currentHoveredDate.getTime()
                                 ) {
                                     day.isRangeEnd = true;
                                 }
                             }
                         } else if (currentSelectionStart) {
-                            if (
-                                day.date.getTime() ===
-                                currentSelectionStart.getTime()
-                            ) {
+                            if (dayTime === currentSelectionStart.getTime()) {
                                 day.isSelected = true;
                                 day.isRangeStart = true;
                                 day.isRangeEnd = true;
                             }
                         }
                     }
-                    return day;
-                }),
-            ),
-        }));
+                });
+            });
+        });
+        return newCalendarStructure;
     }
 
     // --- Fetch Initial Data ---
@@ -670,6 +650,25 @@
         requests: VacationRequest[],
     ): VacationRequestDisplay[] {
         return requests.map((req) => {
+            let statusEnum: VacationRequestStatus;
+            switch (
+                req.status.toUpperCase() // Convert API string status to enum
+            ) {
+                case "PENDING":
+                    statusEnum = VacationRequestStatus.Pending;
+                    break;
+                case "APPROVED":
+                    statusEnum = VacationRequestStatus.Approved;
+                    break;
+                case "REJECTED":
+                    statusEnum = VacationRequestStatus.Rejected;
+                    break;
+                default:
+                    console.warn(
+                        `Unknown vacation status string: ${req.status}`,
+                    );
+                    statusEnum = VacationRequestStatus.Pending; // Or some default/error state
+            }
             const start = new Date(req.start_date + "T00:00:00Z");
             const end = new Date(req.end_date + "T00:00:00Z");
             const requestedAt = new Date(req.requested_at);
@@ -707,6 +706,7 @@
                       })
                     : undefined,
                 duration,
+                status: statusEnum,
             };
         });
     }
