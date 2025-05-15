@@ -37,3 +37,10 @@ export interface VacationRequestDisplay extends VacationRequest {
   actionedAtDisplay?: string; // DD/MM/YYYY HH:MM or empty
   duration: number; // in days
 }
+
+// For admin view, includes user details
+export interface VacationRequestWithUser extends VacationRequest {
+  username: string;
+  email: string;
+  // Potentially add user's total vacation days or role names if helpful for admin view
+}

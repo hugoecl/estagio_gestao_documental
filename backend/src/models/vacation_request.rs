@@ -38,6 +38,22 @@ pub struct ActionVacationRequest {
     pub admin_notes: Option<String>,   // Admin's notes for the action
 }
 
+// DTO for returning vacation requests along with user information
+#[derive(Debug, Serialize, Deserialize, FromRow, Clone)]
+pub struct VacationRequestWithUser {
+    pub id: u32,
+    pub user_id: u32,
+    pub username: String, // Joined from users table
+    pub email: String,    // Joined from users table
+    pub start_date: NaiveDate,
+    pub end_date: NaiveDate,
+    pub status: VacationRequestStatus,
+    pub notes: Option<String>,
+    pub requested_at: DateTime<Utc>,
+    pub approved_by: Option<u32>,
+    pub actioned_at: Option<DateTime<Utc>>,
+}
+
 impl VacationRequest {
     pub async fn create(
         pool: &MySqlPool,
@@ -107,91 +123,165 @@ impl VacationRequest {
         .await
     }
 
-    /// Fetches all PENDING vacation requests, optionally filtered by a list of user IDs (for a specific role).
-    pub async fn get_pending_requests_for_users(
+    /// Fetches all PENDING vacation requests, optionally filtered by a list of user IDs (for a specific role),
+    /// including the username and email of the user who made the request.
+    pub async fn get_pending_requests_with_users(
         pool: &MySqlPool,
-        user_ids: Option<&[u32]>, // If None, fetch for all users. If Some, filter by these user IDs.
-    ) -> Result<Vec<VacationRequest>, sqlx::Error> {
-        // The query_as! macro cannot be used directly with dynamically formatted strings.
-        // We need to use query_as directly with the sqlx::QueryAs structure.
-        // However, the current `VacationRequest` struct doesn't have `user_username`.
-        // For simplicity, I'll fetch without username here.
-        // The admin view will likely need a dedicated struct or a different query.
-        // For now, let's adjust the query to match the `VacationRequest` struct.
+        user_ids: Option<&[u32]>,
+    ) -> Result<Vec<VacationRequestWithUser>, sqlx::Error> {
+        let base_query = r#"
+            SELECT
+                vr.id, vr.user_id, u.username, u.email,
+                vr.start_date, vr.end_date,
+                vr.status AS "status: _",
+                vr.notes,
+                vr.requested_at AS "requested_at!",
+                vr.approved_by,
+                vr.actioned_at
+            FROM vacation_requests vr
+            JOIN users u ON vr.user_id = u.id
+            WHERE vr.status = 'PENDING'
+        "#;
 
-        let dynamic_query_str = if let Some(ids) = user_ids {
+        let query_str = if let Some(ids) = user_ids {
             if ids.is_empty() {
-                return Ok(Vec::new());
+                return Ok(Vec::new()); // No users to fetch for, return empty
             }
             format!(
-                r#"
-                SELECT
-                    id, user_id,
-                    start_date, end_date,
-                    status AS "status: _",
-                    notes,
-                    requested_at AS "requested_at!",
-                    approved_by,
-                    actioned_at
-                FROM vacation_requests
-                WHERE status = 'PENDING' AND user_id IN ({})
-                ORDER BY requested_at ASC
-                "#,
-                ids.iter()
-                    .map(|id| id.to_string())
-                    .collect::<Vec<String>>()
-                    .join(",")
+                "{} AND vr.user_id IN ({}) ORDER BY vr.requested_at ASC",
+                base_query,
+                ids.iter().map(|id| id.to_string()).collect::<Vec<String>>().join(",")
             )
         } else {
-            r#"
-            SELECT
-                id, user_id,
-                start_date, end_date,
-                status AS "status: _",
-                notes,
-                requested_at AS "requested_at!",
-                approved_by,
-                actioned_at
-            FROM vacation_requests
-            WHERE status = 'PENDING'
-            ORDER BY requested_at ASC
-            "#
-            .to_string()
+            // Fetch for all users if user_ids is None (though admin might usually filter by role)
+            format!("{} ORDER BY vr.requested_at ASC", base_query)
         };
-
-        sqlx::query_as(&dynamic_query_str).fetch_all(pool).await
+        
+        sqlx::query_as(&query_str) // This maps to VacationRequestWithUser
+            .fetch_all(pool)
+            .await
     }
 
-    /// Admin actions a vacation request (approve or reject).
-    pub async fn action_request(
+    /// Admin actions a vacation request (approve or reject), and deducts days if approved.
+    /// Returns Ok(true) if action was successful (and days deducted if approved).
+    /// Returns Ok(false) if the request was not in PENDING state (already actioned).
+    /// Returns Err for database errors or if not enough vacation days for approval.
+    pub async fn action_request_with_days_deduction(
         pool: &MySqlPool,
         request_id: u32,
         admin_id: u32,
         new_status: VacationRequestStatus,
         admin_notes: Option<String>,
-    ) -> Result<u64, sqlx::Error> {
+    ) -> Result<bool, sqlx::Error> {
         if new_status == VacationRequestStatus::Pending {
-            // Admins should only approve or reject
             return Err(sqlx::Error::Protocol(
                 "Admin action cannot set status to PENDING.".into(),
             ));
         }
 
-        let result = sqlx::query!(
+        let mut tx = pool.begin().await?;
+
+        // Fetch the request details to get user_id, start_date, and end_date
+        // Fetch status as String first, then convert
+        let request_details_raw = sqlx::query!(
+            r#"
+            SELECT user_id, start_date, end_date, status
+            FROM vacation_requests
+            WHERE id = ?
+            "#,
+            request_id
+        )
+        .fetch_optional(&mut *tx)
+        .await?;
+
+        let (user_id_for_deduction, request_start_date, request_end_date, current_db_status_str) =
+            match request_details_raw {
+                Some(req) => (req.user_id, req.start_date, req.end_date, req.status),
+                None => {
+                    tx.rollback().await?;
+                    return Err(sqlx::Error::RowNotFound); // Request not found
+                }
+            };
+        
+        // Convert status string to enum
+        let current_db_status: VacationRequestStatus = match current_db_status_str.as_str() {
+            "PENDING" => VacationRequestStatus::Pending,
+            "APPROVED" => VacationRequestStatus::Approved,
+            "REJECTED" => VacationRequestStatus::Rejected,
+            _ => {
+                log::error!("Invalid status string '{}' from database for request_id: {}", current_db_status_str, request_id);
+                tx.rollback().await?;
+                return Err(sqlx::Error::Decode("Invalid status string from database".into()));
+            }
+        };
+
+        // Ensure the request is currently PENDING before actioning
+        if current_db_status != VacationRequestStatus::Pending {
+            tx.rollback().await?;
+            log::warn!("Attempted to action non-pending request_id: {}, current status: {:?}", request_id, current_db_status);
+            return Ok(false); // Indicate request was not actioned because not pending
+        }
+
+
+        if new_status == VacationRequestStatus::Approved {
+            // Calculate number of days for the request
+            let duration_days = (request_end_date - request_start_date).num_days() + 1;
+            if duration_days <= 0 {
+                tx.rollback().await?;
+                return Err(sqlx::Error::Protocol("Invalid request duration.".into()));
+            }
+
+            // Fetch user's current available vacation days
+            let user_vacation_days = sqlx::query_scalar!(
+                "SELECT vacation_days_current_year FROM users WHERE id = ?",
+                user_id_for_deduction
+            )
+            .fetch_one(&mut *tx)
+            .await?
+            .unwrap_or(0); // Default to 0 if NULL
+
+            if user_vacation_days < duration_days as u16 {
+                tx.rollback().await?;
+                return Err(sqlx::Error::Protocol(
+                    "Not enough vacation days available.".into(),
+                ));
+            }
+
+            // Deduct days
+            let new_available_days = user_vacation_days - duration_days as u16;
+            sqlx::query!(
+                "UPDATE users SET vacation_days_current_year = ? WHERE id = ?",
+                new_available_days,
+                user_id_for_deduction
+            )
+            .execute(&mut *tx)
+            .await?;
+        }
+
+        // Update the vacation request status
+        let update_result = sqlx::query!(
             r#"
             UPDATE vacation_requests
             SET status = ?, approved_by = ?, actioned_at = CURRENT_TIMESTAMP, notes = ?
-            WHERE id = ? AND status = 'PENDING'
-            "#,
+            WHERE id = ? AND status = 'PENDING' 
+            "#, // Ensure it's still PENDING to avoid race conditions
             new_status as VacationRequestStatus,
             admin_id,
             admin_notes,
             request_id
         )
-        .execute(pool)
+        .execute(&mut *tx)
         .await?;
 
-        Ok(result.rows_affected())
+        if update_result.rows_affected() == 0 {
+             // This means the request was not in PENDING state when update was attempted (e.g. actioned by another admin)
+            tx.rollback().await?;
+            log::warn!("Vacation request {} was already actioned or not found when trying to update status.", request_id);
+            return Ok(false); 
+        }
+
+        tx.commit().await?;
+        Ok(true) // Successfully actioned
     }
 
     /// Fetches all approved vacation dates for a list of user IDs within a given year.

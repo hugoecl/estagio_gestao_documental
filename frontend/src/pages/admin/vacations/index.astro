@@ -1,0 +1,22 @@
+---
+import Layout from "@layouts/Layout.astro";
+import HolidayRoleList from "@components/admin/vacations/HolidayRoleList.svelte";
+---
+
+<Layout title="Gestão de Férias | Admin">
+    <div class="mb-6">
+        <div class="flex justify-between items-center">
+            <h1 class="text-2xl font-bold">Gestão de Férias - Funções</h1>
+            <a href="/admin/" class="btn btn-sm btn-ghost">
+                <i class="fa-solid fa-arrow-left mr-2"></i> Voltar ao Painel Admin
+            </a>
+        </div>
+        <p class="text-sm text-base-content/70 mt-1">
+            Selecione uma função marcada como "função de férias" para ver e gerir os pedidos de férias dos utilizadores associados.
+        </p>
+    </div>
+
+    <div class="bg-base-100 p-4 sm:p-6 rounded-lg shadow-md border border-base-content/10">
+        <HolidayRoleList client:load />
+    </div>
+</Layout>

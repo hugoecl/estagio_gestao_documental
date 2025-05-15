@@ -1,0 +1,94 @@
+---
+import Layout from "@layouts/Layout.astro";
+import PendingRequestsTable from "@components/admin/vacations/PendingRequestsTable.svelte";
+import { getRoles } from "@api/roles-api"; // To fetch role details
+import type { Role } from "@lib/types/roles";
+
+const { roleId } = Astro.params;
+const roleIdNum = parseInt(roleId || "", 10);
+
+let roleName = `Função ID #${roleIdNum}`; // Default name
+let error: string | null = null;
+let status = 200;
+
+if (isNaN(roleIdNum)) {
+    error = "ID da Função Inválido.";
+    status = 400;
+} else {
+    try {
+        // Fetch all roles to find the name of the current one.
+        // In a real app, you might have a getRoleById API endpoint.
+        const allRoles = await getRoles(Astro.request.headers.get("cookie") ?? undefined);
+        const currentRole = allRoles.find(r => r.id === roleIdNum);
+        if (currentRole) {
+            if (currentRole.is_holiday_role) {
+                roleName = currentRole.name;
+            } else {
+                error = `A função '${currentRole.name}' não é uma função de férias.`;
+                status = 403; // Or 404, depending on desired behavior
+            }
+        } else {
+            error = `Função com ID #${roleIdNum} não encontrada.`;
+            status = 404;
+        }
+    } catch (e: any) {
+        console.error(`Error fetching role details for roleId ${roleIdNum}:`, e);
+        error = `Erro ao carregar detalhes da função: ${e.message || "Erro desconhecido"}`;
+        status = 500;
+        if (e.message?.includes("401") || e.message?.includes("403")) {
+            status = 403;
+        } else if (e.message?.includes("404")) {
+            status = 404;
+        }
+    }
+}
+
+if (status !== 200) {
+    Astro.response.status = status;
+}
+
+---
+
+<Layout title={`Pedidos Pendentes - ${roleName} | Admin Férias`}>
+    <div class="mb-6">
+        <div class="flex justify-between items-center">
+            <h1 class="text-2xl font-bold">
+                Pedidos de Férias Pendentes para: <span class="text-primary">{roleName}</span>
+            </h1>
+            <a href="/admin/vacations/" class="btn btn-sm btn-ghost">
+                <i class="fa-solid fa-arrow-left mr-2"></i> Voltar às Funções de Férias
+            </a>
+        </div>
+    </div>
+
+    {
+        status !== 200 && (
+            <div class="alert alert-error shadow-lg">
+                <div>
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="stroke-current flex-shrink-0 h-6 w-6"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                    </svg>
+                    <span>{error}</span>
+                </div>
+            </div>
+        )
+    }
+
+    {
+        status === 200 && !isNaN(roleIdNum) && (
+            <div class="bg-base-100 p-4 sm:p-6 rounded-lg shadow-md border border-base-content/10">
+                <PendingRequestsTable client:load {roleId} {roleName} />
+            </div>
+        )
+    }
+</Layout>
