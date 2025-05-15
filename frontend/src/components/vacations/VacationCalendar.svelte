@@ -28,10 +28,10 @@
     // --- Custom Calendar State & Logic ---
     interface CalendarDay {
         dayOfMonth: number;
-        date: Date; // Represents the actual date (normalized to midnight UTC for comparisons)
+        date: Date;
         isCurrentMonth: boolean;
         isToday: boolean;
-        status: string | null; // e.g., 'user_pending', 'user_approved', 'colleague_approved'
+        status: string | null;
         tooltip: string | null;
         isSelected: boolean;
         isRangeStart: boolean;
@@ -46,14 +46,16 @@
     }
 
     let currentYear = $state(new Date().getFullYear());
-    let baseCalendarStructure = $state<CalendarMonth[]>([]); // Raw structure, changes only with year
-    let displayedCalendarData = $state<CalendarMonth[]>([]); // What's rendered
+    let baseCalendarStructure = $state<CalendarMonth[]>([]);
+    let displayedCalendarData = $state<CalendarMonth[]>([]);
 
     // Date selection state
     let selectionStartDate = $state<Date | null>(null);
     let selectionEndDate = $state<Date | null>(null);
+    let hoveredDate = $state<Date | null>(null);
 
-    const monthNames = [
+    const monthNames = $state([
+        // Made reactive for consistency, though not strictly necessary
         "Janeiro",
         "Fevereiro",
         "Março",
@@ -66,8 +68,8 @@
         "Outubro",
         "Novembro",
         "Dezembro",
-    ];
-    const dayNames = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
+    ]);
+    const dayNames = $state(["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]); // Made reactive
 
     // Modal state for new request
     let requestModalRef: HTMLDialogElement | null = $state(null);
@@ -88,13 +90,157 @@
         return day === 0 ? 6 : day - 1; // Adjust to Monday: 0, ..., Sunday: 6
     }
 
+    // estagio_gestao_documental/frontend/src/components/vacations/VacationCalendar.svelte
+    // Replace your existing getDayClasses function with this one:
+
+    function getDayClasses(day: CalendarDay): string {
+        let classes =
+            "p-0.5 h-7 w-full flex items-center justify-center text-xs border border-transparent focus:outline-none focus:ring-1 focus:ring-primary"; // Base, no default rounding here
+
+        if (!day.isCurrentMonth) {
+            classes += " opacity-40 cursor-not-allowed rounded"; // Non-current month days are fully rounded and faded
+        } else {
+            classes += " font-semibold";
+
+            const isPreviewing =
+                selectionStartDate &&
+                !selectionEndDate &&
+                hoveredDate &&
+                hoveredDate >= selectionStartDate;
+
+            let isInHoverPreviewRange = false;
+            if (
+                isPreviewing &&
+                hoveredDate &&
+                selectionStartDate &&
+                day.date >= selectionStartDate &&
+                day.date <= hoveredDate
+            ) {
+                isInHoverPreviewRange = true;
+            }
+
+            let hasExplicitBg = false;
+            let hasSpecificRounding = false;
+
+            // 1. User's actual vacation status (highest priority for background and rounding)
+            if (day.status === "user_approved") {
+                classes += " bg-success text-success-content rounded";
+                hasExplicitBg = true;
+                hasSpecificRounding = true;
+            } else if (day.status === "user_pending") {
+                classes += " bg-warning text-warning-content rounded";
+                hasExplicitBg = true;
+                hasSpecificRounding = true;
+            } else if (day.status === "colleague_approved") {
+                classes +=
+                    " bg-neutral text-neutral-content opacity-70 cursor-not-allowed rounded";
+                hasExplicitBg = true;
+                hasSpecificRounding = true;
+            }
+
+            // 2. If no vacation status, apply selection or hover preview styling
+            if (!hasExplicitBg) {
+                if (day.isSelected) {
+                    // day.isSelected is true if it's part of *any* selection (confirmed or preview)
+                    if (selectionEndDate) {
+                        // --- Confirmed Selection ---
+                        classes += " text-primary-content";
+                        if (day.isRangeStart && day.isRangeEnd) {
+                            // Single selected day
+                            classes += " bg-primary rounded"; // Fully rounded
+                        } else if (day.isRangeStart) {
+                            // Head of selected range
+                            classes += " bg-accent rounded-l rounded-r-none";
+                        } else if (day.isRangeEnd) {
+                            // Tail of selected range
+                            classes += " bg-accent rounded-r rounded-l-none";
+                        } else {
+                            // In-between selected range
+                            classes += " bg-secondary rounded-none";
+                        }
+                        hasExplicitBg = true;
+                        hasSpecificRounding = true; // Selection logic dictates rounding
+                    } else if (isInHoverPreviewRange) {
+                        // --- Hover Preview ---
+                        classes += " text-info-content";
+                        if (
+                            day.date.getTime() ===
+                                selectionStartDate!.getTime() &&
+                            day.date.getTime() === hoveredDate!.getTime()
+                        ) {
+                            // Single day hover
+                            classes += " bg-info rounded";
+                        } else if (
+                            day.date.getTime() === selectionStartDate!.getTime()
+                        ) {
+                            // Start of hover preview
+                            classes += " bg-accent rounded-l rounded-r-none";
+                        } else if (
+                            day.date.getTime() === hoveredDate!.getTime()
+                        ) {
+                            // End of hover preview
+                            classes += " bg-accent rounded-r rounded-l-none";
+                        } else {
+                            // In-between hover preview
+                            classes +=
+                                " bg-neutral/40 text-neutral-content rounded-none";
+                        }
+                        hasExplicitBg = true;
+                        hasSpecificRounding = true; // Hover preview logic dictates rounding
+                    } else if (
+                        selectionStartDate &&
+                        day.date.getTime() === selectionStartDate.getTime()
+                    ) {
+                        // Only start date is selected, no hover, no end date (anchor point)
+                        classes += " bg-primary text-primary-content rounded";
+                        hasExplicitBg = true;
+                        hasSpecificRounding = true;
+                    }
+                }
+            }
+
+            // 3. Today's date styling (if not styled by status or selection/hover)
+            if (!hasExplicitBg && day.isToday) {
+                classes += " !border-primary text-primary rounded";
+                // hasExplicitBg is not set here because only border/text changes, background might still be needed for hover
+            }
+
+            // 4. Default hover for available, non-selected, non-status, non-preview days
+            if (
+                !hasExplicitBg &&
+                !day.isSelected &&
+                !isInHoverPreviewRange &&
+                day.isCurrentMonth
+            ) {
+                if (day.isToday && classes.includes("!border-primary")) {
+                    classes += " hover:bg-primary/10";
+                } else {
+                    classes += " hover:bg-base-300";
+                }
+            }
+
+            // Apply default full rounding if no specific rounding has been applied yet
+            // and it's a current month day (non-current month days already get rounded).
+            if (day.isCurrentMonth && !hasSpecificRounding) {
+                classes += " rounded";
+            }
+        }
+
+        if (!day.isCurrentMonth || day.status === "colleague_approved") {
+            if (!classes.includes(" cursor-not-allowed"))
+                classes += " cursor-not-allowed";
+        }
+
+        return classes.trim().replace(/\s+/g, " "); // Clean up multiple spaces
+    }
+
     function generateBaseCalendarStructure(year: number): CalendarMonth[] {
         const newBaseData: CalendarMonth[] = [];
         const today = new Date();
         today.setUTCHours(0, 0, 0, 0);
 
         for (let monthIndex = 0; monthIndex < 12; monthIndex++) {
-            const monthName = monthNames[monthIndex];
+            const monthName = monthNames[monthIndex]; // Access reactive state
             const daysInCurrentMonth = getDaysInMonth(year, monthIndex);
             const firstDayOfWeek = getFirstDayOfMonth(year, monthIndex);
 
@@ -202,23 +348,32 @@
         requests: VacationRequestDisplay[],
         currentSelectionStart: Date | null,
         currentSelectionEnd: Date | null,
+        currentHoveredDate: Date | null,
     ): CalendarMonth[] {
         if (!baseStructure || !baseStructure.length) return [];
+
+        let effectiveRangeEnd = currentSelectionEnd;
+        if (
+            currentSelectionStart &&
+            !currentSelectionEnd &&
+            currentHoveredDate &&
+            currentHoveredDate >= currentSelectionStart
+        ) {
+            effectiveRangeEnd = currentHoveredDate;
+        }
 
         return baseStructure.map((month) => ({
             ...month,
             weeks: month.weeks.map((week) =>
                 week.map((baseDay) => {
-                    // Create a copy to avoid mutating baseStructure's day objects
                     const day = { ...baseDay };
 
-                    day.status = null; // Reset status
+                    day.status = null;
                     day.tooltip = null;
                     day.isSelected = false;
                     day.isRangeStart = false;
                     day.isRangeEnd = false;
 
-                    // Apply request statuses
                     for (const req of requests) {
                         const reqStartDate = new Date(
                             req.start_date + "T00:00:00Z",
@@ -226,7 +381,6 @@
                         const reqEndDate = new Date(
                             req.end_date + "T00:00:00Z",
                         );
-
                         if (
                             day.date >= reqStartDate &&
                             day.date <= reqEndDate
@@ -240,37 +394,39 @@
                                 day.status = "user_approved";
                                 day.tooltip = `Meu Pedido (Aprovado): ${req.startDateDisplay} - ${req.endDateDisplay}`;
                             }
-                            // Add other statuses like 'colleague_approved' here in Phase 4
                             break;
                         }
                     }
 
-                    // Apply selection visuals
-                    if (currentSelectionStart && currentSelectionEnd) {
-                        if (
-                            day.date >= currentSelectionStart &&
-                            day.date <= currentSelectionEnd
-                        ) {
-                            day.isSelected = true;
+                    if (!day.status) {
+                        if (currentSelectionStart && effectiveRangeEnd) {
+                            if (
+                                day.date >= currentSelectionStart &&
+                                day.date <= effectiveRangeEnd
+                            ) {
+                                day.isSelected = true;
+                                if (
+                                    day.date.getTime() ===
+                                    currentSelectionStart.getTime()
+                                ) {
+                                    day.isRangeStart = true;
+                                }
+                                if (
+                                    day.date.getTime() ===
+                                    effectiveRangeEnd.getTime()
+                                ) {
+                                    day.isRangeEnd = true;
+                                }
+                            }
+                        } else if (currentSelectionStart) {
                             if (
                                 day.date.getTime() ===
                                 currentSelectionStart.getTime()
-                            )
+                            ) {
+                                day.isSelected = true;
                                 day.isRangeStart = true;
-                            if (
-                                day.date.getTime() ===
-                                currentSelectionEnd.getTime()
-                            )
                                 day.isRangeEnd = true;
-                        }
-                    } else if (currentSelectionStart) {
-                        if (
-                            day.date.getTime() ===
-                            currentSelectionStart.getTime()
-                        ) {
-                            day.isSelected = true;
-                            day.isRangeStart = true;
-                            day.isRangeEnd = true; // Single day selection
+                            }
                         }
                     }
                     return day;
@@ -306,19 +462,17 @@
         } finally {
             isLoadingDays = false;
             isLoadingRequests = false;
-            // Initial generation and display update will be handled by the $effect
         }
     });
 
-    // Effect to update displayed calendar when year, requests, or selection change
     $effect(() => {
         const year = currentYear;
         const requests = myRequests;
         const startSel = selectionStartDate;
         const endSel = selectionEndDate;
+        const hDate = hoveredDate;
 
         let currentBase = baseCalendarStructure;
-        // Only rebuild base structure if year has actually changed or it's empty
         if (
             !currentBase.length ||
             (currentBase[0] && currentBase[0].year !== year)
@@ -333,6 +487,7 @@
                 requests,
                 startSel,
                 endSel,
+                hDate,
             );
         } else {
             displayedCalendarData = [];
@@ -364,23 +519,28 @@
             selectionStartDate = clickedDate;
             selectionEndDate = null;
         } else if (!selectionEndDate) {
-            if (clickedDate < selectionStartDate) {
+            // Start is selected, now selecting end
+            if (clickedDate.getTime() === selectionStartDate.getTime()) {
+                // Clicking the start date again when only start is selected means make it a single-day selection
+                selectionEndDate = clickedDate;
+            } else if (clickedDate < selectionStartDate) {
                 selectionEndDate = selectionStartDate;
                 selectionStartDate = clickedDate;
             } else {
                 selectionEndDate = clickedDate;
             }
         } else {
+            // Both start and end are selected, reset and start new selection
             selectionStartDate = clickedDate;
             selectionEndDate = null;
         }
-        // $effect will update displayedCalendarData
+        hoveredDate = null; // Clear hover when a click modifies the selection
     }
 
     function clearSelection() {
         selectionStartDate = null;
         selectionEndDate = null;
-        // $effect will update displayedCalendarData
+        hoveredDate = null;
     }
 
     function processVacationRequestsForDisplay(
@@ -428,7 +588,7 @@
         });
     }
 
-    // --- New Request Modal ---
+    // --- New Request Modal ---\
     function openRequestModal() {
         if (selectionStartDate && selectionEndDate) {
             const yyyyMMDD = (date: Date) => date.toISOString().split("T")[0];
@@ -518,7 +678,6 @@
                 myRequests = processVacationRequestsForDisplay(
                     requestsData || [],
                 );
-                // The $effect will update displayedCalendarData
             } else {
                 showAlert(
                     result.message || "Falha ao submeter pedido de férias.",
@@ -662,6 +821,11 @@
                     {#each displayedCalendarData as month (month.year + "-" + month.monthIndex)}
                         <div
                             class="border border-base-content/20 rounded-md p-1.5 bg-base-200/30 shadow-sm min-w-[260px]"
+                            onmouseleave={() => {
+                                if (selectionStartDate && !selectionEndDate) {
+                                    hoveredDate = null;
+                                }
+                            }}
                         >
                             <h3
                                 class="text-sm font-semibold text-center mb-1.5 text-primary"
@@ -683,70 +847,30 @@
                                 <div class="grid grid-cols-7 gap-px">
                                     {#each week as day, dayIndex (day.date.toISOString())}
                                         <button
-                                            class="p-0.5 h-7 w-full flex items-center justify-center text-xs
-                                                    border border-transparent focus:outline-none focus:ring-1 focus:ring-primary"
-                                            class:rounded={!day.isSelected ||
-                                                (day.isRangeStart &&
-                                                    day.isRangeEnd)}
-                                            class:rounded-r-none={day.isSelected &&
-                                                day.isRangeStart &&
-                                                !day.isRangeEnd &&
-                                                day.isCurrentMonth}
-                                            class:rounded-l-none={day.isSelected &&
-                                                day.isRangeEnd &&
-                                                !day.isRangeStart &&
-                                                day.isCurrentMonth}
-                                            class:rounded-none={day.isSelected &&
-                                                !day.isRangeStart &&
-                                                !day.isRangeEnd &&
-                                                day.isCurrentMonth}
-                                            class:opacity-40={!day.isCurrentMonth}
-                                            class:font-semibold={day.isCurrentMonth}
-                                            class:bg-primary={day.isSelected &&
-                                                day.isCurrentMonth}
-                                            class:text-primary-content={day.isSelected &&
-                                                day.isCurrentMonth}
-                                            class:bg-success={day.status ===
-                                                "user_approved" &&
-                                                !day.isSelected &&
-                                                day.isCurrentMonth}
-                                            class:text-success-content={day.status ===
-                                                "user_approved" &&
-                                                !day.isSelected &&
-                                                day.isCurrentMonth}
-                                            class:bg-warning={day.status ===
-                                                "user_pending" &&
-                                                !day.isSelected &&
-                                                day.isCurrentMonth}
-                                            class:text-warning-content={day.status ===
-                                                "user_pending" &&
-                                                !day.isSelected &&
-                                                day.isCurrentMonth}
-                                            class:!border-primary={day.isToday &&
-                                                !day.status &&
-                                                !day.isSelected &&
-                                                day.isCurrentMonth}
-                                            class:text-primary={day.isToday &&
-                                                !day.status &&
-                                                !day.isSelected &&
-                                                day.isCurrentMonth}
-                                            class:hover:bg-base-300={!day.status &&
-                                                !day.isSelected &&
-                                                day.isCurrentMonth &&
-                                                !(
-                                                    day.isSelected &&
-                                                    day.isCurrentMonth
-                                                )}
-                                            class:cursor-not-allowed={!day.isCurrentMonth ||
-                                                (!!day.status &&
-                                                    day.status ===
-                                                        "colleague_approved")}
+                                            class={getDayClasses(day)}
                                             title={day.tooltip ||
                                                 `${day.dayOfMonth}/${month.monthIndex + 1}/${month.year}${day.isToday ? " (Hoje)" : ""}`}
                                             disabled={!day.isCurrentMonth ||
                                                 (!!day.status &&
-                                                    day.status ===
-                                                        "colleague_approved")}
+                                                    (day.status ===
+                                                        "user_approved" ||
+                                                        day.status ===
+                                                            "colleague_approved"))}
+                                            onmouseenter={() => {
+                                                if (
+                                                    selectionStartDate &&
+                                                    !selectionEndDate &&
+                                                    day.isCurrentMonth &&
+                                                    !day.status
+                                                ) {
+                                                    if (
+                                                        day.date >=
+                                                        selectionStartDate
+                                                    ) {
+                                                        hoveredDate = day.date;
+                                                    }
+                                                }
+                                            }}
                                             onclick={() => handleDayClick(day)}
                                         >
                                             {day.dayOfMonth}
@@ -922,28 +1046,17 @@
 </dialog>
 
 <style>
-    .btn-day-selected {
-        @apply bg-primary text-primary-content;
-    }
-    .btn-day-in-range {
-        @apply bg-primary/70 text-primary-content rounded-none;
-    }
-    .btn-day-range-start {
-        @apply bg-primary text-primary-content rounded-r-none;
-    }
-    .btn-day-range-end {
-        @apply bg-primary text-primary-content rounded-l-none;
-    }
-
     /* Ensure day buttons in a week flow correctly for range highlighting */
     /* Target the grid of day buttons within each week */
     div.grid > div.grid.grid-cols-7 {
-        display: flex; /* Allows children to not wrap individually for rounded corners */
-        flex-wrap: nowrap; /* Prevent wrapping within a week */
+        /* Direct child grid for weeks */
+        display: flex;
+        flex-wrap: nowrap;
     }
     div.grid > div.grid.grid-cols-7 > button {
-        flex-grow: 1; /* Make buttons take up equal space */
-        flex-basis: 0; /* Allow shrinking/growing from 0 basis */
-        min-width: 0; /* Important for flex items to shrink properly */
+        /* Buttons within the week grid */
+        flex-grow: 1;
+        flex-basis: 0;
+        min-width: 0;
     }
 </style>
