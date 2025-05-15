@@ -25,9 +25,14 @@
 - [X] Corrigir bug quando se abre um datepicker o modal muda de posição
 - [X] Meter alert de notificações bem destacado no centro da tela
 
+- [ ] Duplicar página
+- [ ] Drag and drop ordem campos
+- [ ] Fix bug ao editar página ele volta por defeito raiz /
 - [ ] Lista drag and drop para o administrador ordenar páginas
+- [ ] Fix quando o grupo esta vazio para nao aparecer pagina de 404
 
 - [ ] Adicionar sistema de maração de férias administrador ao criar utilizador define dias por ano que o trabalhador ainda pode gozar.
+  - [ ] Calendar Performance
   - [ ] Integração com feridos
   - [ ] Fix texto em criar função
   - [ ] Página especial (Sempre no menu) para férias
@@ -47,6 +52,7 @@
 
 - [ ] Logotipo para notificações
 - [ ] Traduzir caminhos de paginas
+- [ ] Performance
 
 - [ ] Ver possivel bug quando o admin enviar uma mensagem/notifica utilizadores que o alert nao sai automaticamente
 
