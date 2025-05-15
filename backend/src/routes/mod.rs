@@ -9,6 +9,7 @@ pub mod notification_routes;
 pub mod record_routes;
 pub mod role_routes;
 pub mod user_routes;
+pub mod vacation_routes;
 
 #[get("/{filename:.*}")]
 async fn serve_files(req: HttpRequest, session: Session) -> Result<actix_files::NamedFile, Error> {
@@ -33,6 +34,7 @@ pub fn init(cfg: &mut web::ServiceConfig) {
     role_routes::init(cfg);
     record_routes::init(cfg);
     notification_routes::init(cfg);
+    vacation_routes::init(cfg); // Added vacation routes
 
     cfg.service(serve_files);
 }

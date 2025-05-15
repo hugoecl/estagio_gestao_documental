@@ -1,6 +1,10 @@
 import API_BASE_URL from "@api/base-url";
 import { handleFetch } from "@api/fetch-handler";
-import type { Role } from "@lib/types/roles"; // Define this type
+import type {
+  Role,
+  CreateRoleRequest,
+  UpdateRoleRequest,
+} from "@lib/types/roles"; // Define this type
 
 export async function getRoles(cookie?: string): Promise<Role[]> {
   const response = await handleFetch(`${API_BASE_URL}/roles`, {

@@ -42,6 +42,7 @@ struct RegisterRequest {
 pub struct AdminUpdateUserRequest {
     pub username: Option<String>,
     pub email: Option<String>,
+    pub vacation_days_current_year: Option<u16>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -428,7 +429,7 @@ pub async fn get_current_user_details(state: web::Data<State>, session: Session)
 
     match sqlx::query_as!(
         User, // Using the User model from models/user.rs
-        r#"SELECT id, username, email FROM users WHERE id = ?"#,
+        r#"SELECT id, username, email, vacation_days_current_year as "vacation_days_current_year: _" FROM users WHERE id = ?"#,
         user_id
     )
     .fetch_one(&state.db.pool)
@@ -627,6 +628,7 @@ pub async fn get_users_with_roles(
         r.name as role_name,
         r.description as role_description,
         r.is_admin as "role_is_admin: bool",
+        r.is_holiday_role as "role_is_holiday_role: bool",
         r.created_at as "role_created_at?: chrono::DateTime<chrono::Utc>",
         r.updated_at as "role_updated_at?: chrono::DateTime<chrono::Utc>"
     FROM users u
@@ -660,18 +662,21 @@ pub async fn get_users_with_roles(
                     Some(role_created_at),
                     Some(role_updated_at),
                     Some(role_is_admin),
+                    Some(role_is_holiday_role), // Add the new field here
                 ) = (
                     row.role_id,
                     row.role_name,
                     row.role_created_at,
                     row.role_updated_at,
                     row.role_is_admin,
+                    row.role_is_holiday_role, // And here
                 ) {
                     user.roles.push(Role {
                         id: role_id,
                         name: role_name,
                         description: row.role_description,
                         is_admin: role_is_admin,
+                        is_holiday_role: role_is_holiday_role, // And here
                         created_at: role_created_at,
                         updated_at: role_updated_at,
                     });
@@ -705,7 +710,7 @@ pub async fn admin_update_user_details(
 
     // Fetch current details of the user being updated
     let target_user = match sqlx::query!(
-        r#"SELECT username, email FROM users WHERE id = ?"#,
+        r#"SELECT username, email, vacation_days_current_year FROM users WHERE id = ?"#,
         target_user_id
     )
     .fetch_optional(&state.db.pool)
@@ -722,6 +727,7 @@ pub async fn admin_update_user_details(
     // Clone original values for comparison and potential revert
     let original_target_username = target_user.username.clone();
     let original_target_email = target_user.email.clone();
+    let original_target_vacation_days = target_user.vacation_days_current_year.unwrap_or(0);
 
     let new_username = update_payload
         .username
@@ -732,6 +738,10 @@ pub async fn admin_update_user_details(
         .email
         .filter(|s| !s.trim().is_empty()) // Keep Some only if not just whitespace
         .unwrap_or_else(|| original_target_email.clone()); // Use cloned original if None or was empty
+
+    let new_vacation_days = update_payload
+        .vacation_days_current_year
+        .unwrap_or(original_target_vacation_days);
 
     // Check for username uniqueness if it's being changed
     if new_username != original_target_username {
@@ -776,9 +786,10 @@ pub async fn admin_update_user_details(
 
     // Update user details
     match sqlx::query!(
-        r#"UPDATE users SET username = ?, email = ? WHERE id = ?"#,
+        r#"UPDATE users SET username = ?, email = ?, vacation_days_current_year = ? WHERE id = ?"#,
         new_username,
         new_email,
+        new_vacation_days,
         target_user_id
     )
     .execute(&state.db.pool)

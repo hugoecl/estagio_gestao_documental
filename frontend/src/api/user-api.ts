@@ -99,7 +99,7 @@ export async function updateUserDetails(
 
 export async function adminUpdateUserDetails(
   userId: number,
-  payload: AdminUpdateUserPayload,
+  payload: AdminUpdateUserPayload, // payload can include username, email, and vacation_days_current_year
 ): Promise<{ success: boolean; message: string }> {
   const response = await handleFetch(
     `${API_BASE_URL}/users/admin/${userId}/details`,

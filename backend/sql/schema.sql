@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS users (
     username VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     password BINARY(48) NOT NULL,
+    vacation_days_current_year SMALLINT UNSIGNED DEFAULT 0 COMMENT 'Remaining vacation days for the current year',
     PRIMARY KEY (id)
 );
 
@@ -79,6 +80,7 @@ CREATE TABLE IF NOT EXISTS roles (
     name VARCHAR(100) NOT NULL UNIQUE,
     description TEXT,
     is_admin BOOLEAN NOT NULL DEFAULT false,
+    is_holiday_role BOOLEAN NOT NULL DEFAULT false COMMENT 'True if this role is relevant for vacation scheduling conflicts',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id)
@@ -171,4 +173,22 @@ CREATE TABLE IF NOT EXISTS notifications (
     FOREIGN KEY (page_id) REFERENCES custom_pages (id) ON DELETE CASCADE, 
     FOREIGN KEY (field_id) REFERENCES page_fields (id) ON DELETE SET NULL,
     INDEX idx_user_unread (user_id, is_read)
+);
+
+-- Vacation Requests Table
+CREATE TABLE IF NOT EXISTS vacation_requests (
+    id INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL,
+    user_id INT UNSIGNED NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    status ENUM('PENDING', 'APPROVED', 'REJECTED') NOT NULL DEFAULT 'PENDING',
+    notes TEXT DEFAULT NULL COMMENT 'User notes on request, or admin notes on action',
+    requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    approved_by INT UNSIGNED DEFAULT NULL COMMENT 'Admin user ID who actioned the request',
+    actioned_at TIMESTAMP NULL DEFAULT NULL COMMENT 'Timestamp of approval/rejection',
+    PRIMARY KEY (id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_vacation_user_status (user_id, status),
+    INDEX idx_vacation_dates (start_date, end_date)
 );

@@ -28,6 +28,7 @@
 - [ ] Lista drag and drop para o administrador ordenar páginas
 
 - [ ] Adicionar sistema de maração de férias administrador ao criar utilizador define dias por ano que o trabalhador ainda pode gozar.
+  - [ ] Integração com feridos
   - [ ] Página especial (Sempre no menu) para férias
   - [ ] Na página de marcação de férias vai ter um unico anual calendar (em que da para alterar o ano) em que utilizadores podem ver, mas não selecionar dias em que outras pessoas do mesmo cargo já tenham selecionado. Ou seja um trabalhador só pode ver ferias de pessoas com o mesmo cargo.
   - [ ] Adicionar um campo nos cargos que é "é cargo de férias?", pessoas com cargos que tem este campo só podem ver/influenciar outra pessoas com o mesmo cargo

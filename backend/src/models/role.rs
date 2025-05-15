@@ -8,6 +8,7 @@ pub struct Role {
     pub name: String,
     pub description: Option<String>,
     pub is_admin: bool,
+    pub is_holiday_role: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -17,6 +18,7 @@ pub struct CreateRoleRequest {
     pub name: String,
     pub description: Option<String>,
     pub is_admin: bool,
+    pub is_holiday_role: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -24,6 +26,7 @@ pub struct UpdateRoleRequest {
     pub name: String,
     pub description: Option<String>,
     pub is_admin: bool,
+    pub is_holiday_role: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -39,12 +42,13 @@ impl Role {
     ) -> Result<u32, sqlx::Error> {
         let result = sqlx::query!(
             r#"
-            INSERT INTO roles (name, description, is_admin)
-            VALUES (?, ?, ?)
+            INSERT INTO roles (name, description, is_admin, is_holiday_role)
+            VALUES (?, ?, ?, ?)
             "#,
             request.name,
             request.description,
-            request.is_admin
+            request.is_admin,
+            request.is_holiday_role
         )
         .execute(pool)
         .await?;
@@ -56,7 +60,7 @@ impl Role {
         sqlx::query_as!(
             Role,
             r#"
-            SELECT id, name, description, is_admin as "is_admin: bool", created_at as "created_at!", updated_at as "updated_at!"
+            SELECT id, name, description, is_admin as "is_admin: bool", is_holiday_role as "is_holiday_role: bool", created_at as "created_at!", updated_at as "updated_at!"
             FROM roles
             ORDER BY name
             "#
@@ -69,7 +73,7 @@ impl Role {
         sqlx::query_as!(
             Role,
             r#"
-            SELECT id, name, description, is_admin as "is_admin: bool", created_at as "created_at!", updated_at as "updated_at!"
+            SELECT id, name, description, is_admin as "is_admin: bool", is_holiday_role as "is_holiday_role: bool", created_at as "created_at!", updated_at as "updated_at!"
             FROM roles
             WHERE id = ?
             "#,
@@ -87,12 +91,13 @@ impl Role {
         sqlx::query!(
             r#"
             UPDATE roles
-            SET name = ?, description = ?, is_admin = ?
+            SET name = ?, description = ?, is_admin = ?, is_holiday_role = ?
             WHERE id = ?
             "#,
             request.name,
             request.description,
             request.is_admin,
+            request.is_holiday_role,
             role_id
         )
         .execute(pool)
@@ -116,7 +121,7 @@ impl Role {
         sqlx::query_as!(
             Role,
             r#"
-            SELECT r.id, r.name, r.description, r.is_admin as "is_admin: bool", r.created_at as "created_at!", r.updated_at as "updated_at!"
+            SELECT r.id, r.name, r.description, r.is_admin as "is_admin: bool", r.is_holiday_role as "is_holiday_role: bool", r.created_at as "created_at!", r.updated_at as "updated_at!"
             FROM roles r
             JOIN user_roles ur ON r.id = ur.role_id
             WHERE ur.user_id = ?

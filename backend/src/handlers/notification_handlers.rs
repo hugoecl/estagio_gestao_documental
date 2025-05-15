@@ -163,7 +163,7 @@ pub async fn mark_notifications_read(
     }
 
     match Notification::mark_as_read(&state.db.pool, user_id, &body.ids).await {
-        Ok(rows_affected) => HttpResponse::Ok().finish(),
+        Ok(_rows_affected) => HttpResponse::Ok().finish(),
         Err(e) => {
             log::error!(
                 "Error marking notifications as read for user {}: {}",
@@ -186,7 +186,7 @@ pub async fn mark_all_notifications_read(
     };
 
     match Notification::mark_all_as_read(&state.db.pool, user_id).await {
-        Ok(rows_affected) => HttpResponse::Ok().finish(),
+        Ok(_rows_affected) => HttpResponse::Ok().finish(),
         Err(e) => {
             log::error!(
                 "Error marking all notifications as read for user {}: {}",

@@ -10,5 +10,6 @@ pub mod role;
 pub mod user;
 pub mod validation;
 pub mod notification;
+pub mod vacation_request;
 
 pub mod auth;

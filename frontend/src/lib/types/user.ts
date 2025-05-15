@@ -14,6 +14,7 @@ export interface UserWithRoles extends User {
   // if it comes from backend, ensure backend provides it or derive on client.
   // For now, assuming 'roles' array is the source of truth.
   role?: string; // Optional: A display string for roles, can be derived client-side
+  vacation_days_current_year?: number; // Optional: Number of vacation days for the current year
 }
 
 // For creating a user (admin or public registration)
@@ -59,6 +60,7 @@ export interface ChangePasswordPayload {
 export interface AdminUpdateUserPayload {
   username?: string; // Optional: only send if changed
   email?: string;    // Optional: only send if changed
+  vacation_days_current_year?: number; // Optional: only send if changed
   // Admin does not need to provide a password to change these details
 }
 

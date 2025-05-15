@@ -25,13 +25,14 @@
         onUserDetailsUpdated, // For username/email changes
     }: {
         modalRef: HTMLDialogElement;
-        user: UserWithRoles;
+        user: UserWithRoles; // Assume UserWithRoles will be updated to include vacation_days_current_year
         allRoles: Role[];
         onRolesUpdated: (userId: number, updatedRoles: Role[]) => void;
         onUserDetailsUpdated: (
             userId: number,
             newUsername: string,
             newEmail: string,
+            newVacationDays: number | null,
         ) => void;
     } = $props();
 
@@ -47,6 +48,7 @@
     // --- Details State ---
     let editUsername = $state("");
     let editEmail = $state("");
+    let editVacationDays = $state<number | null>(null);
     let detailsErrors = $state<Record<string, string>>({});
 
     // --- Password State ---
@@ -63,6 +65,7 @@
             // Details
             editUsername = user.username;
             editEmail = user.email;
+            editVacationDays = user.vacation_days_current_year ?? 0; // Default to 0 if undefined/null
             detailsErrors = {};
 
             // Password
@@ -81,6 +84,7 @@
             selectedRoleIds = new Set();
             editUsername = "";
             editEmail = "";
+            editVacationDays = 0;
             newPassword = "";
             confirmNewPassword = "";
             currentTab = "roles";
@@ -150,8 +154,20 @@
         } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editEmail)) {
             detailsErrors.email = "Formato de e-mail inválido.";
         }
+        if (
+            editVacationDays !== null &&
+            (isNaN(editVacationDays) || editVacationDays < 0)
+        ) {
+            detailsErrors.vacationDays =
+                "Dias de férias deve ser um número não negativo.";
+        }
+
         // Check if anything actually changed
-        if (editUsername === user?.username && editEmail === user?.email) {
+        if (
+            editUsername === user?.username &&
+            editEmail === user?.email &&
+            editVacationDays === (user?.vacation_days_current_year ?? 0)
+        ) {
             showAlert(
                 "Nenhuma alteração detetada nos detalhes.",
                 AlertType.INFO,
@@ -178,6 +194,12 @@
         const payload: AdminUpdateUserPayload = {};
         if (editUsername !== user.username) payload.username = editUsername;
         if (editEmail !== user.email) payload.email = editEmail;
+        if (
+            editVacationDays !== null &&
+            editVacationDays !== (user.vacation_days_current_year ?? 0)
+        ) {
+            payload.vacation_days_current_year = editVacationDays;
+        }
 
         try {
             const result = await adminUpdateUserDetails(user.id, payload);
@@ -187,7 +209,12 @@
                     AlertType.SUCCESS,
                     AlertPosition.TOP,
                 );
-                onUserDetailsUpdated(user.id, editUsername, editEmail);
+                onUserDetailsUpdated(
+                    user.id,
+                    editUsername,
+                    editEmail,
+                    editVacationDays,
+                );
                 closeModal();
             } else {
                 showAlert(
@@ -404,6 +431,26 @@
                         {#if detailsErrors.email}<span
                                 class="text-error text-xs mt-1"
                                 >{detailsErrors.email}</span
+                            >{/if}
+                    </label>
+                    <label class="form-control w-full">
+                        <div class="label">
+                            <span class="label-text"
+                                >Dias de Férias (Ano Atual)</span
+                            >
+                        </div>
+                        <input
+                            type="number"
+                            min="0"
+                            placeholder="Número de dias de férias"
+                            class="input input-bordered w-full"
+                            bind:value={editVacationDays}
+                            disabled={isSubmittingDetails}
+                            class:input-error={detailsErrors.vacationDays}
+                        />
+                        {#if detailsErrors.vacationDays}<span
+                                class="text-error text-xs mt-1"
+                                >{detailsErrors.vacationDays}</span
                             >{/if}
                     </label>
                     <div class="modal-action mt-6">
