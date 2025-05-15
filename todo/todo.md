@@ -30,6 +30,7 @@
 - [ ] Fix bug ao editar página ele volta por defeito raiz /
 - [ ] Lista drag and drop para o administrador ordenar páginas
 - [ ] Fix quando o grupo esta vazio para nao aparecer pagina de 404
+- [ ] Pagina para gerir paginas, aparecer primeiro so os grupo e depois clicar nos grupos para aparecer as paginas desses grupos
 
 - [ ] Adicionar sistema de maração de férias administrador ao criar utilizador define dias por ano que o trabalhador ainda pode gozar.
   - [ ] Calendar Performance
