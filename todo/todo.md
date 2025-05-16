@@ -32,8 +32,9 @@
 - [ ] Fix quando o grupo esta vazio para nao aparecer pagina de 404
 - [ ] Pagina para gerir paginas, aparecer primeiro so os grupo e depois clicar nos grupos para aparecer as paginas desses grupos
 - [ ] Ver alerta que não sai sozinho depois de criar um registo
-- [ ] Meter no fim de cada registo um texto ou algum tipo de indicação para indicar que para aceder aos ficheiros tem se que clicar la 
+- [ ] Meter no fim de cada registo um texto ou algum tipo de indicação para indicar que para aceder aos ficheiros tem se que clicar la
 - [ ] Fazer campo para dar upload de ficheiros
+- [ ] Criar novo tipo de permissão para adição (ou seja pode inserir nos campoes vazios de um registo, mas nao pode editar o que ja foi preenchido)
 
 - [ ] Adicionar sistema de maração de férias administrador ao criar utilizador define dias por ano que o trabalhador ainda pode gozar.
   - [ ] Calendar Performance
