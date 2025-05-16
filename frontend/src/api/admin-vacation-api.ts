@@ -103,13 +103,21 @@ export async function actionVacationRequest(
   requestId: number,
   payload: { status: 'APPROVED' | 'REJECTED'; admin_notes?: string | null }, // Use string literals for status
 ): Promise<{ success: boolean; message?: string }> {
+  // Map the uppercase status to PascalCase for the backend
+  const mappedStatus = payload.status === 'APPROVED' ? 'Approved' : 'Rejected';
+  
+  const mappedPayload = {
+    status: mappedStatus,
+    admin_notes: payload.admin_notes
+  };
+  
   const response = await handleFetch(
     `${API_BASE_URL}/admin/vacations/request/${requestId}/action`,
     {
       method: "PUT",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(mappedPayload),
     },
   );
 
