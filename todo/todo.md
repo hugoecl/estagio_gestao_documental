@@ -26,6 +26,7 @@
 - [X] Meter alert de notificações bem destacado no centro da tela
 
 - [X] Fazer com que o admin consiga apagar utilizadores
+- [X] Fix texto em criar função, agora ao criar/editar uma função o texto é renderizado corretamente
 - [ ] Duplicar página
 - [ ] Drag and drop ordem campos
 - [ ] Fix bug ao editar página ele volta por defeito raiz /
@@ -40,8 +41,7 @@
 
 - [X] Adicionar sistema de maração de férias administrador ao criar utilizador define dias por ano que o trabalhador ainda pode gozar.
   - [ ] Calendar Performance
-  - [ ] Integração com feridos
-  - [X] Fix texto em criar função, agora ao criar/editar uma função o texto é renderizado corretamente
+  - [ ] Integração com feriados
   - [X] Página especial (Sempre no menu) para férias
   - [X] Na página de marcação de férias vai ter um unico anual calendar (em que da para alterar o ano) em que utilizadores podem ver, mas não selecionar dias em que outras pessoas do mesmo cargo já tenham selecionado. Ou seja um trabalhador só pode ver ferias de pessoas com o mesmo cargo.
   - [X] Adicionar um campo nos cargos que é "é cargo de férias?", pessoas com cargos que tem este campo só podem ver/influenciar outra pessoas com o mesmo cargo
