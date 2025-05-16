@@ -972,8 +972,8 @@
                     <span class="loading loading-dots loading-md"></span>
                 </div>
             {:else if remainingDaysInfo}
-                <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm mt-2" role="list">
-                    <div class="text-center p-2 bg-base-100 rounded">
+                <div class="flex w-full justify-between gap-2 text-sm mt-2" role="list">
+                    <div class="text-center p-2 bg-base-100 rounded w-full">
                         <div class="font-semibold relative group cursor-help">
                             Total Dias Férias
                             <div class="absolute z-10 hidden group-hover:block bg-base-300 p-2 rounded shadow-lg text-xs w-64 text-left mt-1">
@@ -984,7 +984,7 @@
                             {remainingDaysInfo.total_allocated_days}
                         </div>
                     </div>
-                    <div class="text-center p-2 bg-base-100 rounded">
+                    <div class="text-center p-2 bg-base-100 rounded w-full">
                         <div class="font-semibold relative group cursor-help">
                             Aprovados
                             <div class="absolute z-10 hidden group-hover:block bg-base-300 p-2 rounded shadow-lg text-xs w-64 text-left mt-1">
@@ -995,7 +995,7 @@
                             {remainingDaysInfo.approved_days_taken}
                         </div>
                     </div>
-                    <div class="text-center p-2 bg-base-100 rounded">
+                    <div class="text-center p-2 bg-base-100 rounded w-full">
                         <div class="font-semibold relative group cursor-help">
                             Pendentes
                             <div class="absolute z-10 hidden group-hover:block bg-base-300 p-2 rounded shadow-lg text-xs w-64 text-left mt-1">
@@ -1006,7 +1006,7 @@
                             {remainingDaysInfo.pending_days_requested}
                         </div>
                     </div>
-                    <div class="text-center p-2 bg-base-100 rounded">
+                    <div class="text-center p-2 bg-base-100 rounded w-full">
                         <div class="font-semibold relative group cursor-help">
                             Dias Disponíveis
                             <div class="absolute z-10 hidden group-hover:block bg-base-300 p-2 rounded shadow-lg text-xs w-64 text-left mt-1">
@@ -1034,7 +1034,7 @@
      <div class="card-body">
       <div class="flex justify-between items-center mb-4">
        <h2 class="card-title text-base">
-        {monthNames[new Date().getMonth()]} {new Date().getFullYear()}
+        Calendario Anual {new Date().getFullYear()}
        </h2>
                 <div>
                     <button
@@ -1153,7 +1153,7 @@
     <div class="card bg-base-100 shadow mb-4">
      <div class="card-body p-4">
       <h2 class="card-title text-base">Legenda</h2>
-      <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm mt-2">
+      <div class="grid grid-cols-1 sm:grid-cols-4 gap-2 text-sm mt-2">
        <div class="flex items-center gap-2">
         <div class="w-4 h-4 bg-success rounded"></div>
         <span>Suas férias aprovadas</span>
