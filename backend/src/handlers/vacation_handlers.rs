@@ -11,11 +11,18 @@ use crate::{
         role::Role, // Added for shared calendar logic
         user::User, // Assuming User model exists to fetch vacation_days_current_year
         vacation_request::{CreateVacationRequest, VacationRequest, VacationRequestStatus},
+        notification::Notification,
     },
     utils::json_utils::{json_response, json_response_with_etag},
 };
 use actix_web::HttpRequest; // Added for HttpRequest
 use serde::Deserialize;
+
+// Use notification constants from the Notification module
+use crate::models::notification::{
+    NOTIFICATION_TYPE_VACATION_CANCELED,
+    NOTIFICATION_TYPE_VACATION_REQUESTED,
+};
 
 // Struct for parsing query parameters for shared calendar
 #[derive(Deserialize, Debug)]
@@ -207,7 +214,68 @@ pub async fn submit_vacation_request(
     // --- End Conflict Check ---
 
     match VacationRequest::create(&state.db.pool, user_id, &request_data).await {
-        Ok(request_id) => HttpResponse::Created().json(serde_json::json!({ "id": request_id })),
+        Ok(request_id) => {
+            // Send notification to admins about the new request
+            match Role::get_user_ids_by_role_id(&state.db.pool, 1).await { // Admin role ID is usually 1
+                Ok(admin_ids) => {
+                    if !admin_ids.is_empty() {
+                        // Get user name for the notification
+                        let user_name = match sqlx::query!("SELECT username FROM users WHERE id = ?", user_id)
+                            .fetch_optional(&state.db.pool)
+                            .await {
+                                Ok(Some(user_row)) => user_row.username,
+                                _ => "Um utilizador".to_string(), // Fallback if we can't get the username
+                            };
+
+                        // Format dates for the message
+                        let start_date_fmt = request_data.start_date.format("%d/%m/%Y").to_string();
+                        let end_date_fmt = request_data.end_date.format("%d/%m/%Y").to_string();
+                        
+                        let message = format!(
+                            "{} solicitou férias ({} a {}).",
+                            user_name, start_date_fmt, end_date_fmt
+                        );
+
+                        // Send notification to each admin
+                        for admin_id in admin_ids {
+                            match Notification::create(
+                                &state.db.pool,
+                                admin_id,
+                                None,              // record_id - Not used for vacation requests
+                                Some(request_id),  // vacation_request_id
+                                None,              // page_id - Not applicable
+                                None,              // field_id - Not applicable
+                                NOTIFICATION_TYPE_VACATION_REQUESTED,
+                                &message,
+                                Some(request_data.end_date), // End date as due date
+                            ).await {
+                                Ok(_) => {
+                                    log::info!(
+                                        "Created vacation request notification for admin {}, vacation request {}",
+                                        admin_id,
+                                        request_id
+                                    );
+                                },
+                                Err(e) => {
+                                    log::error!(
+                                        "Failed to create vacation request notification for admin {}, vacation request {}: {}",
+                                        admin_id,
+                                        request_id,
+                                        e
+                                    );
+                                }
+                            }
+                        }
+                    }
+                },
+                Err(e) => {
+                    log::error!("Error fetching admin users for notifications: {}", e);
+                    // Continue even if we can't send notifications
+                }
+            }
+
+            HttpResponse::Created().json(serde_json::json!({ "id": request_id }))
+        },
         Err(e) => {
             log::error!("Error creating vacation request: {}", e);
             HttpResponse::InternalServerError().finish()
@@ -351,7 +419,7 @@ pub async fn cancel_vacation_request(
 
     // First, fetch the request to verify it belongs to the user and is in PENDING state
     let request = match sqlx::query!(
-        "SELECT user_id, status FROM vacation_requests WHERE id = ?",
+        "SELECT user_id, status, start_date, end_date FROM vacation_requests WHERE id = ?",
         request_id
     )
     .fetch_optional(&state.db.pool)
@@ -387,6 +455,66 @@ pub async fn cancel_vacation_request(
     .await {
         Ok(result) => {
             if result.rows_affected() > 0 {
+                // Send notification to admins
+                // First, get all users with admin role
+                match Role::get_user_ids_by_role_id(&state.db.pool, 1).await { // Admin role ID is usually 1
+                    Ok(admin_ids) => {
+                        if !admin_ids.is_empty() {
+                            // Get user name for the notification
+                            let user_name = match sqlx::query!("SELECT username FROM users WHERE id = ?", user_id)
+                                .fetch_optional(&state.db.pool)
+                                .await {
+                                    Ok(Some(user_row)) => user_row.username,
+                                    _ => "Um utilizador".to_string(), // Fallback if we can't get the username
+                                };
+
+                            // Format dates for the message
+                            let start_date_fmt = request.start_date.format("%d/%m/%Y").to_string();
+                            let end_date_fmt = request.end_date.format("%d/%m/%Y").to_string();
+                            
+                            let message = format!(
+                                "{} cancelou um pedido de férias ({} a {}).",
+                                user_name, start_date_fmt, end_date_fmt
+                            );
+
+                            // Send notification to each admin
+                            for admin_id in admin_ids {
+                                match Notification::create(
+                                    &state.db.pool,
+                                    admin_id,
+                                    None,              // record_id - Not used for vacation requests
+                                    Some(request_id),  // vacation_request_id
+                                    None,              // page_id - Not applicable
+                                    None,              // field_id - Not applicable
+                                    NOTIFICATION_TYPE_VACATION_CANCELED,
+                                    &message,
+                                    None,             // No due date for cancellations
+                                ).await {
+                                    Ok(_) => {
+                                        log::info!(
+                                            "Created vacation cancellation notification for admin {}, vacation request {}",
+                                            admin_id,
+                                            request_id
+                                        );
+                                    },
+                                    Err(e) => {
+                                        log::error!(
+                                            "Failed to create vacation cancellation notification for admin {}, vacation request {}: {}",
+                                            admin_id,
+                                            request_id,
+                                            e
+                                        );
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    Err(e) => {
+                        log::error!("Error fetching admin users for notifications: {}", e);
+                        // Continue even if we can't send notifications
+                    }
+                }
+
                 HttpResponse::Ok().body(format!("Pedido de férias #{} cancelado com sucesso.", request_id))
             } else {
                 // This should not happen since we already checked the request exists and belongs to the user

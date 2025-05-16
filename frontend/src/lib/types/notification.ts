@@ -3,6 +3,7 @@ export interface NotificationResponse {
   id: number;
   userId: number;
   recordId?: number | null; // Can be null for broadcasts
+  vacationRequestId?: number | null; // Added for vacation request notifications
   pageId?: number | null;   // Can be null for broadcasts
   fieldId?: number | null; // Optional number or null
   notificationType: string;

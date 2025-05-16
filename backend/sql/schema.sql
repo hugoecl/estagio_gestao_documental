@@ -169,9 +169,9 @@ CREATE TABLE IF NOT EXISTS notifications (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-    FOREIGN KEY (record_id) REFERENCES page_records (id) ON DELETE CASCADE, 
-    FOREIGN KEY (page_id) REFERENCES custom_pages (id) ON DELETE CASCADE, 
-    FOREIGN KEY (field_id) REFERENCES page_fields (id) ON DELETE SET NULL,
+    FOREIGN KEY (record_id) REFERENCES page_records (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (page_id) REFERENCES custom_pages (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (field_id) REFERENCES page_fields (id) ON DELETE SET NULL ON UPDATE CASCADE,
     INDEX idx_user_unread (user_id, is_read)
 );
 

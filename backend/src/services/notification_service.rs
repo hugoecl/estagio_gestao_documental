@@ -10,7 +10,8 @@ use crate::{
     },
 };
 
-const NOTIFICATION_TYPE_DATE_EXPIRY: &str = "DATE_EXPIRY";
+// Use notification constant from the Notification module
+use crate::models::notification::NOTIFICATION_TYPE_DATE_EXPIRY;
 
 pub async fn check_expiring_date_ranges(pool: &MySqlPool) {
     log::info!("Starting hourly check for expiring date ranges...");
@@ -100,6 +101,7 @@ pub async fn check_expiring_date_ranges(pool: &MySqlPool) {
                                                             pool,
                                                             user_id,
                                                             Some(record.id),
+                                                            None,               // vacation_request_id
                                                             Some(field.page_id),
                                                             Some(field.id),
                                                             NOTIFICATION_TYPE_DATE_EXPIRY,

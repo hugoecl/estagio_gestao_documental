@@ -4,8 +4,14 @@ use actix_web::{HttpRequest, HttpResponse, Responder, web};
 use crate::{
     State,
     auth::is_admin,
-    models::{role::Role, vacation_request::VacationRequest},
+    models::{notification::Notification, role::Role, vacation_request::{VacationRequest, VacationRequestStatus}},
     utils::json_utils::json_response_with_etag,
+};
+
+// Use notification constants from the Notification module
+use crate::models::notification::{
+    NOTIFICATION_TYPE_VACATION_APPROVED,
+    NOTIFICATION_TYPE_VACATION_REJECTED,
 };
 
 // Handler to get all roles marked as "holiday roles"
@@ -92,6 +98,17 @@ pub async fn action_vacation_request_admin(
             .body("Admin action cannot set status to PENDING. Use APPROVE or REJECT.");
     }
 
+    // First, fetch the vacation request to get the user_id and other details
+    let request_details = match VacationRequest::get_by_id(&state.db.pool, request_id).await {
+        Ok(Some(request)) => request,
+        Ok(None) => return HttpResponse::NotFound().body("Vacation request not found"),
+        Err(e) => {
+            log::error!("Error fetching vacation request {}: {}", request_id, e);
+            return HttpResponse::InternalServerError().finish();
+        }
+    };
+
+    // Action the request
     match crate::models::vacation_request::VacationRequest::action_request_with_days_deduction(
         &state.db.pool,
         request_id,
@@ -102,33 +119,67 @@ pub async fn action_vacation_request_admin(
     .await
     {
         Ok(true) => {
-            // true indicates request was successfully actioned
-            let action_verb = if action_data.status
-                == crate::models::vacation_request::VacationRequestStatus::Approved
-            {
-                "aprovado"
-            } else {
-                "rejeitado"
+            // Create notification for the user
+            let notification_type = match action_data.status {
+                VacationRequestStatus::Approved => NOTIFICATION_TYPE_VACATION_APPROVED,
+                VacationRequestStatus::Rejected => NOTIFICATION_TYPE_VACATION_REJECTED,
+                _ => unreachable!(), // We already checked this is not PENDING
             };
-            HttpResponse::Ok().body(format!("Pedido de férias {} com sucesso.", action_verb))
+
+            // Format dates for the message
+            let start_date_fmt = request_details.start_date.format("%d/%m/%Y").to_string();
+            let end_date_fmt = request_details.end_date.format("%d/%m/%Y").to_string();
+
+            // Prepare notification message based on status
+            let message = match action_data.status {
+                VacationRequestStatus::Approved => {
+                    format!("O seu pedido de férias ({} a {}) foi aprovado.", start_date_fmt, end_date_fmt)
+                },
+                VacationRequestStatus::Rejected => {
+                    format!("O seu pedido de férias ({} a {}) foi recusado.", start_date_fmt, end_date_fmt)
+                },
+                _ => unreachable!(),
+            };
+
+            // Create the notification
+            match Notification::create(
+                &state.db.pool, 
+                request_details.user_id, 
+                None,               // record_id - Not used for vacation requests
+                Some(request_id),   // vacation_request_id - Using request_id
+                None,               // page_id - Not applicable
+                None,               // field_id - Not applicable 
+                notification_type,
+                &message,
+                Some(request_details.end_date), // Use end_date as due_date
+            ).await {
+                Ok(_) => {
+                    log::info!(
+                        "Created vacation notification for user {}, vacation request {}",
+                        request_details.user_id,
+                        request_id
+                    );
+                },
+                Err(e) => {
+                    log::error!(
+                        "Failed to create vacation notification for user {}, vacation request {}: {}",
+                        request_details.user_id,
+                        request_id,
+                        e
+                    );
+                    // Continue processing even if notification fails
+                }
+            }
+
+            // Success response
+            HttpResponse::Ok().body("Vacation request actioned successfully")
         }
-        Ok(false) => {
-            // This case might occur if the request wasn't in PENDING state
-            log::warn!(
-                "action_request_with_days_deduction returned false for request_id: {}, action: {:?}",
-                request_id,
-                action_data.status
-            );
-            HttpResponse::Conflict().body(
-                "Não foi possível processar o pedido. O pedido pode já ter sido processado anteriormente.",
-            )
-        }
+        Ok(false) => HttpResponse::BadRequest().body(
+            "Vacation request was already actioned or not found when trying to update status.",
+        ),
         Err(e) => {
             log::error!("Error actioning vacation request {}: {}", request_id, e);
-            if e.to_string().contains("Not enough vacation days available") {
-                return HttpResponse::BadRequest().body(e.to_string());
-            }
-            HttpResponse::InternalServerError().finish()
+            HttpResponse::InternalServerError().body(format!("Error: {}", e))
         }
     }
 }

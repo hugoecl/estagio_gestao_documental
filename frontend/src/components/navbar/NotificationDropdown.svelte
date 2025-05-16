@@ -44,7 +44,66 @@
             }
         }
 
-        // 2. Navigate to the relevant record/page
+        // Check if it's a vacation-related notification
+        if (notification.notificationType && 
+            (notification.notificationType === "VACATION_REQUESTED" || 
+             notification.notificationType === "VACATION_APPROVED" || 
+             notification.notificationType === "VACATION_REJECTED" ||
+             notification.notificationType === "VACATION_CANCELED")) {
+            
+            // For admins receiving vacation requested notifications
+            if (notification.notificationType === "VACATION_REQUESTED" && notification.vacationRequestId) {
+                // Import necessary API functions
+                import("@api/admin-vacation-api").then(async ({ getHolidayRoles, getPendingRequestsForRole }) => {
+                    try {
+                        // Get all holiday roles
+                        const roles = await getHolidayRoles();
+                        if (!roles || roles.length === 0) {
+                            // Fallback to general admin vacation page if no roles found
+                            if (typeof window !== "undefined") {
+                                window.location.href = "/admin/vacations/";
+                            }
+                            return;
+                        }
+                        
+                        // Try to find the correct role by checking each one for the vacation request
+                        let foundRoleId: number | null = null;
+                        for (const role of roles) {
+                            const requests = await getPendingRequestsForRole(role.id);
+                            const foundRequest = requests.find(req => req.id === notification.vacationRequestId);
+                            if (foundRequest) {
+                                foundRoleId = role.id;
+                                break;
+                            }
+                        }
+                        
+                        // Navigate to the found role or the first role
+                        if (typeof window !== "undefined") {
+                            if (foundRoleId !== null) {
+                                window.location.href = `/admin/vacations/roles/${foundRoleId}/requests/`;
+                            } else {
+                                // If we couldn't find the right role, just use the first one
+                                window.location.href = `/admin/vacations/roles/${roles[0].id}/requests/`;
+                            }
+                        }
+                    } catch (error) {
+                        console.error("Error finding appropriate role for vacation request:", error);
+                        // Fallback to general admin vacation page
+                        if (typeof window !== "undefined") {
+                            window.location.href = "/admin/vacations/";
+                        }
+                    }
+                });
+            } else {
+                // For regular users who get approval/rejection notifications, go to their vacation page
+                if (typeof window !== "undefined") {
+                    window.location.href = "/vacations/";
+                }
+            }
+            return;
+        }
+
+        // Regular case - Navigate to the relevant record/page
         if (notification.pagePath && notification.recordId) {
             // Construct the URL carefully. Assuming record modals are opened via the page path
             // and might need the record ID as a query param or handled differently.
@@ -193,7 +252,6 @@
         </div>
     {/if}
 </div>
-```
 
 <style>
     /* Add any specific styles if needed */
