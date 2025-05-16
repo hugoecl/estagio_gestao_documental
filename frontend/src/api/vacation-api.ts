@@ -99,11 +99,11 @@ export async function submitVacationRequest(
 // e.g., getPendingRequestsForRole, actionVacationRequest
 
 /**
- * Fetches approved vacation date ranges for colleagues in shared holiday roles for a given year.
+ * Fetches approved and pending vacation date ranges for colleagues in shared holiday roles for a given year.
  * @param year The year for which to fetch shared calendar data.
- * @returns A promise that resolves to an array of [startDate, endDate] string tuples.
+ * @returns A promise that resolves to an array of objects with start_date, end_date, and status.
  */
-export async function getSharedCalendarVacations(year: number): Promise<[string, string][]> {
+export async function getSharedCalendarVacations(year: number): Promise<{start_date: string, end_date: string, status: string}[]> {
   const response = await handleFetch(
     `${API_BASE_URL}/vacation-requests/shared-calendar?year=${year}`,
     {
@@ -113,7 +113,7 @@ export async function getSharedCalendarVacations(year: number): Promise<[string,
   );
 
   if (response.ok) {
-    return (await response.json()) as [string, string][];
+    return (await response.json()) as {start_date: string, end_date: string, status: string}[];
   }
 
   if (response.status === 401) {

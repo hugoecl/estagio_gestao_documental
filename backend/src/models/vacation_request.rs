@@ -434,6 +434,66 @@ impl VacationRequest {
         Ok(rows)
     }
 
+    pub async fn get_approved_and_pending_dates_for_users_in_year(
+        pool: &MySqlPool,
+        user_ids: &[u32],
+        year: i32,
+    ) -> Result<Vec<(NaiveDate, NaiveDate, String)>, sqlx::Error> {
+        if user_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let start_of_year = NaiveDate::from_ymd_opt(year, 1, 1).unwrap();
+        let end_of_year = NaiveDate::from_ymd_opt(year, 12, 31).unwrap();
+
+        // Constructing the IN clause dynamically for user_ids
+        let user_ids_placeholder = user_ids
+            .iter()
+            .map(|_| "?")
+            .collect::<Vec<_>>()
+            .join(",");
+        let query_str = format!(
+            r#"
+            SELECT start_date, end_date, status
+            FROM vacation_requests
+            WHERE user_id IN ({})
+              AND status IN ('APPROVED', 'PENDING')
+              AND (
+                  (start_date <= ? AND end_date >= ?) OR 
+                  (start_date <= ? AND end_date >= ?) OR 
+                  (start_date >= ? AND end_date <= ?)    
+              )
+            "#,
+            user_ids_placeholder
+        );
+       
+        let mut query_builder = sqlx::query(&query_str);
+        for user_id in user_ids {
+            query_builder = query_builder.bind(user_id);
+        }
+        query_builder = query_builder
+            .bind(end_of_year) 
+            .bind(start_of_year)
+            .bind(end_of_year) 
+            .bind(start_of_year)
+            .bind(start_of_year) 
+            .bind(end_of_year);
+
+        let rows = query_builder
+            .fetch_all(pool)
+            .await?
+            .into_iter()
+            .map(|row| {
+                let start_date: NaiveDate = sqlx::Row::get(&row, "start_date");
+                let end_date: NaiveDate = sqlx::Row::get(&row, "end_date");
+                let status: String = sqlx::Row::get(&row, "status");
+                (start_date, end_date, status)
+            })
+            .collect();
+
+        Ok(rows)
+    }
+
     // Function to count the number of approved vacation days for a user in a given year.
     pub async fn count_approved_vacation_days_for_year(
         pool: &MySqlPool,

@@ -23,7 +23,7 @@
     let remainingDaysInfo = $state<RemainingVacationDaysResponse | null>(null);
     let myRequests = $state<VacationRequestDisplay[]>([]); // Store processed requests
     let colleagueVacations = $state<
-        Array<{ start_date: string; end_date: string }>
+        Array<{ start_date: string; end_date: string; status: string }>
     >([]);
     let isLoadingDays = $state(true);
     let isLoadingRequests = $state(true);
@@ -141,6 +141,11 @@
                 " bg-neutral/60 text-neutral-content opacity-80 cursor-not-allowed";
             hoverClasses = ""; // No hover on colleague days
             hasStatusStyle = true;
+        } else if (day.status === "colleague_pending") {
+            styleClasses +=
+                " bg-neutral/40 text-neutral-content opacity-70 cursor-not-allowed";
+            hoverClasses = ""; // No hover on colleague pending days
+            hasStatusStyle = true;
         }
 
         // 2. Apply selection and hover preview styles
@@ -221,7 +226,7 @@
         // Construct final classes
         let finalClasses = `${base} ${styleClasses} ${roundingClasses} ${hoverClasses}`;
 
-        if (day.status === "colleague_approved" || !day.isCurrentMonth) {
+        if (day.status === "colleague_approved" || day.status === "colleague_pending" || !day.isCurrentMonth) {
             if (!finalClasses.includes(" cursor-not-allowed"))
                 finalClasses += " cursor-not-allowed";
         }
@@ -347,7 +352,7 @@
     function applyVisualsToCalendar(
         baseStructureInput: CalendarMonth[],
         userRequests: VacationRequestDisplay[],
-        colleagueDateRanges: Array<{ start_date: string; end_date: string }>,
+        colleagueDateRanges: Array<{ start_date: string; end_date: string; status: string }>,
         currentSelectionStart: Date | null,
         currentSelectionEnd: Date | null,
         currentHoveredDate: Date | null,
@@ -364,6 +369,7 @@
         const colleagueBookedPeriods = colleagueDateRanges.map((range) => ({
             start: new Date(range.start_date + "T00:00:00Z").getTime(),
             end: new Date(range.end_date + "T00:00:00Z").getTime(),
+            status: range.status
         }));
 
         newCalendarStructure.forEach((month) => {
@@ -382,15 +388,20 @@
                     // --- Debugging Loop for userRequests ---
                     // console.log(`Processing Day: ${day.date.toISOString().slice(0,10)}`);
 
-                    // --- 1. Apply Colleague's Approved Vacations ---
+                    // --- 1. Apply Colleague's Approved and Pending Vacations ---
                     for (const colleaguePeriod of colleagueBookedPeriods) {
                         if (
                             dayTime >= colleaguePeriod.start &&
                             dayTime <= colleaguePeriod.end
                         ) {
-                            day.status = "colleague_approved";
-                            day.tooltip = "Férias Colega";
-                            // console.log(` -> Status set to colleague_approved`);
+                            if (colleaguePeriod.status === "APPROVED") {
+                                day.status = "colleague_approved";
+                                day.tooltip = "Férias Colega (Aprovadas)";
+                            } else if (colleaguePeriod.status === "PENDING") {
+                                day.status = "colleague_pending";
+                                day.tooltip = "Férias Colega (Pendentes)";
+                            }
+                            // console.log(` -> Status set to ${day.status}`);
                             break;
                         }
                     }
@@ -439,7 +450,7 @@
                     }
 
                     // --- 3. Apply Selection / Hover Preview Visuals ---
-                    if (day.status !== "colleague_approved") {
+                    if (day.status !== "colleague_approved" && day.status !== "colleague_pending") {
                         const isPreviewing =
                             currentSelectionStart &&
                             !currentSelectionEnd &&
@@ -609,6 +620,14 @@
             );
             return;
         }
+        if (day.status && day.status === "colleague_pending") {
+            showAlert(
+                "Este dia não está disponível pois coincide com as férias pendentes de um colega.",
+                AlertType.WARNING,
+                AlertPosition.TOP,
+            );
+            return;
+        }
         if (day.status && day.status === "user_approved") {
             showAlert(
                 "Já tem férias aprovadas para este dia.",
@@ -773,6 +792,28 @@
             );
             return;
         }
+        
+        // Check for colleague vacation conflicts (both pending and approved)
+        const requestStartDate = new Date(newRequestStartDate + "T00:00:00Z").getTime();
+        const requestEndDate = new Date(newRequestEndDate + "T00:00:00Z").getTime();
+        
+        for (const colleagueVacation of colleagueVacations) {
+            const colleagueStart = new Date(colleagueVacation.start_date + "T00:00:00Z").getTime();
+            const colleagueEnd = new Date(colleagueVacation.end_date + "T00:00:00Z").getTime();
+            
+            // Check for overlap: (StartA <= EndB) and (EndA >= StartB)
+            if (requestStartDate <= colleagueEnd && requestEndDate >= colleagueStart) {
+                const status = colleagueVacation.status === "PENDING" ? "pendentes" : "aprovadas";
+                newRequestErrors.general = `Este período coincide com férias ${status} de um colega. Por favor, escolha outras datas.`;
+                showAlert(
+                    newRequestErrors.general,
+                    AlertType.ERROR,
+                    AlertPosition.TOP,
+                );
+                return;
+            }
+        }
+        
         isSubmittingRequest = true;
         const payload: CreateVacationRequestPayload = {
             start_date: newRequestStartDate,
@@ -863,7 +904,7 @@
                     <span class="loading loading-dots loading-md"></span>
                 </div>
             {:else if remainingDaysInfo}
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm mt-2" role="list">
                     <div class="text-center p-2 bg-base-100 rounded">
                         <div class="font-semibold">Alocados</div>
                         <div class="text-lg">
@@ -898,17 +939,18 @@
     </div>
 
     <!-- Calendar Display -->
-    <div class="card bg-base-100 shadow">
-        <div class="card-body">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="card-title text-base">
-                    Calendário Anual - {currentYear}
-                </h2>
+    <div class="card bg-base-100 shadow mb-4">
+     <div class="card-body">
+      <div class="flex justify-between items-center mb-4">
+       <h2 class="card-title text-base">
+        {monthNames[new Date().getMonth()]} {new Date().getFullYear()}
+       </h2>
                 <div>
                     <button
                         class="btn btn-sm btn-ghost"
                         onclick={() => currentYear--}
                         title="Ano Anterior"
+                        aria-label="Ano Anterior"
                     >
                         <i class="fa-solid fa-chevron-left"></i>
                     </button>
@@ -916,6 +958,7 @@
                         class="btn btn-sm btn-ghost"
                         onclick={() => (currentYear = new Date().getFullYear())}
                         title="Ano Atual"
+                        aria-label="Ano Atual"
                     >
                         <i class="fa-solid fa-calendar-day"></i>
                     </button>
@@ -923,6 +966,7 @@
                         class="btn btn-sm btn-ghost"
                         onclick={() => currentYear++}
                         title="Próximo Ano"
+                        aria-label="Próximo Ano"
                     >
                         <i class="fa-solid fa-chevron-right"></i>
                     </button>
@@ -940,6 +984,7 @@
             {:else}
                 <div
                     class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3"
+                    role="grid"
                 >
                     {#each displayedCalendarData as month (month.year + "-" + month.monthIndex)}
                         <div
@@ -1009,6 +1054,39 @@
     </div>
 
     <!-- List of My Requests -->
+    <!-- Color Legend -->
+    <div class="card bg-base-100 shadow mb-4">
+     <div class="card-body p-4">
+      <h2 class="card-title text-base">Legenda</h2>
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm mt-2">
+       <div class="flex items-center gap-2">
+        <div class="w-4 h-4 bg-success rounded"></div>
+        <span>Suas férias aprovadas</span>
+       </div>
+       <div class="flex items-center gap-2">
+        <div class="w-4 h-4 bg-warning rounded"></div>
+        <span>Suas férias pendentes</span>
+       </div>
+       <div class="flex items-center gap-2">
+        <div class="w-4 h-4 bg-neutral/60 rounded"></div>
+        <span>Férias aprovadas de colegas</span>
+       </div>
+       <div class="flex items-center gap-2">
+        <div class="w-4 h-4 bg-neutral/40 rounded"></div>
+        <span>Férias pendentes de colegas</span>
+       </div>
+       <div class="flex items-center gap-2">
+        <div class="w-4 h-4 bg-accent rounded"></div>
+        <span>Dias selecionados</span>
+       </div>
+       <div class="flex items-center gap-2">
+        <div class="w-4 h-4 bg-info rounded"></div>
+        <span>Pré-visualização de seleção</span>
+       </div>
+      </div>
+     </div>
+    </div>
+
     <div class="card bg-base-100 shadow">
         <div class="card-body">
             <h2 class="card-title text-base">Meus Pedidos Registados</h2>
@@ -1168,18 +1246,4 @@
     </form>
 </dialog>
 
-<style>
-    /* Ensure day buttons in a week flow correctly for range highlighting */
-    /* Target the grid of day buttons within each week */
-    div.grid > div.grid.grid-cols-7 {
-        /* Direct child grid for weeks */
-        display: flex;
-        flex-wrap: nowrap;
-    }
-    div.grid > div.grid.grid-cols-7 > button {
-        /* Buttons within the week grid */
-        flex-grow: 1;
-        flex-basis: 0;
-        min-width: 0;
-    }
-</style>
+<!-- Styles removed as they were unused -->

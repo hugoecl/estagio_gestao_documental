@@ -2,6 +2,7 @@ use actix_session::Session;
 use actix_web::{HttpResponse, Responder, web};
 use chrono::Datelike; // For year extraction
 use serde::Serialize;
+use sqlx::Row; // Added for Row::get method
 
 use crate::{
     State,
@@ -99,9 +100,8 @@ pub async fn submit_vacation_request(
         ));
     }
 
-    // --- TODO: Initial Conflict Check (Phase 2 - basic, Phase 4 - advanced) ---
-    // For now, let's assume a simple check for overlapping requests for the *same user*.
-    // Advanced role-based conflict will be in Phase 4.
+    // --- Initial Conflict Check (Same User) ---
+    // Check for overlapping requests for the *same user*.
     let existing_requests = match VacationRequest::get_by_user_id(&state.db.pool, user_id).await {
         Ok(reqs) => reqs,
         Err(e) => {
@@ -124,6 +124,83 @@ pub async fn submit_vacation_request(
             return HttpResponse::Conflict().body(format!(
                 "Já tem um pedido de férias ({:?}) que entra em conflito com as datas solicitadas.",
                 req.status
+            ));
+        }
+    }
+    
+    // --- Advanced Conflict Check (Colleagues in Shared Holiday Role) ---
+    // Get all users who share holiday roles with the current user
+    let colleague_user_ids = match Role::get_colleague_user_ids_in_shared_holiday_roles(&state.db.pool, user_id).await {
+        Ok(ids) => ids,
+        Err(e) => {
+            log::error!(
+                "Error fetching colleague user IDs for vacation conflict check: {}",
+                e
+            );
+            return HttpResponse::InternalServerError().finish();
+        }
+    };
+    
+    if !colleague_user_ids.is_empty() {
+        // Get both pending and approved vacation requests from colleagues
+        let requests_query = format!(
+            r#"
+            SELECT vr.start_date, vr.end_date, vr.status, u.username
+            FROM vacation_requests vr
+            JOIN users u ON vr.user_id = u.id
+            WHERE vr.user_id IN ({})
+              AND vr.status IN ('PENDING', 'APPROVED')
+              AND (
+                  (vr.start_date <= ? AND vr.end_date >= ?) OR 
+                  (vr.start_date <= ? AND vr.end_date >= ?) OR 
+                  (vr.start_date >= ? AND vr.end_date <= ?)    
+              )
+            "#,
+            colleague_user_ids
+                .iter()
+                .map(|_| "?")
+                .collect::<Vec<_>>()
+                .join(",")
+        );
+        
+        let mut query_builder = sqlx::query(&requests_query);
+        for colleague_id in &colleague_user_ids {
+            query_builder = query_builder.bind(colleague_id);
+        }
+        
+        query_builder = query_builder
+            .bind(&request_data.end_date)
+            .bind(&request_data.start_date)
+            .bind(&request_data.end_date)
+            .bind(&request_data.start_date)
+            .bind(&request_data.start_date)
+            .bind(&request_data.end_date);
+            
+        let colleague_requests = match query_builder.fetch_all(&state.db.pool).await {
+            Ok(rows) => rows,
+            Err(e) => {
+                log::error!(
+                    "Error fetching colleague vacation requests for conflict check: {}",
+                    e
+                );
+                return HttpResponse::InternalServerError().finish();
+            }
+        };
+        
+        if !colleague_requests.is_empty() {
+            let first_conflict = colleague_requests.first().unwrap();
+            let status: String = first_conflict.try_get("status").unwrap_or_default();
+            let username: String = first_conflict.try_get("username").unwrap_or_default();
+            
+            let status_desc = match status.as_str() {
+                "PENDING" => "pendente",
+                "APPROVED" => "aprovado",
+                _ => "existente",
+            };
+            
+            return HttpResponse::Conflict().body(format!(
+                "As datas solicitadas entram em conflito com um pedido {} do colega {}.",
+                status_desc, username
             ));
         }
     }
@@ -259,6 +336,14 @@ pub async fn get_my_remaining_vacation_days(
 
 // Add this handler to the end of src/handlers/vacation_handlers.rs
 
+// Response struct for shared calendar with status information
+#[derive(Serialize)]
+struct SharedCalendarResponse {
+    start_date: chrono::NaiveDate,
+    end_date: chrono::NaiveDate,
+    status: String,
+}
+
 pub async fn get_shared_calendar_vacations(
     state: web::Data<State>,
     session: Session,
@@ -277,21 +362,33 @@ pub async fn get_shared_calendar_vacations(
             if colleague_user_ids.is_empty() {
                 // No colleagues in shared holiday roles, or user is not in any holiday role
                 return json_response_with_etag(
-                    &Vec::<(chrono::NaiveDate, chrono::NaiveDate)>::new(),
+                    &Vec::<SharedCalendarResponse>::new(),
                     &req,
                 );
             }
 
-            match VacationRequest::get_approved_dates_for_users_in_year(
+            match VacationRequest::get_approved_and_pending_dates_for_users_in_year(
                 &state.db.pool,
                 &colleague_user_ids,
                 year,
             )
             .await
             {
-                Ok(dates) => json_response_with_etag(&dates, &req),
+                Ok(dates) => {
+                    // Transform the dates into the response format
+                    let response = dates.into_iter()
+                        .map(|(start_date, end_date, status)| 
+                            SharedCalendarResponse {
+                                start_date,
+                                end_date,
+                                status,
+                            })
+                        .collect::<Vec<_>>();
+                    
+                    json_response_with_etag(&response, &req)
+                },
                 Err(e) => {
-                    log::error!("Error fetching approved dates for colleagues: {}", e);
+                    log::error!("Error fetching vacation dates for colleagues: {}", e);
                     HttpResponse::InternalServerError().finish()
                 }
             }
