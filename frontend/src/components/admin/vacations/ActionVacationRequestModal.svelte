@@ -224,14 +224,11 @@
                                 <span class="loading loading-spinner loading-sm"
                                 ></span> A Aprovar...
                             {:else}
-                                <i class="fa-solid fa-check-circle mr-2"></i> Aprovar
-                                Pedido
+                                <i class="fa-solid fa-check-circle mr-2"></i> Aprovar Pedido
                             {/if}
                         </button>
                     </div>
-                    <div
-                        class="sm:w-[calc(theme(space.btn-block-padding-x)*2+theme(width.btn-sm-padding-x)*2)] order-2 sm:order-3"
-                    ></div>
+    
                     <!-- Spacer -->
                 </div>
             </div>
