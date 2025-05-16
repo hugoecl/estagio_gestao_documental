@@ -1153,7 +1153,7 @@
     <div class="card bg-base-100 shadow mb-4">
      <div class="card-body p-4">
       <h2 class="card-title text-base">Legenda</h2>
-      <div class="grid grid-cols-1 sm:grid-cols-4 gap-2 text-sm mt-2">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm mt-2">
        <div class="flex items-center gap-2">
         <div class="w-4 h-4 bg-success rounded"></div>
         <span>Suas férias aprovadas</span>
