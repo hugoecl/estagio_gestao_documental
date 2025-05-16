@@ -238,10 +238,10 @@ pub async fn action_vacation_request_admin(
             }
 
             // Success response
-            HttpResponse::Ok().body("Vacation request actioned successfully")
+            HttpResponse::Ok().body("Pedido de férias atualizado com sucesso")
         }
         Ok(false) => HttpResponse::BadRequest().body(
-            "Vacation request was already actioned or not found when trying to update status.",
+            "Pedido de férias já foi atualizado ou não encontrado quando tentando atualizar o status.",
         ),
         Err(e) => {
             log::error!("Error actioning vacation request {}: {}", request_id, e);
