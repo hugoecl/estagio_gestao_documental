@@ -48,8 +48,8 @@
   - [X] Dias selecionados tem 3 tipos: Hover (ou seja não guardado), Solicitado (ou seja guardado mas não confirmado) e concedido (ou seja ferias que o administrador já verificou e aprovou)
   - [X] Administrador tem que ter uma página para a a gestão de férias, em que tem uma tabela inicial com todos os cargos de férias. Depois de clicar um cargo de férias, tem todos as solicitações de férias ordenadas por data.
   - [X] Administrador pode recusar e dar um motivo em especifico por ter recusado ou não.
-  - [ ] Notificar administrador quando há novas solicitações de férias
-  - [ ] Notificar colegas do mesmo cargo de férias quando há novas férias solicitadas
+  - [X] Notificar administrador quando há novas solicitações de férias
+  - [X] Notificar colegas do mesmo cargo de férias quando há novas férias solicitadas
 
 - [X] Página especial (Sempre no menu) para o inicio
 - [ ] Make inputs have the same hover effects
