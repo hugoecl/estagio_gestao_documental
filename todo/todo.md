@@ -33,8 +33,8 @@
 - [ ] Fix quando o grupo esta vazio para nao aparecer pagina de 404
 - [ ] Pagina para gerir paginas, aparecer primeiro so os grupo e depois clicar nos grupos para aparecer as paginas desses grupos
 - [ ] Ver alerta que não sai sozinho depois de criar um registo
-- [ ] Meter no fim de cada registo um texto ou algum tipo de indicação para indicar que para aceder aos ficheiros tem se que clicar la
-- [ ] Fazer campo para dar upload de ficheiros
+- [ ] ~Meter no fim de cada registo um texto ou algum tipo de indicação para indicar que para aceder aos ficheiros tem se que clicar la~
+- [ ] Fazer campo para dar upload de ficheiros ao criar paginas
 - [ ] Criar novo tipo de permissão para adição (ou seja pode inserir nos campoes vazios de um registo, mas nao pode editar o que ja foi preenchido)
 - [ ] Make the color of checkboxes consistent
 
@@ -42,8 +42,8 @@
   - [ ] Calendar Performance
   - [ ] Integração com feridos
   - [X] Fix texto em criar função, agora ao criar/editar uma função o texto é renderizado corretamente
-  - [ ] Página especial (Sempre no menu) para férias
-  - [ ] Na página de marcação de férias vai ter um unico anual calendar (em que da para alterar o ano) em que utilizadores podem ver, mas não selecionar dias em que outras pessoas do mesmo cargo já tenham selecionado. Ou seja um trabalhador só pode ver ferias de pessoas com o mesmo cargo.
+  - [X] Página especial (Sempre no menu) para férias
+  - [X] Na página de marcação de férias vai ter um unico anual calendar (em que da para alterar o ano) em que utilizadores podem ver, mas não selecionar dias em que outras pessoas do mesmo cargo já tenham selecionado. Ou seja um trabalhador só pode ver ferias de pessoas com o mesmo cargo.
   - [X] Adicionar um campo nos cargos que é "é cargo de férias?", pessoas com cargos que tem este campo só podem ver/influenciar outra pessoas com o mesmo cargo
   - [X] Dias selecionados tem 3 tipos: Hover (ou seja não guardado), Solicitado (ou seja guardado mas não confirmado) e concedido (ou seja ferias que o administrador já verificou e aprovou)
   - [X] Administrador tem que ter uma página para a a gestão de férias, em que tem uma tabela inicial com todos os cargos de férias. Depois de clicar um cargo de férias, tem todos as solicitações de férias ordenadas por data.
@@ -51,7 +51,7 @@
   - [ ] Notificar administrador quando há novas solicitações de férias
   - [ ] Notificar colegas do mesmo cargo de férias quando há novas férias solicitadas
 
-- [ ] Página especial (Sempre no menu) para o inicio
+- [X] Página especial (Sempre no menu) para o inicio
 - [ ] Make inputs have the same hover effects
 - [ ] Administrador ao criar utilizador submete num date picker quando é que o trabalhador nasceu.
 - [ ] Ver coisas giras para se meter na pagina inicial (editor de markdown para o admin, aniversários)

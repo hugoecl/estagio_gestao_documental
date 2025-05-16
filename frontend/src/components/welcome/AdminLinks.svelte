@@ -9,6 +9,11 @@
             href: "/admin/notifications/broadcast/",
             icon: "bullhorn",
         },
+        {
+            title: "Gerir Férias",
+            href: "/admin/vacations/",
+            icon: "umbrella-beach",
+        },
         // Add more admin links here if needed
     ];
 </script>
