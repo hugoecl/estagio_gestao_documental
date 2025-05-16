@@ -5,6 +5,7 @@
         getMyVacationRequests,
         submitVacationRequest,
         getSharedCalendarVacations, // Import new API function
+        cancelVacationRequest,
     } from "@api/vacation-api";
     import type {
         RemainingVacationDaysResponse,
@@ -29,6 +30,8 @@
     let isLoadingRequests = $state(true);
     let isLoadingShared = $state(false); // New loading state for shared data
     let error = $state<string | null>(null);
+    let isCancelling = $state(false);
+    let cancelRequestId = $state<number | null>(null);
 
     // --- Custom Calendar State & Logic ---
     interface CalendarDay {
@@ -782,6 +785,45 @@
         return Object.keys(newRequestErrors).length === 0;
     }
 
+    // Function to handle cancellation of a pending request
+    async function handleCancelRequest(requestId: number) {
+        if (isCancelling) return; // Prevent multiple clicks
+        
+        isCancelling = true;
+        cancelRequestId = requestId;
+        
+        try {
+            const result = await cancelVacationRequest(requestId);
+            
+            if (result.success) {
+                showAlert(
+                    result.message || "Pedido de férias cancelado com sucesso.",
+                    AlertType.SUCCESS,
+                    AlertPosition.TOP,
+                );
+                
+                // Refresh data
+                await fetchAllCalendarData(currentYear);
+            } else {
+                showAlert(
+                    result.message || "Falha ao cancelar o pedido de férias.",
+                    AlertType.ERROR,
+                    AlertPosition.TOP,
+                );
+            }
+        } catch (e: any) {
+            console.error(`Error cancelling vacation request ${requestId}:`, e);
+            showAlert(
+                `Erro ao cancelar o pedido: ${e.message}`,
+                AlertType.ERROR,
+                AlertPosition.TOP,
+            );
+        } finally {
+            isCancelling = false;
+            cancelRequestId = null;
+        }
+    }
+    
     async function handleNewRequestSubmit(e: Event) {
         e.preventDefault();
         if (!validateNewRequestForm()) {
@@ -1110,6 +1152,7 @@
                                 <th>Notas</th>
                                 <th>Submetido Em</th>
                                 <th>Processado Em</th>
+                                <th>Ações</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1145,6 +1188,26 @@
                                     >
                                     <td>{req.requestedAtDisplay}</td>
                                     <td>{req.actionedAtDisplay || "-"}</td>
+                                    <td>
+                                        {#if req.status === VacationRequestStatus.Pending}
+                                            <button 
+                                                class="btn btn-xs btn-error" 
+                                                disabled={isCancelling && cancelRequestId === req.id}
+                                                onclick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleCancelRequest(req.id);
+                                                }}
+                                            >
+                                                {#if isCancelling && cancelRequestId === req.id}
+                                                    <span class="loading loading-spinner loading-xs"></span>
+                                                {:else}
+                                                    <i class="fa-solid fa-xmark mr-1"></i> Cancelar
+                                                {/if}
+                                            </button>
+                                        {:else}
+                                            -
+                                        {/if}
+                                    </td>
                                 </tr>
                             {/each}
                         </tbody>

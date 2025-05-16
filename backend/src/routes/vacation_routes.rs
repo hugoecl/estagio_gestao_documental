@@ -18,6 +18,10 @@ pub fn init(cfg: &mut web::ServiceConfig) {
                 // New route for shared calendar data
                 "/shared-calendar",
                 web::get().to(vacation_handlers::get_shared_calendar_vacations),
+            )
+            .route(
+                "/{request_id}",
+                web::delete().to(vacation_handlers::cancel_vacation_request),
             ),
     );
     // Admin vacation routes are in admin_vacation_routes.rs

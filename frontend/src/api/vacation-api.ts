@@ -102,6 +102,7 @@ export async function submitVacationRequest(
  * Fetches approved and pending vacation date ranges for colleagues in shared holiday roles for a given year.
  * @param year The year for which to fetch shared calendar data.
  * @returns A promise that resolves to an array of objects with start_date, end_date, and status.
+ * @returns A promise that resolves to an array of [string, string, string] tuples.
  */
 export async function getSharedCalendarVacations(year: number): Promise<{start_date: string, end_date: string, status: string}[]> {
   const response = await handleFetch(
@@ -125,4 +126,41 @@ export async function getSharedCalendarVacations(year: number): Promise<{start_d
     `Failed to fetch shared calendar vacations for year ${year}: ${response.statusText}`,
   );
   return []; // Or throw an error if preferred
+}
+
+/**
+ * Cancels (deletes) a pending vacation request.
+ * Only pending requests can be cancelled.
+ * 
+ * @param requestId The ID of the vacation request to cancel
+ * @returns A promise that resolves to an object with success and message information
+ */
+export async function cancelVacationRequest(
+  requestId: number,
+): Promise<{ success: boolean; message: string }> {
+  const response = await handleFetch(
+    `${API_BASE_URL}/vacation-requests/${requestId}`,
+    {
+      method: "DELETE",
+      credentials: "include",
+    },
+  );
+
+  const responseText = await response.text();
+
+  if (response.ok) {
+    return { 
+      success: true, 
+      message: responseText || "Pedido de férias cancelado com sucesso." 
+    };
+  } else {
+    console.error(
+      `Failed to cancel vacation request ${requestId}: ${response.status} ${response.statusText}`,
+      responseText,
+    );
+    return { 
+      success: false, 
+      message: responseText || `Falha ao cancelar pedido: ${response.statusText}` 
+    };
+  }
 }

@@ -334,7 +334,71 @@ pub async fn get_my_remaining_vacation_days(
     })
 }
 
-// Add this handler to the end of src/handlers/vacation_handlers.rs
+// Add handlers to the end of src/handlers/vacation_handlers.rs
+
+// Handler for canceling a pending vacation request
+pub async fn cancel_vacation_request(
+    state: web::Data<State>,
+    session: Session,
+    request_id_path: web::Path<u32>
+) -> impl Responder {
+    let user_id = match validate_session(&session) {
+        Ok(id) => id as u32,
+        Err(resp) => return resp,
+    };
+
+    let request_id = request_id_path.into_inner();
+
+    // First, fetch the request to verify it belongs to the user and is in PENDING state
+    let request = match sqlx::query!(
+        "SELECT user_id, status FROM vacation_requests WHERE id = ?",
+        request_id
+    )
+    .fetch_optional(&state.db.pool)
+    .await {
+        Ok(Some(row)) => row,
+        Ok(None) => {
+            return HttpResponse::NotFound().body(format!("Pedido de férias #{} não encontrado.", request_id));
+        },
+        Err(e) => {
+            log::error!("Error fetching vacation request {}: {}", request_id, e);
+            return HttpResponse::InternalServerError().finish();
+        }
+    };
+
+    // Verify the request belongs to the current user
+    if request.user_id != user_id {
+        return HttpResponse::Forbidden().body("Não tem permissão para cancelar este pedido de férias.");
+    }
+
+    // Verify the request is in PENDING state
+    if request.status != "PENDING" {
+        return HttpResponse::BadRequest().body(
+            "Apenas pedidos pendentes podem ser cancelados. Este pedido já foi processado."
+        );
+    }
+
+    // Delete the request
+    match sqlx::query!(
+        "DELETE FROM vacation_requests WHERE id = ? AND user_id = ? AND status = 'PENDING'",
+        request_id, user_id
+    )
+    .execute(&state.db.pool)
+    .await {
+        Ok(result) => {
+            if result.rows_affected() > 0 {
+                HttpResponse::Ok().body(format!("Pedido de férias #{} cancelado com sucesso.", request_id))
+            } else {
+                // This should not happen since we already checked the request exists and belongs to the user
+                HttpResponse::InternalServerError().body("Falha ao cancelar o pedido de férias.")
+            }
+        },
+        Err(e) => {
+            log::error!("Error deleting vacation request {}: {}", request_id, e);
+            HttpResponse::InternalServerError().finish()
+        }
+    }
+}
 
 // Response struct for shared calendar with status information
 #[derive(Serialize)]
