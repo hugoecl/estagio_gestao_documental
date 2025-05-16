@@ -25,6 +25,7 @@
 - [X] Corrigir bug quando se abre um datepicker o modal muda de posição
 - [X] Meter alert de notificações bem destacado no centro da tela
 
+- [ ] Fazer com que o admin consiga apagar utilizadores
 - [ ] Duplicar página
 - [ ] Drag and drop ordem campos
 - [ ] Fix bug ao editar página ele volta por defeito raiz /
