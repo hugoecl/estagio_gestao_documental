@@ -119,19 +119,27 @@ pub async fn action_vacation_request_admin(
     .await
     {
         Ok(true) => {
-            // Create notification for the user
+            // Format dates for the message
+            let start_date_fmt = request_details.start_date.format("%d/%m/%Y").to_string();
+            let end_date_fmt = request_details.end_date.format("%d/%m/%Y").to_string();
+            
+            // Get user name for the notification messages
+            let user_name = match sqlx::query!("SELECT username FROM users WHERE id = ?", request_details.user_id)
+                .fetch_optional(&state.db.pool)
+                .await {
+                    Ok(Some(user_row)) => user_row.username,
+                    _ => "Um utilizador".to_string(), // Fallback if we can't get the username
+                };
+
+            // 1. Create notification for the requesting user
             let notification_type = match action_data.status {
                 VacationRequestStatus::Approved => NOTIFICATION_TYPE_VACATION_APPROVED,
                 VacationRequestStatus::Rejected => NOTIFICATION_TYPE_VACATION_REJECTED,
                 _ => unreachable!(), // We already checked this is not PENDING
             };
 
-            // Format dates for the message
-            let start_date_fmt = request_details.start_date.format("%d/%m/%Y").to_string();
-            let end_date_fmt = request_details.end_date.format("%d/%m/%Y").to_string();
-
             // Prepare notification message based on status
-            let message = match action_data.status {
+            let user_message = match action_data.status {
                 VacationRequestStatus::Approved => {
                     format!("O seu pedido de férias ({} a {}) foi aprovado.", start_date_fmt, end_date_fmt)
                 },
@@ -141,7 +149,7 @@ pub async fn action_vacation_request_admin(
                 _ => unreachable!(),
             };
 
-            // Create the notification
+            // Create the notification for the user who made the request
             match Notification::create(
                 &state.db.pool, 
                 request_details.user_id, 
@@ -150,7 +158,7 @@ pub async fn action_vacation_request_admin(
                 None,               // page_id - Not applicable
                 None,               // field_id - Not applicable 
                 notification_type,
-                &message,
+                &user_message,
                 Some(request_details.end_date), // Use end_date as due_date
             ).await {
                 Ok(_) => {
@@ -168,6 +176,64 @@ pub async fn action_vacation_request_admin(
                         e
                     );
                     // Continue processing even if notification fails
+                }
+            }
+            
+            // 2. Only send notifications to colleagues if the request was APPROVED
+            // (we don't need to bother colleagues about rejected requests)
+            if action_data.status == VacationRequestStatus::Approved {
+                // Prepare the message for colleagues
+                let colleague_message = format!(
+                    "O pedido de férias do seu colega {} ({} a {}) foi aprovado.",
+                    user_name, start_date_fmt, end_date_fmt
+                );
+                
+                // Get colleagues in the same vacation role
+                match Role::get_colleague_user_ids_in_shared_holiday_roles(&state.db.pool, request_details.user_id).await {
+                    Ok(colleague_ids) => {
+                        for colleague_id in colleague_ids {
+                            // Skip the user who made the request - they already got their own notification
+                            if colleague_id == request_details.user_id {
+                                continue;
+                            }
+                            
+                            // Send notification to each colleague
+                            match Notification::create(
+                                &state.db.pool,
+                                colleague_id,
+                                None,               // record_id - Not used for vacation requests
+                                Some(request_id),   // vacation_request_id - Using request_id
+                                None,               // page_id - Not applicable
+                                None,               // field_id - Not applicable 
+                                NOTIFICATION_TYPE_VACATION_APPROVED,
+                                &colleague_message,
+                                Some(request_details.end_date), // Use end_date as due_date
+                            ).await {
+                                Ok(_) => {
+                                    log::info!(
+                                        "Created vacation approval notification for colleague {}, vacation request {}",
+                                        colleague_id,
+                                        request_id
+                                    );
+                                },
+                                Err(e) => {
+                                    log::error!(
+                                        "Failed to create vacation approval notification for colleague {}, vacation request {}: {}",
+                                        colleague_id,
+                                        request_id,
+                                        e
+                                    );
+                                }
+                            }
+                        }
+                    },
+                    Err(e) => {
+                        log::error!(
+                            "Error fetching colleague users for vacation approval notifications: {}",
+                            e
+                        );
+                        // Continue processing even if we can't notify colleagues
+                    }
                 }
             }
 

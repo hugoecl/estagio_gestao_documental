@@ -53,47 +53,58 @@
             
             // For admins receiving vacation requested notifications
             if (notification.notificationType === "VACATION_REQUESTED" && notification.vacationRequestId) {
-                // Import necessary API functions
-                import("@api/admin-vacation-api").then(async ({ getHolidayRoles, getPendingRequestsForRole }) => {
-                    try {
-                        // Get all holiday roles
-                        const roles = await getHolidayRoles();
-                        if (!roles || roles.length === 0) {
-                            // Fallback to general admin vacation page if no roles found
+                // Check if the message seems to be for admins
+                // Messages for admins contain the text "solicitou férias" (someone requested)
+                // Messages for colleagues contain "O seu colega" (Your colleague)
+                if (notification.message.includes("solicitou férias") && !notification.message.includes("O seu colega")) {
+                    // This is likely an admin notification - try to navigate to the admin vacation management page
+                    import("@api/admin-vacation-api").then(async ({ getHolidayRoles, getPendingRequestsForRole }) => {
+                        try {
+                            // Get all holiday roles
+                            const roles = await getHolidayRoles();
+                            if (!roles || roles.length === 0) {
+                                // Fallback to general admin vacation page if no roles found
+                                if (typeof window !== "undefined") {
+                                    window.location.href = "/admin/vacations/";
+                                }
+                                return;
+                            }
+                            
+                            // Try to find the correct role by checking each one for the vacation request
+                            let foundRoleId: number | null = null;
+                            for (const role of roles) {
+                                const requests = await getPendingRequestsForRole(role.id);
+                                const foundRequest = requests.find(req => req.id === notification.vacationRequestId);
+                                if (foundRequest) {
+                                    foundRoleId = role.id;
+                                    break;
+                                }
+                            }
+                            
+                            // Navigate to the found role or the first role
+                            if (typeof window !== "undefined") {
+                                if (foundRoleId !== null) {
+                                    window.location.href = `/admin/vacations/roles/${foundRoleId}/requests/`;
+                                } else {
+                                    // If we couldn't find the right role, just use the first one
+                                    window.location.href = `/admin/vacations/roles/${roles[0].id}/requests/`;
+                                }
+                            }
+                        } catch (error) {
+                            console.error("Error finding appropriate role for vacation request:", error);
+                            // Fallback to general admin vacation page
                             if (typeof window !== "undefined") {
                                 window.location.href = "/admin/vacations/";
                             }
-                            return;
                         }
-                        
-                        // Try to find the correct role by checking each one for the vacation request
-                        let foundRoleId: number | null = null;
-                        for (const role of roles) {
-                            const requests = await getPendingRequestsForRole(role.id);
-                            const foundRequest = requests.find(req => req.id === notification.vacationRequestId);
-                            if (foundRequest) {
-                                foundRoleId = role.id;
-                                break;
-                            }
-                        }
-                        
-                        // Navigate to the found role or the first role
-                        if (typeof window !== "undefined") {
-                            if (foundRoleId !== null) {
-                                window.location.href = `/admin/vacations/roles/${foundRoleId}/requests/`;
-                            } else {
-                                // If we couldn't find the right role, just use the first one
-                                window.location.href = `/admin/vacations/roles/${roles[0].id}/requests/`;
-                            }
-                        }
-                    } catch (error) {
-                        console.error("Error finding appropriate role for vacation request:", error);
-                        // Fallback to general admin vacation page
-                        if (typeof window !== "undefined") {
-                            window.location.href = "/admin/vacations/";
-                        }
+                    });
+                } else {
+                    // This is a regular user notification about a colleague's vacation request
+                    // Navigate to the vacations page
+                    if (typeof window !== "undefined") {
+                        window.location.href = "/vacations/";
                     }
-                });
+                }
             } else {
                 // For regular users who get approval/rejection notifications, go to their vacation page
                 if (typeof window !== "undefined") {
