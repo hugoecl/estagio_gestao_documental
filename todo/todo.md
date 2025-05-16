@@ -38,16 +38,16 @@
 - [ ] Criar novo tipo de permissão para adição (ou seja pode inserir nos campoes vazios de um registo, mas nao pode editar o que ja foi preenchido)
 - [ ] Make the color of checkboxes consistent
 
-- [ ] Adicionar sistema de maração de férias administrador ao criar utilizador define dias por ano que o trabalhador ainda pode gozar.
+- [X] Adicionar sistema de maração de férias administrador ao criar utilizador define dias por ano que o trabalhador ainda pode gozar.
   - [ ] Calendar Performance
   - [ ] Integração com feridos
   - [X] Fix texto em criar função, agora ao criar/editar uma função o texto é renderizado corretamente
   - [ ] Página especial (Sempre no menu) para férias
   - [ ] Na página de marcação de férias vai ter um unico anual calendar (em que da para alterar o ano) em que utilizadores podem ver, mas não selecionar dias em que outras pessoas do mesmo cargo já tenham selecionado. Ou seja um trabalhador só pode ver ferias de pessoas com o mesmo cargo.
-  - [ ] Adicionar um campo nos cargos que é "é cargo de férias?", pessoas com cargos que tem este campo só podem ver/influenciar outra pessoas com o mesmo cargo
-  - [ ] Dias selecionados tem 3 tipos: Hover (ou seja não guardado), Solicitado (ou seja guardado mas não confirmado) e concedido (ou seja ferias que o administrador já verificou e aprovou)
-  - [ ] Administrador tem que ter uma página para a a gestão de férias, em que tem uma tabela inicial com todos os cargos de férias. Depois de clicar um cargo de férias, tem todos as solicitações de férias ordenadas por data.
-  - [ ] Administrador pode recusar e dar um motivo em especifico por ter recusado ou não.
+  - [X] Adicionar um campo nos cargos que é "é cargo de férias?", pessoas com cargos que tem este campo só podem ver/influenciar outra pessoas com o mesmo cargo
+  - [X] Dias selecionados tem 3 tipos: Hover (ou seja não guardado), Solicitado (ou seja guardado mas não confirmado) e concedido (ou seja ferias que o administrador já verificou e aprovou)
+  - [X] Administrador tem que ter uma página para a a gestão de férias, em que tem uma tabela inicial com todos os cargos de férias. Depois de clicar um cargo de férias, tem todos as solicitações de férias ordenadas por data.
+  - [X] Administrador pode recusar e dar um motivo em especifico por ter recusado ou não.
   - [ ] Notificar administrador quando há novas solicitações de férias
   - [ ] Notificar colegas do mesmo cargo de férias quando há novas férias solicitadas
 
