@@ -127,7 +127,7 @@
     const currentYear = now.getFullYear();
     const currentYearString = currentYear.toString();
     const todayCallyFormat = `${currentYear}/${(now.getMonth() + 1).toString().padStart(2, "0")}/${now.getDate().toString().padStart(2, "0")}`;
-    for (let i = -10; i <= 10; i++) {
+    for (let i = -50; i <= 50; i++) {
         dates.push(currentYear + i);
     }
 
