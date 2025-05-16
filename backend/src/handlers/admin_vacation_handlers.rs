@@ -102,7 +102,7 @@ pub async fn action_vacation_request_admin(
     .await
     {
         Ok(true) => {
-            // true indicates days were successfully deducted if approved, or request actioned
+            // true indicates request was successfully actioned
             let action_verb = if action_data.status
                 == crate::models::vacation_request::VacationRequestStatus::Approved
             {
@@ -113,15 +113,14 @@ pub async fn action_vacation_request_admin(
             HttpResponse::Ok().body(format!("Pedido de férias {} com sucesso.", action_verb))
         }
         Ok(false) => {
-            // This case might occur if the request wasn't in PENDING state,
-            // or if deducting days failed for an approved request.
+            // This case might occur if the request wasn't in PENDING state
             log::warn!(
                 "action_request_with_days_deduction returned false for request_id: {}, action: {:?}",
                 request_id,
                 action_data.status
             );
             HttpResponse::Conflict().body(
-                "Não foi possível processar o pedido. Pode já ter sido processado ou ocorreu um erro ao deduzir os dias.",
+                "Não foi possível processar o pedido. O pedido pode já ter sido processado anteriormente.",
             )
         }
         Err(e) => {

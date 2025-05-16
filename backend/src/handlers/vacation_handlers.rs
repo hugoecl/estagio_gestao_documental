@@ -324,7 +324,7 @@ pub async fn get_my_remaining_vacation_days(
         }
     }
 
-    let remaining_days = total_allocated_days as i64 - approved_days_taken;
+    let remaining_days = total_allocated_days as i64 - approved_days_taken - pending_days_requested;
 
     json_response(&RemainingVacationDaysResponse {
         total_allocated_days: total_allocated_days as u16,

@@ -1,4 +1,4 @@
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::{DateTime, NaiveDate, Utc, Datelike};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, MySqlPool, Row};
 
@@ -271,8 +271,8 @@ impl VacationRequest {
         Ok(rows)
     }
 
-    /// Admin actions a vacation request (approve or reject), and deducts days if approved.
-    /// Returns Ok(true) if action was successful (and days deducted if approved).
+    /// Admin actions a vacation request (approve or reject).
+    /// Returns Ok(true) if action was successful.
     /// Returns Ok(false) if the request was not in PENDING state (already actioned).
     /// Returns Err for database errors or if not enough vacation days for approval.
     pub async fn action_request_with_days_deduction(
@@ -340,7 +340,7 @@ impl VacationRequest {
                 return Err(sqlx::Error::Protocol("Invalid request duration.".into()));
             }
 
-            // Fetch user's current available vacation days
+            // Fetch user's total allocated vacation days
             let user_vacation_days = sqlx::query_scalar!(
                 "SELECT vacation_days_current_year FROM users WHERE id = ?",
                 user_id_for_deduction
@@ -349,22 +349,29 @@ impl VacationRequest {
             .await?
             .unwrap_or(0); // Default to 0 if NULL
 
-            if user_vacation_days < duration_days as u16 {
+            // Calculate already approved days
+            let current_year = chrono::Utc::now().year();
+            let approved_days = VacationRequest::count_approved_vacation_days_for_year(
+                pool,
+                user_id_for_deduction,
+                current_year,
+            )
+            .await?;
+
+            // Calculate the days that would be used after this approval
+            let total_used_days = approved_days + duration_days;
+            
+            // Check if enough vacation days are available
+            if (user_vacation_days as i64) < total_used_days {
                 tx.rollback().await?;
                 return Err(sqlx::Error::Protocol(
                     "Not enough vacation days available.".into(),
                 ));
             }
 
-            // Deduct days
-            let new_available_days = user_vacation_days - duration_days as u16;
-            sqlx::query!(
-                "UPDATE users SET vacation_days_current_year = ? WHERE id = ?",
-                new_available_days,
-                user_id_for_deduction
-            )
-            .execute(&mut *tx)
-            .await?;
+            // We no longer deduct days from vacation_days_current_year
+            // The remaining days are calculated on-demand by counting approved days in get_my_remaining_vacation_days
+            // This avoids modifying the total allocation which should remain constant
         }
 
         // Update the vacation request status

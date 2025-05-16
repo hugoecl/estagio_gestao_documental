@@ -61,6 +61,8 @@
     let selectionStartDate = $state<Date | null>(null);
     let selectionEndDate = $state<Date | null>(null);
     let hoveredDate = $state<Date | null>(null);
+    let selectedDaysCount = $state(0);
+    let projectedRemainingDays = $state<number | null>(null);
 
     const monthNames = $state([
         // Made reactive for consistency, though not strictly necessary
@@ -606,6 +608,12 @@
                 _selectionEndDate,
                 _hoveredDate,
             );
+            
+            // Update selected days count when hovering changes
+            if (_selectionStartDate && !_selectionEndDate && _hoveredDate && _hoveredDate >= _selectionStartDate) {
+                selectedDaysCount = Math.round((_hoveredDate.getTime() - _selectionStartDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                updateProjectedRemainingDays();
+            }
         } else {
             displayedCalendarData = [];
         }
@@ -643,29 +651,47 @@
         if (!selectionStartDate) {
             selectionStartDate = clickedDate;
             selectionEndDate = null;
+            selectedDaysCount = 1;
+            updateProjectedRemainingDays();
         } else if (!selectionEndDate) {
             // Start is selected, now selecting end
             if (clickedDate.getTime() === selectionStartDate.getTime()) {
                 // Clicking the start date again when only start is selected means make it a single-day selection
                 selectionEndDate = clickedDate;
+                selectedDaysCount = 1;
             } else if (clickedDate < selectionStartDate) {
                 selectionEndDate = selectionStartDate;
                 selectionStartDate = clickedDate;
+                selectedDaysCount = Math.round((selectionEndDate.getTime() - selectionStartDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
             } else {
                 selectionEndDate = clickedDate;
+                selectedDaysCount = Math.round((selectionEndDate.getTime() - selectionStartDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
             }
+            updateProjectedRemainingDays();
         } else {
-            // Both start and end are selected, reset and start new selection
+            // Both start and end are already selected, this is a new selection
             selectionStartDate = clickedDate;
             selectionEndDate = null;
+            selectedDaysCount = 1;
+            updateProjectedRemainingDays();
         }
-        hoveredDate = null; // Clear hover when a click modifies the selection
+    }
+
+    function updateProjectedRemainingDays() {
+        if (remainingDaysInfo && selectedDaysCount > 0) {
+            // Calculate remaining days directly from total, not from already calculated remaining_days
+            projectedRemainingDays = Math.max(0, remainingDaysInfo.total_allocated_days - remainingDaysInfo.approved_days_taken - remainingDaysInfo.pending_days_requested - selectedDaysCount);
+        } else {
+            projectedRemainingDays = null;
+        }
     }
 
     function clearSelection() {
         selectionStartDate = null;
         selectionEndDate = null;
         hoveredDate = null;
+        selectedDaysCount = 0;
+        projectedRemainingDays = null;
     }
 
     function processVacationRequestsForDisplay(
@@ -948,27 +974,50 @@
             {:else if remainingDaysInfo}
                 <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm mt-2" role="list">
                     <div class="text-center p-2 bg-base-100 rounded">
-                        <div class="font-semibold">Alocados</div>
+                        <div class="font-semibold relative group cursor-help">
+                            Total Dias Férias
+                            <div class="absolute z-10 hidden group-hover:block bg-base-300 p-2 rounded shadow-lg text-xs w-64 text-left mt-1">
+                                <p>Número total de dias de férias atribuídos a si para o ano corrente. Este valor é definido pelo administrador.</p>
+                            </div>
+                        </div>
                         <div class="text-lg">
                             {remainingDaysInfo.total_allocated_days}
                         </div>
                     </div>
                     <div class="text-center p-2 bg-base-100 rounded">
-                        <div class="font-semibold">Aprovados</div>
+                        <div class="font-semibold relative group cursor-help">
+                            Aprovados
+                            <div class="absolute z-10 hidden group-hover:block bg-base-300 p-2 rounded shadow-lg text-xs w-64 text-left mt-1">
+                                <p>Dias de férias que já foram aprovados para o ano corrente. Estes dias já estão confirmados e não podem ser cancelados.</p>
+                            </div>
+                        </div>
                         <div class="text-lg text-success">
                             {remainingDaysInfo.approved_days_taken}
                         </div>
                     </div>
                     <div class="text-center p-2 bg-base-100 rounded">
-                        <div class="font-semibold">Pendentes</div>
+                        <div class="font-semibold relative group cursor-help">
+                            Pendentes
+                            <div class="absolute z-10 hidden group-hover:block bg-base-300 p-2 rounded shadow-lg text-xs w-64 text-left mt-1">
+                                <p>Dias de férias que foram solicitados mas ainda aguardam aprovação. Estes dias são descontados dos dias disponíveis mas podem ser cancelados.</p>
+                            </div>
+                        </div>
                         <div class="text-lg text-warning">
                             {remainingDaysInfo.pending_days_requested}
                         </div>
                     </div>
                     <div class="text-center p-2 bg-base-100 rounded">
-                        <div class="font-semibold">Restantes</div>
+                        <div class="font-semibold relative group cursor-help">
+                            Dias Disponíveis
+                            <div class="absolute z-10 hidden group-hover:block bg-base-300 p-2 rounded shadow-lg text-xs w-64 text-left mt-1">
+                                <p class="mb-1">Cálculo de dias disponíveis:</p>
+                                <p>Total ({remainingDaysInfo.total_allocated_days}) - Aprovados ({remainingDaysInfo.approved_days_taken}) - Pendentes ({remainingDaysInfo.pending_days_requested}){selectedDaysCount > 0 ? ` - Selecionados (${selectedDaysCount})` : ''} = <strong>{projectedRemainingDays !== null && selectedDaysCount > 0 ? projectedRemainingDays : remainingDaysInfo.remaining_days}</strong></p>
+                            </div>
+                        </div>
                         <div class="text-lg font-bold text-primary">
-                            {remainingDaysInfo.remaining_days}
+                            {projectedRemainingDays !== null && selectedDaysCount > 0 ? 
+                              `${projectedRemainingDays} (após seleção)` : 
+                              remainingDaysInfo.remaining_days}
                         </div>
                     </div>
                 </div>
@@ -1027,6 +1076,9 @@
                 <div
                     class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3"
                     role="grid"
+                    tabindex="0"
+                    onmouseleave={() => hoveredDate = null}
+                    aria-label="Calendar grid"
                 >
                     {#each displayedCalendarData as month (month.year + "-" + month.monthIndex)}
                         <div
@@ -1036,6 +1088,7 @@
                                     hoveredDate = null;
                                 }
                             }}
+                            role="presentation"
                         >
                             <h3
                                 class="text-sm font-semibold text-center mb-1.5 text-primary"
@@ -1119,7 +1172,7 @@
        </div>
        <div class="flex items-center gap-2">
         <div class="w-4 h-4 bg-accent rounded"></div>
-        <span>Dias selecionados</span>
+        <span>Dias selecionados {selectedDaysCount > 0 ? `(${selectedDaysCount} dias)` : ''}</span>
        </div>
        <div class="flex items-center gap-2">
         <div class="w-4 h-4 bg-info rounded"></div>
