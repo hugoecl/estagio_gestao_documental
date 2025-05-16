@@ -36,6 +36,7 @@
 - [ ] Meter no fim de cada registo um texto ou algum tipo de indicação para indicar que para aceder aos ficheiros tem se que clicar la
 - [ ] Fazer campo para dar upload de ficheiros
 - [ ] Criar novo tipo de permissão para adição (ou seja pode inserir nos campoes vazios de um registo, mas nao pode editar o que ja foi preenchido)
+- [ ] Make the color of checkboxes consistent
 
 - [ ] Adicionar sistema de maração de férias administrador ao criar utilizador define dias por ano que o trabalhador ainda pode gozar.
   - [ ] Calendar Performance
