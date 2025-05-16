@@ -1,6 +1,6 @@
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, MySqlPool};
+use sqlx::{FromRow, MySqlPool, Row};
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, sqlx::Type)]
 #[sqlx(type_name = "ENUM('PENDING', 'APPROVED', 'REJECTED')", rename_all = "UPPERCASE")]
@@ -220,9 +220,9 @@ impl VacationRequest {
             SELECT
                 vr.id, vr.user_id, u.username, u.email,
                 vr.start_date, vr.end_date,
-                vr.status, // Fetch status as String
+                vr.status,
                 vr.notes,
-                vr.requested_at AS "requested_at!",
+                vr.requested_at AS 'requested_at',
                 vr.approved_by,
                 vr.actioned_at
             FROM vacation_requests vr
@@ -244,11 +244,31 @@ impl VacationRequest {
             format!("{} ORDER BY vr.requested_at ASC", base_query)
         };
         
-        let rows = sqlx::query_as::<_, VacationRequestWithUserDbRow>(&query_str) // Fetch as DbRow
+        let rows = sqlx::query(&query_str)
+            .map(|row: sqlx::mysql::MySqlRow| {
+                VacationRequestWithUser {
+                    id: row.get("id"),
+                    user_id: row.get("user_id"),
+                    username: row.get("username"),
+                    email: row.get("email"),
+                    start_date: row.get("start_date"),
+                    end_date: row.get("end_date"),
+                    status: match row.get::<String, _>("status").as_str() {
+                        "PENDING" => VacationRequestStatus::Pending,
+                        "APPROVED" => VacationRequestStatus::Approved,
+                        "REJECTED" => VacationRequestStatus::Rejected,
+                        _ => VacationRequestStatus::Pending, // Default
+                    },
+                    notes: row.get("notes"),
+                    requested_at: row.get("requested_at"),
+                    approved_by: row.get("approved_by"),
+                    actioned_at: row.get("actioned_at"),
+                }
+            })
             .fetch_all(pool)
             .await?;
 
-        Ok(rows.into_iter().map(VacationRequestWithUser::from).collect()) // Convert
+        Ok(rows)
     }
 
     /// Admin actions a vacation request (approve or reject), and deducts days if approved.

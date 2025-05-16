@@ -22,7 +22,7 @@
     let error = $state<string | null>(null);
 
     // State for the action modal
-    let actionModalRef: HTMLDialogElement | null = $state(null);
+    let actionModalRef: HTMLDialogElement | undefined = $state(undefined);
     let selectedRequestToAction = $state<VacationRequestWithUser | null>(null);
 
     const columns: TableColumn[] = [

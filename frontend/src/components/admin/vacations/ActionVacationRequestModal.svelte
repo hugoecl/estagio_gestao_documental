@@ -1,9 +1,7 @@
 <script lang="ts">
     import { tick } from "svelte";
-    import type {
-        VacationRequestWithUser,
-        VacationRequestStatus as RequestStatusEnum,
-    } from "@lib/types/vacation";
+    import type { VacationRequestWithUser } from "@lib/types/vacation";
+    import { VacationRequestStatus as RequestStatusEnum } from "@lib/types/vacation";
     import { actionVacationRequest } from "@api/admin-vacation-api"; // This API function needs to be created
     import {
         showAlert,
