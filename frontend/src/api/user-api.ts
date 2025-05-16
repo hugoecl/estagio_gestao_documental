@@ -143,3 +143,18 @@ export async function changePassword(
   const responseText = await response.text(); // Get text for success or error message
   return { success: response.ok, message: responseText };
 }
+
+// Function to delete a user (admin only)
+export async function deleteUser(
+  userId: number,
+): Promise<{ success: boolean; message: string }> {
+  const response = await handleFetch(
+    `${API_BASE_URL}/users/admin/${userId}`,
+    {
+      method: "DELETE",
+      credentials: "include", // Admin actions require authenticated admin session
+    },
+  );
+  const responseText = await response.text();
+  return { success: response.ok, message: responseText };
+}

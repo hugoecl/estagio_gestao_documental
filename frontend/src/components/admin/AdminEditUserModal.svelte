@@ -10,6 +10,7 @@
         assignRolesToUser,
         adminUpdateUserDetails,
         adminSetUserPassword,
+        deleteUser,
     } from "@api/user-api";
     import {
         showAlert,
@@ -41,6 +42,11 @@
     let isSubmittingRoles = $state(false);
     let isSubmittingDetails = $state(false);
     let isSubmittingPassword = $state(false);
+    let isSubmittingDelete = $state(false);
+    
+    // --- Delete User Modal State ---
+    let deleteModalRef = $state<HTMLDialogElement | null>(null);
+    let userToDelete = $state<UserWithRoles | null>(null);
 
     // --- Roles State ---
     let selectedRoleIds = $state<Set<number>>(new Set());
@@ -77,6 +83,7 @@
             isSubmittingRoles = false;
             isSubmittingDetails = false;
             isSubmittingPassword = false;
+            isSubmittingDelete = false;
 
             // Default to roles tab
             currentTab = "roles";
@@ -291,6 +298,56 @@
             isSubmittingPassword = false;
         }
     }
+    
+    // Open delete confirmation modal
+    function openDeleteModal() {
+        if (!user) return;
+        userToDelete = user;
+        deleteModalRef?.showModal();
+    }
+    
+    // Close delete confirmation modal
+    function closeDeleteModal() {
+        deleteModalRef?.close();
+        userToDelete = null;
+    }
+    
+    // Delete user function
+    async function handleDeleteUser() {
+        if (!userToDelete) return;
+        
+        isSubmittingDelete = true;
+        try {
+            const result = await deleteUser(userToDelete.id);
+            if (result.success) {
+                showAlert(
+                    result.message || "Utilizador eliminado com sucesso!",
+                    AlertType.SUCCESS,
+                    AlertPosition.TOP,
+                );
+                closeDeleteModal();
+                closeModal();
+                // Refresh the user list if there's a global refreshUserList function
+                if (typeof window !== "undefined" && (window as any).refreshUserList) {
+                    (window as any).refreshUserList();
+                }
+            } else {
+                showAlert(
+                    result.message || "Falha ao eliminar o utilizador.",
+                    AlertType.ERROR,
+                    AlertPosition.TOP,
+                );
+            }
+        } catch (e: any) {
+            showAlert(
+                `Erro ao eliminar o utilizador: ${e.message}`,
+                AlertType.ERROR,
+                AlertPosition.TOP,
+            );
+        } finally {
+            isSubmittingDelete = false;
+        }
+    }
 </script>
 
 <dialog class="modal" bind:this={modalRef}>
@@ -374,25 +431,36 @@
                             </label>
                         {/each}
                     </div>
-                    <div class="modal-action mt-6">
+                    <div class="modal-action mt-6 flex justify-between w-full">
                         <button
                             type="button"
-                            class="btn btn-ghost"
-                            onclick={closeModal}
-                            disabled={isSubmittingRoles}>Cancelar</button
-                        >
-                        <button
-                            type="submit"
-                            class="btn btn-primary"
+                            class="btn btn-error"
+                            onclick={openDeleteModal}
                             disabled={isSubmittingRoles}
                         >
-                            {#if isSubmittingRoles}
-                                <span class="loading loading-spinner loading-sm"
-                                ></span> A Guardar Funções...
-                            {:else}
-                                Guardar Funções
-                            {/if}
+                            <i class="fa-solid fa-trash mr-1"></i>
+                            Eliminar Utilizador
                         </button>
+                        <div>
+                            <button
+                                type="button"
+                                class="btn btn-ghost"
+                                onclick={closeModal}
+                                disabled={isSubmittingRoles || isSubmittingDelete}>Cancelar</button
+                            >
+                            <button
+                                type="submit"
+                                class="btn btn-primary"
+                                disabled={isSubmittingRoles || isSubmittingDelete}
+                            >
+                                {#if isSubmittingRoles}
+                                    <span class="loading loading-spinner loading-sm"
+                                    ></span> A Guardar Funções...
+                                {:else}
+                                    Guardar Funções
+                                {/if}
+                            </button>
+                        </div>
                     </div>
                 </form>
             {/if}
@@ -453,25 +521,36 @@
                                 >{detailsErrors.vacationDays}</span
                             >{/if}
                     </label>
-                    <div class="modal-action mt-6">
+                    <div class="modal-action mt-6 flex justify-between w-full">
                         <button
                             type="button"
-                            class="btn btn-ghost"
-                            onclick={closeModal}
-                            disabled={isSubmittingDetails}>Cancelar</button
-                        >
-                        <button
-                            type="submit"
-                            class="btn btn-primary"
+                            class="btn btn-error"
+                            onclick={openDeleteModal}
                             disabled={isSubmittingDetails}
                         >
-                            {#if isSubmittingDetails}
-                                <span class="loading loading-spinner loading-sm"
-                                ></span> A Guardar Detalhes...
-                            {:else}
-                                Guardar Detalhes
-                            {/if}
+                            <i class="fa-solid fa-trash mr-1"></i>
+                            Eliminar Utilizador
                         </button>
+                        <div>
+                            <button
+                                type="button"
+                                class="btn btn-ghost"
+                                onclick={closeModal}
+                                disabled={isSubmittingDetails || isSubmittingDelete}>Cancelar</button
+                            >
+                            <button
+                                type="submit"
+                                class="btn btn-primary"
+                                disabled={isSubmittingDetails || isSubmittingDelete}
+                            >
+                                {#if isSubmittingDetails}
+                                    <span class="loading loading-spinner loading-sm"
+                                    ></span> A Guardar Detalhes...
+                                {:else}
+                                    Guardar Detalhes
+                                {/if}
+                            </button>
+                        </div>
                     </div>
                 </form>
             {/if}
@@ -522,25 +601,36 @@
                                 >{passwordErrors.confirmNewPassword}</span
                             >{/if}
                     </label>
-                    <div class="modal-action mt-6">
+                    <div class="modal-action mt-6 flex justify-between w-full">
                         <button
                             type="button"
-                            class="btn btn-ghost"
-                            onclick={closeModal}
-                            disabled={isSubmittingPassword}>Cancelar</button
-                        >
-                        <button
-                            type="submit"
-                            class="btn btn-primary"
+                            class="btn btn-error"
+                            onclick={openDeleteModal}
                             disabled={isSubmittingPassword}
                         >
-                            {#if isSubmittingPassword}
-                                <span class="loading loading-spinner loading-sm"
-                                ></span> Definindo Palavra-passe...
-                            {:else}
-                                Definir Palavra-passe
-                            {/if}
+                            <i class="fa-solid fa-trash mr-1"></i>
+                            Eliminar Utilizador
                         </button>
+                        <div>
+                            <button
+                                type="button"
+                                class="btn btn-ghost"
+                                onclick={closeModal}
+                                disabled={isSubmittingPassword || isSubmittingDelete}>Cancelar</button
+                            >
+                            <button
+                                type="submit"
+                                class="btn btn-primary"
+                                disabled={isSubmittingPassword || isSubmittingDelete}
+                            >
+                                {#if isSubmittingPassword}
+                                    <span class="loading loading-spinner loading-sm"
+                                    ></span> A Guardar Palavra-passe...
+                                {:else}
+                                    Guardar Palavra-passe
+                                {/if}
+                            </button>
+                        </div>
                     </div>
                 </form>
             {/if}
@@ -553,5 +643,38 @@
                 isSubmittingDetails ||
                 isSubmittingPassword}>close</button
         >
+    </form>
+</dialog>
+
+<!-- Delete User Confirmation Modal -->
+<dialog class="modal modal-bottom sm:modal-middle" bind:this={deleteModalRef}>
+    <div class="modal-box">
+        <h3 class="font-bold text-lg">Confirmar Eliminação</h3>
+        <p class="py-4">
+            Tem certeza que deseja eliminar o utilizador <strong>{userToDelete?.username}</strong>?
+            <br />
+            <span class="text-error">Esta ação não pode ser desfeita.</span>
+        </p>
+        <div class="modal-action">
+            <button type="button" class="btn btn-ghost" onclick={closeDeleteModal} disabled={isSubmittingDelete}>
+                Cancelar
+            </button>
+            <button
+                type="button"
+                class="btn btn-error"
+                onclick={handleDeleteUser}
+                disabled={isSubmittingDelete}
+            >
+                {#if isSubmittingDelete}
+                    <span class="loading loading-spinner loading-sm"></span>
+                    A Eliminar...
+                {:else}
+                    Sim, Eliminar
+                {/if}
+            </button>
+        </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button onclick={closeDeleteModal} disabled={isSubmittingDelete}>close</button>
     </form>
 </dialog>

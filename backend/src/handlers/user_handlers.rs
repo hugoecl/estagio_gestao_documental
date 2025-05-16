@@ -856,3 +856,108 @@ pub async fn admin_set_user_password(
         }
     }
 }
+
+// Handler for deleting a user (admin only)
+pub async fn admin_delete_user(
+    state: web::Data<State>,
+    session: Session,
+    path: web::Path<u32>, // User ID from path
+) -> impl Responder {
+    // Ensure requester is admin and get their user ID
+    let current_user_id = match is_admin(&session) {
+        Ok(id) => id as u32,
+        Err(resp) => return resp,
+    };
+
+    let target_user_id = path.into_inner();
+
+    if current_user_id == target_user_id {
+        return HttpResponse::BadRequest().body("Não é possível eliminar o seu próprio utilizador.");
+    }
+
+    // Check if target user exists
+    match sqlx::query_scalar!(
+        r#"SELECT EXISTS(SELECT 1 FROM users WHERE id = ?)"#,
+        target_user_id
+    )
+    .fetch_one(&state.db.pool)
+    .await
+    {
+        Ok(exists) => {
+            if exists != 1 {
+                // MySQL returns 1 for true, 0 for false for EXISTS
+                return HttpResponse::NotFound().body("Utilizador alvo não encontrado.");
+            }
+        }
+        Err(e) => {
+            error!("Database error checking if target user exists: {}", e);
+            return HttpResponse::InternalServerError().body("Erro ao verificar utilizador alvo.");
+        }
+    }
+
+    // Start a transaction to ensure all deletions are done atomically
+    let mut tx = match state.db.pool.begin().await {
+        Ok(tx) => tx,
+        Err(e) => {
+            error!("Failed to start transaction: {}", e);
+            return HttpResponse::InternalServerError().body("Erro ao iniciar transação para eliminar o utilizador.");
+        }
+    };
+
+    // Delete user's roles first (due to foreign key constraints)
+    if let Err(e) = sqlx::query!(
+        r#"DELETE FROM user_roles WHERE user_id = ?"#,
+        target_user_id
+    )
+    .execute(&mut *tx)
+    .await
+    {
+        error!("Database error deleting user roles: {}", e);
+        // Rollback transaction on error
+        if let Err(rollback_err) = tx.rollback().await {
+            error!("Failed to rollback transaction: {}", rollback_err);
+        }
+        return HttpResponse::InternalServerError().body("Erro ao eliminar funções do utilizador.");
+    }
+
+    // Delete user's vacation requests
+    if let Err(e) = sqlx::query!(
+        r#"DELETE FROM vacation_requests WHERE user_id = ?"#,
+        target_user_id
+    )
+    .execute(&mut *tx)
+    .await
+    {
+        error!("Database error deleting user vacation requests: {}", e);
+        if let Err(rollback_err) = tx.rollback().await {
+            error!("Failed to rollback transaction: {}", rollback_err);
+        }
+        return HttpResponse::InternalServerError().body("Erro ao eliminar pedidos de férias do utilizador.");
+    }
+
+    // Delete the user
+    match sqlx::query!(
+        r#"DELETE FROM users WHERE id = ?"#,
+        target_user_id
+    )
+    .execute(&mut *tx)
+    .await
+    {
+        Ok(_) => {
+            // Commit the transaction
+            if let Err(e) = tx.commit().await {
+                error!("Failed to commit transaction: {}", e);
+                return HttpResponse::InternalServerError().body("Erro ao finalizar eliminação do utilizador.");
+            }
+            HttpResponse::Ok().body("Utilizador eliminado com sucesso.")
+        }
+        Err(e) => {
+            error!("Database error deleting user: {}", e);
+            // Rollback transaction on error
+            if let Err(rollback_err) = tx.rollback().await {
+                error!("Failed to rollback transaction: {}", rollback_err);
+            }
+            HttpResponse::InternalServerError().body("Erro ao eliminar utilizador.")
+        }
+    }
+}

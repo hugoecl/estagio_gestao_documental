@@ -35,6 +35,10 @@ pub fn init(cfg: &mut web::ServiceConfig) {
                 "/admin/{user_id}/password",
                 web::put().to(user_handlers::admin_set_user_password),
             )
+            .route(
+                "/admin/{user_id}",
+                web::delete().to(user_handlers::admin_delete_user),
+            )
             // Route for fetching user's own remaining vacation days
             .route(
                 "/me/vacation-days",
