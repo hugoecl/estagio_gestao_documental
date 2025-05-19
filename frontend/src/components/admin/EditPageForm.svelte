@@ -84,23 +84,22 @@
 
     // --- Fetch Initial Data ---
     onMount(async () => {
-        // ... (fetching logic remains the same, populating state from fetchedPageData)
         try {
             const [
                 fetchedFieldTypes,
                 fetchedValidations,
                 fetchedRoles,
                 fetchedPageData,
-                fetchedGroups, // Added fetchedGroups here
+                fetchedGroups,
             ] = await Promise.all([
                 getFieldTypes(),
                 getValidations(),
                 getRoles(),
                 getCustomPageById(pageId),
-                getGroupPages(), // Call to fetch groups
+                getGroupPages(),
             ]);
             fieldTypes = fetchedFieldTypes;
-            availableGroups = fetchedGroups; // Now fetchedGroups is defined
+            availableGroups = fetchedGroups;
             validations = fetchedValidations;
             roles = fetchedRoles;
             if (!fetchedPageData) throw new Error("Página não encontrada.");
@@ -111,12 +110,21 @@
                 description: fetchedPageData.page.description,
                 icon: fetchedPageData.page.icon,
                 notify_on_new_record: fetchedPageData.page.notify_on_new_record,
-                requires_acknowledgment:
-                    fetchedPageData.page.requires_acknowledgment,
+                requires_acknowledgment: fetchedPageData.page.requires_acknowledgment,
             };
             isGroup = fetchedPageData.page.is_group;
             originalPageDataJson = JSON.stringify(pageData);
             pagePath = fetchedPageData.page.path;
+
+            // Initialize selectedParentGroupId based on parent_path
+            if (fetchedPageData.page.parent_path) {
+                const parentGroup = availableGroups.find(
+                    group => group.path === fetchedPageData.page.parent_path
+                );
+                if (parentGroup) {
+                    selectedParentGroupId = parentGroup.id.toString();
+                }
+            }
 
             if (!isGroup) {
                 // IMPORTANT: Initialize fields, including notification fields
