@@ -1034,7 +1034,7 @@
      <div class="card-body">
       <div class="flex justify-between items-center mb-4">
        <h2 class="card-title text-base">
-        Calendario Anual {new Date().getFullYear()}
+        Calendario Anual {currentYear}
        </h2>
                 <div>
                     <button
