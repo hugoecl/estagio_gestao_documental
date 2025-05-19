@@ -24,6 +24,7 @@
         type CustomPage,
     } from "@api/custom-pages-api";
     import { toSearchString } from "@utils/search-utils";
+    import { dndzone } from 'svelte-dnd-action'; // Import dndzone for drag and drop
 
     // --- State ---
     let pageData = $state<Partial<CreateCustomPageRequest>>({
@@ -36,7 +37,7 @@
         notify_on_new_record: false,
         requires_acknowledgment: false,
     });
-    let fields = $state<Array<CreatePageFieldRequest & { key: Symbol }>>([]);
+    let fields = $state<Array<CreatePageFieldRequest & { id: string }>>([]);
     let permissions = $state<Record<number, RolePermissionRequest>>({});
     let fieldTypes = $state<BackendFieldType[]>([]);
     let validations = $state<ValidationFunction[]>([]);
@@ -135,7 +136,7 @@
     // --- Field Management ---
     function addField() {
         fields.push({
-            key: Symbol(), // Unique key for #each block
+            id: `new_${Date.now()}_${fields.length}`, // More reliable unique ID than Symbol
             name: `campo_${fields.length + 1}`,
             display_name: "",
             field_type_id: fieldTypes[0]?.id || 1,
@@ -154,8 +155,25 @@
 
     function removeField(index: number) {
         fields.splice(index, 1);
+        updateOrderIndexes();
+    }
+    
+    function updateOrderIndexes() {
         fields.forEach((field, i) => (field.order_index = i));
         fields = [...fields];
+    }
+    
+    function handleDndConsider(e: CustomEvent<{items: any[]}>) {
+        // This is fired when a drag operation starts
+        // Make a copy to ensure reactivity is triggered properly
+        fields = e.detail.items;
+    }
+    
+    function handleDndFinalize(e: CustomEvent<{items: any[]}>) {
+        // This is fired when the drag operation completes
+        // Make a copy to ensure reactivity is triggered properly
+        fields = e.detail.items;
+        updateOrderIndexes();
     }
 
     function handleFieldNameChange(index: number, event: Event) {
@@ -519,14 +537,24 @@
                         {errors.fields_general}
                     </p>{/if}
 
-                {#each fields as field, index (index)}
-                    <div class="border p-3 rounded bg-base-200 relative">
-                        <button
-                            type="button"
-                            class="btn btn-xs btn-error absolute top-2 right-2"
-                            title="Remover Campo"
-                            onclick={() => removeField(index)}>✕</button
-                        >
+                <div use:dndzone={{items: fields, flipDurationMs: 200, type: "fields"}} 
+                     onconsider={handleDndConsider} 
+                     onfinalize={handleDndFinalize}
+                     class="space-y-4">
+                {#each fields as field, index (field.id)}
+                    <div class="border p-3 rounded bg-base-200 relative" style="cursor: grab;">
+                        <div class="flex justify-between mb-2">
+                            <div class="flex items-center text-base-content/70" style="cursor: grab;">
+                                <i class="fa-solid fa-grip-vertical mr-2" style="cursor: grab;"></i>
+                                <span class="text-sm">Arraste para reordenar</span>
+                            </div>
+                            <button
+                                type="button"
+                                class="btn btn-xs btn-error"
+                                title="Remover Campo"
+                                onclick={() => removeField(index)}>✕</button
+                            >
+                        </div>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                             <label class="form-control w-full">
                                 <div class="label">
@@ -764,6 +792,7 @@
                         </div>
                     </div>
                 {/each}
+                </div>
 
                 <button
                     type="button"

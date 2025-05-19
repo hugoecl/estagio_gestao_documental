@@ -36,6 +36,7 @@
         RolePermissionRequest,
         UpdateCustomPageRequest,
     } from "@lib/types/custom-page";
+    import { dndzone } from 'svelte-dnd-action'; // Import dndzone for drag and drop
 
     const { pageId }: { pageId: number } = $props();
 
@@ -254,6 +255,19 @@
             if (!field.isDeleted) field.order_index = currentOrder++;
         });
         fields = [...fields];
+    }
+    
+    function handleDndConsider(e: CustomEvent<{items: any[]}>) {
+        // This is fired when a drag operation starts
+        if (isGroup) return;
+        fields = e.detail.items;
+    }
+    
+    function handleDndFinalize(e: CustomEvent<{items: any[]}>) {
+        // This is fired when the drag operation completes
+        if (isGroup) return;
+        fields = e.detail.items;
+        updateOrderIndexes();
     }
     function handleFieldNameChange(index: number, event: Event) {
         // ... (same as Create form)
@@ -873,6 +887,10 @@
                         {errors.fields_general}
                     </p>{/if}
 
+                <div use:dndzone={{items: fields, flipDurationMs: 200, type: "fields"}} 
+                     onconsider={handleDndConsider} 
+                     onfinalize={handleDndFinalize}
+                     class="space-y-4">
                 {#each fields as field, index (field.id ?? `new_${index}`)}
                     <div
                         class:border-error={field.isDeleted}
@@ -888,12 +906,18 @@
                                 ><i class="fa-solid fa-undo"></i></button
                             >
                         {:else}
-                            <button
-                                type="button"
-                                class="btn btn-xs btn-error absolute top-2 right-2"
-                                title="Remover Campo"
-                                onclick={() => removeField(index)}>✕</button
-                            >
+                            <div class="flex justify-between mb-2">
+                                <div class="flex items-center text-base-content/70">
+                                    <i class="fa-solid fa-grip-vertical mr-2"></i>
+                                    <span class="text-sm">Arraste para reordenar</span>
+                                </div>
+                                <button
+                                    type="button"
+                                    class="btn btn-xs btn-error"
+                                    title="Remover Campo"
+                                    onclick={() => removeField(index)}>✕</button
+                                >
+                            </div>
                         {/if}
 
                         <div
@@ -1134,6 +1158,7 @@
                         </div>
                     </div>
                 {/each}
+                </div>
 
                 <button
                     type="button"

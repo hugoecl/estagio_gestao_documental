@@ -44,7 +44,7 @@
 
 
 - [X] Duplicar página
-- [ ] Drag and drop ordem campos
+- [X] Drag and drop ordem campos
 - [X] Fix bug ao editar página ele volta por defeito raiz /
 - [ ] Lista drag and drop para o administrador ordenar páginas
 - [ ] Fix quando o grupo esta vazio para nao aparecer pagina de 404
