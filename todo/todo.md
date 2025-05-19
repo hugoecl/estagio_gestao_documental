@@ -27,17 +27,7 @@
 
 - [X] Fazer com que o admin consiga apagar utilizadores
 - [X] Fix texto em criar função, agora ao criar/editar uma função o texto é renderizado corretamente
-- [ ] Duplicar página
-- [ ] Drag and drop ordem campos
-- [ ] Fix bug ao editar página ele volta por defeito raiz /
-- [ ] Lista drag and drop para o administrador ordenar páginas
-- [ ] Fix quando o grupo esta vazio para nao aparecer pagina de 404
-- [ ] Pagina para gerir paginas, aparecer primeiro so os grupo e depois clicar nos grupos para aparecer as paginas desses grupos
-- [ ] Ver alerta que não sai sozinho depois de criar um registo
-- [ ] ~Meter no fim de cada registo um texto ou algum tipo de indicação para indicar que para aceder aos ficheiros tem se que clicar la~
-- [ ] Fazer campo para dar upload de ficheiros ao criar paginas
-- [ ] Criar novo tipo de permissão para adição (ou seja pode inserir nos campoes vazios de um registo, mas nao pode editar o que ja foi preenchido)
-- [ ] Make the color of checkboxes consistent
+
 
 - [X] Adicionar sistema de maração de férias administrador ao criar utilizador define dias por ano que o trabalhador ainda pode gozar.
   - [ ] Calendar Performance
@@ -51,6 +41,19 @@
   - [X] Administrador pode recusar e dar um motivo em especifico por ter recusado ou não.
   - [X] Notificar administrador quando há novas solicitações de férias
   - [X] Notificar colegas do mesmo cargo de férias quando há novas férias solicitadas
+
+
+- [ ] Duplicar página
+- [ ] Drag and drop ordem campos
+- [ ] Fix bug ao editar página ele volta por defeito raiz /
+- [ ] Lista drag and drop para o administrador ordenar páginas
+- [ ] Fix quando o grupo esta vazio para nao aparecer pagina de 404
+- [ ] Pagina para gerir paginas, aparecer primeiro so os grupo e depois clicar nos grupos para aparecer as paginas desses grupos
+- [ ] Ver alerta que não sai sozinho depois de criar um registo
+- [ ] ~Meter no fim de cada registo um texto ou algum tipo de indicação para indicar que para aceder aos ficheiros tem se que clicar la~
+- [ ] Fazer campo para dar upload de ficheiros ao criar paginas
+- [ ] Criar novo tipo de permissão para adição (ou seja pode inserir nos campoes vazios de um registo, mas nao pode editar o que ja foi preenchido)
+- [ ] Make the color of checkboxes consistent
 
 - [X] Página especial (Sempre no menu) para o inicio
 - [ ] Make inputs have the same hover effects
