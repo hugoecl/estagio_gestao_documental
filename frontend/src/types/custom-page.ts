@@ -85,14 +85,8 @@ export interface CustomPageWithFields {
 export interface NavigationItem {
   title: string;
   path: string | null; // The actual href path for pages, null for groups
-  // parent_path: string | null; // This was the DB parent path, might not be needed for frontend rendering directly
+  id: number; // ID is now included for admin reordering
   icon: string | null;
+  display_order: number; // Display order for menu items
   children: NavigationItem[];
-
-  // Added from backend for internal logic if needed, but marked skip_serializing on backend
-  // For client-side, these might be useful if logic moves here, but for now, not strictly required.
-  // id: number;
-  // is_group: boolean;
-  // parent_db_path: string | null;
-  // db_path: string;
 }

@@ -2,5 +2,6 @@
 <project version="4">
   <component name="SqlDialectMappings">
     <file url="file://$PROJECT_DIR$/backend/sql/schema.sql" dialect="MariaDB" />
+    <file url="file://$PROJECT_DIR$/backend/sql/updates/add_display_order_to_custom_pages.sql" dialect="MariaDB" />
   </component>
 </project>

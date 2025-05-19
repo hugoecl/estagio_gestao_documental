@@ -46,6 +46,10 @@ pub fn init(cfg: &mut web::ServiceConfig) {
             .route(
                 "/{id}/duplicate",
                 web::post().to(custom_page_handlers::duplicate_custom_page),
+            )
+            .route(
+                "/reorder",
+                web::post().to(custom_page_handlers::reorder_pages),
             ),
     );
 }

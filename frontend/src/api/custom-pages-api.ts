@@ -190,3 +190,17 @@ export async function deleteCustomPage(pageId: number): Promise<boolean> {
 }
 
 // Add deleteCustomPage later
+
+// Add function to reorder custom pages
+export async function reorderPages(
+  orders: { id: number; display_order: number }[]
+): Promise<boolean> {
+  const response = await handleFetch(`${API_BASE_URL}/custom_pages/reorder`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ orders }),
+  });
+
+  return response.ok;
+}

@@ -29,10 +29,11 @@ pub async fn get_group_pages(
         r#"
         SELECT 
             id, name, path, parent_path, is_group as "is_group: bool", description, 
-            icon, notify_on_new_record as "notify_on_new_record: bool", requires_acknowledgment as "requires_acknowledgment: bool", created_at as "created_at!", updated_at as "updated_at!"
+            icon, notify_on_new_record as "notify_on_new_record: bool", requires_acknowledgment as "requires_acknowledgment: bool", display_order, 
+            created_at as "created_at!", updated_at as "updated_at!"
         FROM custom_pages 
         WHERE is_group = true 
-        ORDER BY name
+        ORDER BY display_order, name
         "#
     )
     .fetch_all(&state.db.pool)
@@ -330,8 +331,8 @@ pub async fn duplicate_custom_page(
     }
 
     let page_id = path.into_inner();
-    // Get the user_id from the session
-    let user_id = match validate_session(&session) {
+    // Get the user_id from the session (unused but needed for validation)
+    let _user_id = match validate_session(&session) {
         Ok(id) => id,
         Err(_) => return HttpResponse::Unauthorized().finish(),
     };
@@ -499,4 +500,51 @@ pub async fn duplicate_custom_page(
         "page_id": new_page_id,
         "message": "Página duplicada com sucesso"
     }))
+}
+
+// Add new handler for reordering pages
+pub async fn reorder_pages(
+    state: web::Data<State>,
+    session: Session,
+    data: web::Bytes,
+) -> impl Responder {
+    // Check if user is admin
+    if let Err(resp) = is_admin(&session) {
+        return resp;
+    }
+
+    // Parse the request body
+    #[derive(serde::Deserialize)]
+    struct PageOrder {
+        id: u32,
+        display_order: u32,
+    }
+
+    #[derive(serde::Deserialize)]
+    struct ReorderPagesRequest {
+        orders: Vec<PageOrder>,
+    }
+
+    let Json(req): Json<ReorderPagesRequest> = match Json::from_bytes(&data) {
+        Ok(data) => data,
+        Err(e) => {
+            log::error!("Error parsing JSON: {}", e);
+            return HttpResponse::BadRequest().finish();
+        }
+    };
+    
+    // Convert the orders to the format expected by update_multiple_display_orders
+    let orders: Vec<(u32, u32)> = req.orders
+        .iter()
+        .map(|order| (order.id, order.display_order))
+        .collect();
+        
+    // Update the display orders
+    match CustomPage::update_multiple_display_orders(&state.db.pool, &orders).await {
+        Ok(_) => HttpResponse::Ok().json(serde_json::json!({"success": true})),
+        Err(e) => {
+            log::error!("Error updating page orders: {}", e);
+            HttpResponse::InternalServerError().json(serde_json::json!({"error": "Failed to update page orders"}))
+        }
+    }
 }

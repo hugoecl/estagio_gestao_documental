@@ -26,7 +26,8 @@ pub struct CustomPage {
     pub description: Option<String>,
     pub icon: Option<String>,
     pub notify_on_new_record: bool,
-    pub requires_acknowledgment: bool, // New field
+    pub requires_acknowledgment: bool,
+    pub display_order: u32, // Display order for menu items
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -123,8 +124,8 @@ pub struct PagePermission {
 pub struct NavigationItem {
     pub title: String,
     pub path: Option<String>, // Null for groups
-    #[serde(skip_serializing)]
-    pub id: u32, // Keep track of the original ID for permission checks
+    // Include ID for admins to use when reordering
+    pub id: u32, // ID is now exposed to frontend for admin reordering
     #[serde(skip_serializing)]
     pub is_group: bool, // Keep track if it's a group
     #[serde(skip_serializing)]
@@ -132,6 +133,7 @@ pub struct NavigationItem {
     #[serde(skip_serializing)]
     pub db_path: String,
     pub icon: Option<String>,
+    pub display_order: u32, // Include display order for sorting
     pub children: Vec<NavigationItem>,
 }
 
@@ -221,10 +223,10 @@ impl CustomPage {
             SELECT
                 id, name, path, parent_path, is_group as "is_group: bool", description,
                 icon, notify_on_new_record as "notify_on_new_record: bool",
-                requires_acknowledgment as "requires_acknowledgment: bool",
+                requires_acknowledgment as "requires_acknowledgment: bool", display_order,
                 created_at as "created_at!", updated_at as "updated_at!"
             FROM custom_pages
-            ORDER BY name
+            ORDER BY display_order, name
             "#,
         )
         .fetch_all(pool)
@@ -242,7 +244,7 @@ impl CustomPage {
             SELECT
                 id, name, path, parent_path, is_group as "is_group: bool", description,
                 icon, notify_on_new_record as "notify_on_new_record: bool",
-                requires_acknowledgment as "requires_acknowledgment: bool",
+                requires_acknowledgment as "requires_acknowledgment: bool", display_order,
                 created_at as "created_at!", updated_at as "updated_at!"
             FROM custom_pages
             WHERE id = ?
@@ -442,18 +444,18 @@ impl CustomPage {
         pool: &sqlx::MySqlPool,
         user_id: i32,
     ) -> Result<Vec<NavigationItem>, sqlx::Error> {
-        // 1. Fetch ALL pages/groups initially, ordered to help with tree construction
+        // 1. Fetch ALL pages/groups initially, ordered by display_order
         let all_db_items = sqlx::query_as!(
             CustomPage,
             r#"
             SELECT
                 id, name, path, parent_path, is_group as "is_group: bool", description,
                 icon, notify_on_new_record as "notify_on_new_record: bool",
-                requires_acknowledgment as "requires_acknowledgment: bool",
+                requires_acknowledgment as "requires_acknowledgment: bool", display_order,
                 created_at as "created_at!", updated_at as "updated_at!"
             FROM custom_pages
-            ORDER BY parent_path IS NULL DESC, parent_path ASC, name ASC
-            "# // Order by parent_path (nulls first), then by parent_path itself, then name
+            ORDER BY parent_path IS NULL DESC, parent_path ASC, display_order ASC
+            "# // Order by parent_path (nulls first), then by parent_path itself, then display_order
         )
         .fetch_all(pool)
         .await?;
@@ -505,6 +507,7 @@ impl CustomPage {
                 parent_db_path: db_item.parent_path.clone(), // Store the DB parent_path
                 db_path: db_item.path.clone(),               // Store the DB path for grouping
                 icon: db_item.icon.clone(),
+                display_order: db_item.display_order, // Use the display_order from DB
                 children: Vec::new(),
             };
             items_by_path.insert(db_item.path.clone(), nav_item.clone());
@@ -546,8 +549,8 @@ impl CustomPage {
                     }
                 }
             }
-            // Sort children at this level by title (or other criteria if needed)
-            level_children.sort_by(|a, b| a.title.cmp(&b.title));
+            // Sort children at this level by display_order
+            level_children.sort_by(|a, b| a.display_order.cmp(&b.display_order));
             level_children
         }
 
@@ -555,5 +558,49 @@ impl CustomPage {
         let root_items = build_tree_level(None, &items_by_id, &viewable_page_ids, is_admin);
 
         Ok(root_items)
+    }
+
+    pub async fn update_display_order(
+        pool: &sqlx::MySqlPool,
+        page_id: u32,
+        display_order: u32,
+    ) -> Result<(), sqlx::Error> {
+        sqlx::query!(
+            r#"
+            UPDATE custom_pages
+            SET display_order = ?
+            WHERE id = ?
+            "#,
+            display_order,
+            page_id
+        )
+        .execute(pool)
+        .await?;
+
+        Ok(())
+    }
+
+    // Method to reorder multiple pages at once
+    pub async fn update_multiple_display_orders(
+        pool: &sqlx::MySqlPool,
+        orders: &[(u32, u32)], // Vec of (page_id, display_order)
+    ) -> Result<(), sqlx::Error> {
+        let mut tx = pool.begin().await?;
+
+        for (page_id, display_order) in orders {
+            sqlx::query!(
+                r#"
+                UPDATE custom_pages
+                SET display_order = ?
+                WHERE id = ?
+                "#,
+                display_order,
+                page_id
+            )
+            .execute(&mut *tx)
+            .await?;
+        }
+
+        tx.commit().await
     }
 }
