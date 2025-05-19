@@ -15,6 +15,7 @@
         getGroupPages, // Added for parent group selector
         type CustomPage, // Added for type info
     } from "@api/custom-pages-api";
+    import API_BASE_URL from "@api/base-url";
     import {
         addPageField,
         deleteField,
@@ -66,6 +67,7 @@
     // State for delete confirmation
     let confirmDeleteModalRef: HTMLDialogElement; // For deleting individual pages
     let isDeletingPage = $state(false);
+    let isDuplicatingPage = $state(false); // Add state for duplication
 
     // State for delete group confirmation
     let confirmDeleteGroupModalRef: HTMLDialogElement; // For deleting groups
@@ -306,6 +308,47 @@
         }
     }
 
+    async function handleDuplicatePageClick() {
+        if (isDuplicatingPage) return;
+        isDuplicatingPage = true;
+        try {
+            const response = await fetch(`${API_BASE_URL}/custom_pages/${pageId}/duplicate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to duplicate page');
+            }
+            
+            const data = await response.json();
+            if (data.success && data.page_id) {
+                showAlert(
+                    `Página duplicada com sucesso!`,
+                    AlertType.SUCCESS,
+                    AlertPosition.TOP,
+                );
+                // Redirect to edit the new page
+                if (typeof window !== "undefined") {
+                    window.location.href = `/admin/pages/edit/${data.page_id}/`;
+                }
+            } else {
+                throw new Error(data.message || 'Failed to duplicate page');
+            }
+        } catch (e: any) {
+            showAlert(
+                `Erro ao duplicar página: ${e.message}`,
+                AlertType.ERROR,
+                AlertPosition.TOP,
+            );
+        } finally {
+            isDuplicatingPage = false;
+        }
+    }
+
     async function handleDeletePageConfirm(e: Event) {
         e.preventDefault();
         isDeletingPage = true;
@@ -365,7 +408,7 @@
             const success = await deleteCustomPage(pageId);
             if (success) {
                 showAlert(
-                    `Grupo \"${pageData.name || `#${pageId}`}\" e todo o seu conteúdo foram eliminados com sucesso!`,
+                    `Grupo "${pageData.name || `#${pageId}`}" e todo o seu conteúdo foram eliminados com sucesso!`,
                     AlertType.SUCCESS,
                     AlertPosition.TOP,
                 );
@@ -1236,7 +1279,7 @@
 
         <!-- Actions -->
         <div class="flex justify-between items-center gap-4 pt-4 border-t">
-            <div>
+            <div class="flex gap-2">
                 {#if !isGroup}
                     <button
                         type="button"
@@ -1249,6 +1292,18 @@
                             ></span> Eliminando Página...
                         {:else}
                             <i class="fa-solid fa-trash-can mr-2"></i> Eliminar Página
+                        {/if}
+                    </button>
+                    <button
+                        type="button"
+                        class="btn btn-accent"
+                        onclick={handleDuplicatePageClick}
+                        disabled={isSubmitting || isLoading || isDuplicatingPage}
+                    >
+                        {#if isDuplicatingPage}
+                            <span class="loading loading-spinner loading-sm"></span> Duplicando...
+                        {:else}
+                            <i class="fa-solid fa-copy mr-2"></i> Duplicar Página
                         {/if}
                     </button>
                 {:else if isGroup}

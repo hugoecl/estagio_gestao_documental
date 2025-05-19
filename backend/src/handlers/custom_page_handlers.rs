@@ -319,3 +319,184 @@ pub async fn get_custom_page_by_path(
     // 5. Return the data
     json_response_with_etag(&page_with_fields, &req)
 }
+
+pub async fn duplicate_custom_page(
+    state: web::Data<State>,
+    path: web::Path<u32>,
+    session: Session,
+) -> impl Responder {
+    if let Err(resp) = is_admin(&session) {
+        return resp;
+    }
+
+    let page_id = path.into_inner();
+    // Get the user_id from the session
+    let user_id = match validate_session(&session) {
+        Ok(id) => id,
+        Err(_) => return HttpResponse::Unauthorized().finish(),
+    };
+    
+    // Fetch the original page using a direct query instead of the get_by_id method
+    // to bypass permission checks that might filter it out
+    let original_page_data = match sqlx::query!(
+        r#"
+        SELECT 
+            id, name, path, parent_path, is_group, description, 
+            icon, notify_on_new_record, requires_acknowledgment
+        FROM custom_pages 
+        WHERE id = ?
+        "#,
+        page_id
+    )
+    .fetch_optional(&state.db.pool)
+    .await
+    {
+        Ok(Some(page)) => page,
+        Ok(None) => {
+            log::error!("Page with ID {} not found", page_id);
+            return HttpResponse::NotFound().json(serde_json::json!({
+                "success": false,
+                "message": "Página não encontrada"
+            }));
+        },
+        Err(e) => {
+            log::error!("Database error fetching page {}: {}", page_id, e);
+            return HttpResponse::InternalServerError().finish();
+        }
+    };
+
+    // Start transaction for field and permission operations
+    let mut tx = match state.db.pool.begin().await {
+        Ok(tx) => tx,
+        Err(e) => {
+            log::error!("Error starting transaction: {}", e);
+            return HttpResponse::InternalServerError().finish();
+        }
+    };
+
+    // Create new page request
+    let mut request = crate::models::custom_page::CreateCustomPageRequest {
+        name: format!("{} (Cópia)", original_page_data.name),
+        path: format!("{}-copy", original_page_data.path),
+        parent_path: original_page_data.parent_path,
+        is_group: original_page_data.is_group != 0, // Convert i8 to bool
+        description: original_page_data.description,
+        icon: original_page_data.icon,
+        notify_on_new_record: original_page_data.notify_on_new_record != 0, // Convert i8 to bool
+        requires_acknowledgment: original_page_data.requires_acknowledgment != 0, // Convert i8 to bool
+        fields: Vec::new(),
+        permissions: Vec::new(),
+    };
+    
+    // If not a group, get fields and permissions
+    if original_page_data.is_group == 0 { // Check if is_group is 0 (false)
+        // Get fields
+        let fields = match sqlx::query!(
+            r#"
+            SELECT 
+                id, name, display_name, field_type_id, required,
+                options, validation_name, is_searchable, is_displayed_in_table,
+                order_index, notification_enabled, notification_days_before,
+                notification_target_date_part
+            FROM page_fields 
+            WHERE page_id = ?
+            "#,
+            page_id
+        )
+        .fetch_all(&mut *tx)
+        .await
+        {
+            Ok(fields) => fields,
+            Err(e) => {
+                log::error!("Error fetching fields for page {}: {}", page_id, e);
+                return HttpResponse::InternalServerError().finish();
+            }
+        };
+        
+        // Convert fields to CreatePageFieldRequest
+        for field in fields {
+            // Parse the options from binary to JSON if present
+            let options = if let Some(opt_bytes) = field.options {
+                match serde_json::from_slice::<serde_json::Value>(&opt_bytes) {
+                    Ok(json) => Some(json),
+                    Err(e) => {
+                        log::error!("Error parsing options JSON for field {}: {}", field.id, e);
+                        None
+                    }
+                }
+            } else {
+                None
+            };
+            
+            request.fields.push(crate::models::custom_page::CreatePageFieldRequest {
+                name: field.name,
+                display_name: field.display_name,
+                field_type_id: field.field_type_id,
+                required: field.required != 0, // Convert i8 to bool
+                options, // Use the parsed JSON value
+                validation_name: field.validation_name,
+                is_searchable: field.is_searchable != 0, // Convert i8 to bool
+                is_displayed_in_table: field.is_displayed_in_table != 0, // Convert i8 to bool
+                order_index: field.order_index,
+                notification_enabled: Some(field.notification_enabled != 0), // Convert i8 to bool inside Some
+                notification_days_before: field.notification_days_before,
+                notification_target_date_part: field.notification_target_date_part,
+            });
+        }
+        
+        // Get permissions
+        let permissions = match sqlx::query!(
+            r#"
+            SELECT 
+                role_id, can_view, can_create, can_edit, can_delete,
+                can_manage_fields, can_view_acknowledgments
+            FROM page_permissions
+            WHERE page_id = ?
+            "#,
+            page_id
+        )
+        .fetch_all(&mut *tx)
+        .await
+        {
+            Ok(perms) => perms,
+            Err(e) => {
+                log::error!("Error fetching permissions for page {}: {}", page_id, e);
+                return HttpResponse::InternalServerError().finish();
+            }
+        };
+        
+        // Convert permissions to RolePermissionRequest
+        for perm in permissions {
+            request.permissions.push(crate::models::custom_page::RolePermissionRequest {
+                role_id: perm.role_id,
+                can_view: perm.can_view != 0, // Convert i8 to bool
+                can_create: perm.can_create != 0, // Convert i8 to bool
+                can_edit: perm.can_edit != 0, // Convert i8 to bool
+                can_delete: perm.can_delete != 0, // Convert i8 to bool
+                can_manage_fields: perm.can_manage_fields != 0, // Convert i8 to bool
+                can_view_acknowledgments: perm.can_view_acknowledgments != 0, // Convert i8 to bool
+            });
+        }
+    }
+    
+    // Create the new page using the model function
+    let new_page_id = match crate::models::custom_page::CustomPage::create(&state.db.pool, &request).await {
+        Ok(id) => id,
+        Err(e) => {
+            log::error!("Error creating duplicate page: {}", e);
+            return HttpResponse::InternalServerError().finish();
+        }
+    };
+
+    // Commit transaction
+    if let Err(e) = tx.commit().await {
+        log::error!("Error committing transaction: {}", e);
+        return HttpResponse::InternalServerError().finish();
+    }
+
+    HttpResponse::Ok().json(serde_json::json!({
+        "success": true,
+        "page_id": new_page_id,
+        "message": "Página duplicada com sucesso"
+    }))
+}

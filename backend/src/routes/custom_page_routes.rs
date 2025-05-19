@@ -42,6 +42,10 @@ pub fn init(cfg: &mut web::ServiceConfig) {
             .route(
                 "/{id}",
                 web::delete().to(custom_page_handlers::delete_custom_page),
+            )
+            .route(
+                "/{id}/duplicate",
+                web::post().to(custom_page_handlers::duplicate_custom_page),
             ),
     );
 }
