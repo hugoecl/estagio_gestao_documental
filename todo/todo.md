@@ -49,11 +49,11 @@
 - [ ] Lista drag and drop para o administrador ordenar páginas
 - [ ] Fix quando o grupo esta vazio para nao aparecer pagina de 404
 - [ ] Pagina para gerir paginas, aparecer primeiro so os grupo e depois clicar nos grupos para aparecer as paginas desses grupos
-- [ ] Ver alerta que não sai sozinho depois de criar um registo
-- [ ] ~Meter no fim de cada registo um texto ou algum tipo de indicação para indicar que para aceder aos ficheiros tem se que clicar la~
 - [ ] Fazer campo para dar upload de ficheiros ao criar paginas
 - [ ] Criar novo tipo de permissão para adição (ou seja pode inserir nos campoes vazios de um registo, mas nao pode editar o que ja foi preenchido)
 - [ ] Make the color of checkboxes consistent
+- [ ] Ver alerta que não sai sozinho depois de criar um registo
+- [ ] ~Meter no fim de cada registo um texto ou algum tipo de indicação para indicar que para aceder aos ficheiros tem se que clicar la~
 
 - [X] Página especial (Sempre no menu) para o inicio
 - [ ] Make inputs have the same hover effects
