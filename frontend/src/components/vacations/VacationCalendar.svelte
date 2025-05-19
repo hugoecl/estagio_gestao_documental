@@ -1231,7 +1231,14 @@
                                                 : ''}
                                         "
                                         >
-                                            {req.status}
+                                            {#if req.status === VacationRequestStatus.Approved}
+                                                Aprovado
+                                            {:else if req.status === VacationRequestStatus.Pending}
+                                                Pendente
+                                            {:else if req.status === VacationRequestStatus.Rejected}
+                                                Rejeitado
+                                            {/if}
+
                                         </span>
                                     </td>
                                     <td
