@@ -1000,7 +1000,7 @@
         class="flex flex-col sm:flex-row justify-between items-center gap-4 pb-4 border-b border-base-content/10"
     >
         <h1 class="text-2xl font-bold">Os Meus Pedidos de Férias</h1>
-        <div class="flex gap-2">
+        <div class="flex gap-2 items-center">
             {#if selectionStartDate}
                 <button
                     class="btn btn-outline btn-sm"
