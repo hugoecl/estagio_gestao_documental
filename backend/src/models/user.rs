@@ -9,6 +9,7 @@ pub struct User {
     pub id: u32,
     pub username: String,
     pub email: String,
+    pub vacation_days_current_year: Option<u16>, // Added field
 }
 
 // Structure to hold user data along with their assigned roles
@@ -30,6 +31,7 @@ pub struct UserRoleRow {
     pub role_name: Option<String>,
     pub role_description: Option<String>,
     pub role_is_admin: Option<bool>, // MySQL boolean can be tinyint
+    pub role_is_holiday_role: Option<bool>,
     pub role_created_at: Option<chrono::DateTime<chrono::Utc>>,
     pub role_updated_at: Option<chrono::DateTime<chrono::Utc>>,
 }

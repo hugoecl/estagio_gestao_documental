@@ -180,8 +180,9 @@
     // --- Lifecycle & Outside Click ---
     onMount(() => {
         fetchUnreadCount();
-        // Optional: Set interval to poll for new count?
-        // const intervalId = setInterval(fetchUnreadCount, 60000); // e.g., every minute
+        
+        // Add polling interval to check for new notifications every minute
+        const intervalId = setInterval(fetchUnreadCount, 60000); // Check every minute
 
         function handleClickOutside(event: MouseEvent) {
             if (
@@ -198,7 +199,7 @@
         document.addEventListener("click", handleClickOutside, true);
 
         return () => {
-            // clearInterval(intervalId);
+            clearInterval(intervalId); // Clean up the interval when component unmounts
             document.removeEventListener("click", handleClickOutside, true);
         };
     });

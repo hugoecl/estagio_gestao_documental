@@ -1,6 +1,6 @@
 use actix_web::web;
 
-use crate::handlers::user_handlers;
+use crate::handlers::{user_handlers, vacation_handlers}; // Import vacation_handlers
 
 pub fn init(cfg: &mut web::ServiceConfig) {
     cfg.service(
@@ -34,6 +34,15 @@ pub fn init(cfg: &mut web::ServiceConfig) {
             .route(
                 "/admin/{user_id}/password",
                 web::put().to(user_handlers::admin_set_user_password),
+            )
+            .route(
+                "/admin/{user_id}",
+                web::delete().to(user_handlers::admin_delete_user),
+            )
+            // Route for fetching user's own remaining vacation days
+            .route(
+                "/me/vacation-days",
+                web::get().to(vacation_handlers::get_my_remaining_vacation_days),
             ),
     );
 }

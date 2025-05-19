@@ -99,7 +99,7 @@ export async function updateUserDetails(
 
 export async function adminUpdateUserDetails(
   userId: number,
-  payload: AdminUpdateUserPayload,
+  payload: AdminUpdateUserPayload, // payload can include username, email, and vacation_days_current_year
 ): Promise<{ success: boolean; message: string }> {
   const response = await handleFetch(
     `${API_BASE_URL}/users/admin/${userId}/details`,
@@ -141,5 +141,20 @@ export async function changePassword(
     body: JSON.stringify(payload),
   });
   const responseText = await response.text(); // Get text for success or error message
+  return { success: response.ok, message: responseText };
+}
+
+// Function to delete a user (admin only)
+export async function deleteUser(
+  userId: number,
+): Promise<{ success: boolean; message: string }> {
+  const response = await handleFetch(
+    `${API_BASE_URL}/users/admin/${userId}`,
+    {
+      method: "DELETE",
+      credentials: "include", // Admin actions require authenticated admin session
+    },
+  );
+  const responseText = await response.text();
   return { success: response.ok, message: responseText };
 }

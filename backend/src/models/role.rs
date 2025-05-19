@@ -8,6 +8,7 @@ pub struct Role {
     pub name: String,
     pub description: Option<String>,
     pub is_admin: bool,
+    pub is_holiday_role: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -17,6 +18,7 @@ pub struct CreateRoleRequest {
     pub name: String,
     pub description: Option<String>,
     pub is_admin: bool,
+    pub is_holiday_role: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -24,6 +26,7 @@ pub struct UpdateRoleRequest {
     pub name: String,
     pub description: Option<String>,
     pub is_admin: bool,
+    pub is_holiday_role: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -39,12 +42,13 @@ impl Role {
     ) -> Result<u32, sqlx::Error> {
         let result = sqlx::query!(
             r#"
-            INSERT INTO roles (name, description, is_admin)
-            VALUES (?, ?, ?)
+            INSERT INTO roles (name, description, is_admin, is_holiday_role)
+            VALUES (?, ?, ?, ?)
             "#,
             request.name,
             request.description,
-            request.is_admin
+            request.is_admin,
+            request.is_holiday_role
         )
         .execute(pool)
         .await?;
@@ -56,7 +60,7 @@ impl Role {
         sqlx::query_as!(
             Role,
             r#"
-            SELECT id, name, description, is_admin as "is_admin: bool", created_at as "created_at!", updated_at as "updated_at!"
+            SELECT id, name, description, is_admin as "is_admin: bool", is_holiday_role as "is_holiday_role: bool", created_at as "created_at!", updated_at as "updated_at!"
             FROM roles
             ORDER BY name
             "#
@@ -69,7 +73,7 @@ impl Role {
         sqlx::query_as!(
             Role,
             r#"
-            SELECT id, name, description, is_admin as "is_admin: bool", created_at as "created_at!", updated_at as "updated_at!"
+            SELECT id, name, description, is_admin as "is_admin: bool", is_holiday_role as "is_holiday_role: bool", created_at as "created_at!", updated_at as "updated_at!"
             FROM roles
             WHERE id = ?
             "#,
@@ -87,12 +91,13 @@ impl Role {
         sqlx::query!(
             r#"
             UPDATE roles
-            SET name = ?, description = ?, is_admin = ?
+            SET name = ?, description = ?, is_admin = ?, is_holiday_role = ?
             WHERE id = ?
             "#,
             request.name,
             request.description,
             request.is_admin,
+            request.is_holiday_role,
             role_id
         )
         .execute(pool)
@@ -116,7 +121,7 @@ impl Role {
         sqlx::query_as!(
             Role,
             r#"
-            SELECT r.id, r.name, r.description, r.is_admin as "is_admin: bool", r.created_at as "created_at!", r.updated_at as "updated_at!"
+            SELECT r.id, r.name, r.description, r.is_admin as "is_admin: bool", r.is_holiday_role as "is_holiday_role: bool", r.created_at as "created_at!", r.updated_at as "updated_at!"
             FROM roles r
             JOIN user_roles ur ON r.id = ur.role_id
             WHERE ur.user_id = ?
@@ -214,4 +219,68 @@ impl Role {
         .await?;
         Ok(user_ids)
     }
-}
+
+    // Add this function inside the impl Role block in src/models/role.rs
+    pub async fn get_holiday_roles(pool: &sqlx::MySqlPool) -> Result<Vec<Role>, sqlx::Error> {
+        sqlx::query_as!(
+                Role,
+                r#"
+                SELECT id, name, description, is_admin as "is_admin: bool", is_holiday_role as "is_holiday_role: bool", created_at as "created_at!", updated_at as "updated_at!"
+                FROM roles
+                WHERE is_holiday_role = true
+                ORDER BY name
+                "#
+            )
+            .fetch_all(pool)
+            .await
+        }
+
+        pub async fn get_colleague_user_ids_in_shared_holiday_roles(
+            pool: &sqlx::MySqlPool,
+            user_id: u32,
+        ) -> Result<Vec<u32>, sqlx::Error> {
+            // Step 1: Find the holiday role IDs for the given user
+            let user_holiday_role_ids = sqlx::query_scalar!(
+                r#"
+                SELECT r.id
+                FROM roles r
+                JOIN user_roles ur ON r.id = ur.role_id
+                WHERE ur.user_id = ? AND r.is_holiday_role = true
+                "#,
+                user_id
+            )
+            .fetch_all(pool)
+            .await?;
+
+            if user_holiday_role_ids.is_empty() {
+                return Ok(Vec::new()); // User is not in any holiday roles
+            }
+
+            // Step 2: Find all other users who are in any of these holiday roles
+            // We need to construct the IN clause for role_ids dynamically.
+            let role_id_placeholders = user_holiday_role_ids
+                .iter()
+                .map(|_| "?")
+                .collect::<Vec<_>>()
+                .join(",");
+        
+            let query_str = format!(
+                r#"
+                SELECT DISTINCT ur.user_id
+                FROM user_roles ur
+                WHERE ur.role_id IN ({}) AND ur.user_id != ?
+                "#,
+                role_id_placeholders
+            );
+
+            let mut query_builder = sqlx::query_scalar(&query_str);
+            for role_id in user_holiday_role_ids {
+                query_builder = query_builder.bind(role_id);
+            }
+            query_builder = query_builder.bind(user_id); // For the ur.user_id != ?
+
+            let colleague_ids = query_builder.fetch_all(pool).await?;
+        
+            Ok(colleague_ids)
+        }
+    }

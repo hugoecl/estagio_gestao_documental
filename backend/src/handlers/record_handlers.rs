@@ -182,6 +182,7 @@ pub async fn create_record(
                                             &pool_clone,
                                             notified_user_id,
                                             Some(new_record_id),
+                                            None,               // No vacation_request_id
                                             Some(page_id),
                                             None, // No specific field for a general "new record" notification
                                             NOTIFICATION_TYPE_NEW_RECORD,

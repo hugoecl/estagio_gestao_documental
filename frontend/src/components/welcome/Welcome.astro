@@ -2,8 +2,7 @@
 import AdminLinks from "@components/welcome/AdminLinks.svelte"; // Import new component
 import FrequentPages from "@components/welcome/FrequentPages.svelte";
 import { pathNames } from "@utils/route-utils";
-
-const isAdmin = Astro.locals.isAdmin;
+import AdminSection from "@components/welcome/AdminSection.svelte";
 ---
 
 <div class="container mx-auto p-4">
@@ -13,7 +12,7 @@ const isAdmin = Astro.locals.isAdmin;
 
     <div class="grid md:grid-cols-2 gap-4">
         <FrequentPages client:load menuPageNamesProps={pathNames} />
-        {isAdmin && <AdminLinks client:load />}
+        <AdminSection client:load />
     </div>
 </div>
 <!-- Conditionally render AdminLinks card -->

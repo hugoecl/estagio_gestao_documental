@@ -33,6 +33,7 @@
         name: "",
         description: null,
         is_admin: false,
+        is_holiday_role: false, // New field
     });
     let originalDataJson = $state(""); // For checking changes
     let isSubmitting = $state(false);
@@ -55,10 +56,16 @@
                 name: currentRole.name,
                 description: currentRole.description,
                 is_admin: currentRole.is_admin,
+                is_holiday_role: currentRole.is_holiday_role || false, // Initialize
             });
             originalDataJson = JSON.stringify(formData);
         } else {
-            formData = { name: "", description: null, is_admin: false };
+            formData = {
+                name: "",
+                description: null,
+                is_admin: false,
+                is_holiday_role: false,
+            }; // Initialize
             originalDataJson = JSON.stringify(formData);
         }
         errors = {};
@@ -276,6 +283,27 @@
                 {#if errors.is_admin}<span class="text-error text-xs mt-1"
                         >{errors.is_admin}</span
                     >{/if}
+            </div>
+
+            <div class="form-control mt-3">
+                <label class="label cursor-pointer justify-start gap-2">
+                    <input
+                        type="checkbox"
+                        class="toggle toggle-accent"
+                        bind:checked={formData.is_holiday_role}
+                        disabled={isSubmitting}
+                    />
+                    <span class="label-text font-medium"
+                        >É Função de Férias?</span
+                    >
+                </label>
+                <div class="label">
+                    <span class="label-text-alt"
+                        >Marque se esta função deve ser considerada para
+                        agendamento e visualização de férias partilhadas.</span
+                    >
+                </div>
+                <!-- Add error handling for is_holiday_role if needed -->
             </div>
 
             <div

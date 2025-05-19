@@ -80,11 +80,20 @@
         }
     }
 
-    function handleUserDetailsUpdated(userId: number, newUsername: string, newEmail: string) {
+    function handleUserDetailsUpdated(
+        userId: number,
+        newUsername: string,
+        newEmail: string,
+        newVacationDays: number | null,
+    ) {
         const userIdStr = userId.toString();
         if (users[userIdStr]) {
             users[userIdStr].username = newUsername;
             users[userIdStr].email = newEmail;
+            // Ensure vacation_days_current_year is set, even if null (backend might treat null as "not set" vs 0)
+            // Or, if it should default to 0 if null, adjust accordingly. For now, allow null.
+            users[userIdStr].vacation_days_current_year =
+                newVacationDays === null ? undefined : newVacationDays;
             users = { ...users }; // Trigger reactivity
         }
     }

@@ -10,7 +10,8 @@ use crate::{
     utils::json_utils::json_response,
 };
 
-const NOTIFICATION_TYPE_ADMIN_BROADCAST: &str = "ADMIN_BROADCAST";
+// Use the notification constant from the Notification module
+use crate::models::notification::NOTIFICATION_TYPE_ADMIN_BROADCAST;
 
 // Handler to get the list of unread notifications for the current user
 pub async fn get_unread_notifications(state: web::Data<State>, session: Session) -> impl Responder {
@@ -90,6 +91,7 @@ pub async fn broadcast_notification_to_roles(
             &state.db.pool,
             user_id,
             None, // No specific record_id for a general broadcast
+            None, // No vacation_request_id
             None, // No specific page_id
             None, // No specific field_id
             NOTIFICATION_TYPE_ADMIN_BROADCAST,
@@ -163,7 +165,7 @@ pub async fn mark_notifications_read(
     }
 
     match Notification::mark_as_read(&state.db.pool, user_id, &body.ids).await {
-        Ok(rows_affected) => HttpResponse::Ok().finish(),
+        Ok(_rows_affected) => HttpResponse::Ok().finish(),
         Err(e) => {
             log::error!(
                 "Error marking notifications as read for user {}: {}",
@@ -186,7 +188,7 @@ pub async fn mark_all_notifications_read(
     };
 
     match Notification::mark_all_as_read(&state.db.pool, user_id).await {
-        Ok(rows_affected) => HttpResponse::Ok().finish(),
+        Ok(_rows_affected) => HttpResponse::Ok().finish(),
         Err(e) => {
             log::error!(
                 "Error marking all notifications as read for user {}: {}",

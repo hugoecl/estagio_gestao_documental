@@ -25,25 +25,41 @@
 - [X] Corrigir bug quando se abre um datepicker o modal muda de posição
 - [X] Meter alert de notificações bem destacado no centro da tela
 
+- [X] Fazer com que o admin consiga apagar utilizadores
+- [X] Fix texto em criar função, agora ao criar/editar uma função o texto é renderizado corretamente
+- [ ] Duplicar página
+- [ ] Drag and drop ordem campos
+- [ ] Fix bug ao editar página ele volta por defeito raiz /
 - [ ] Lista drag and drop para o administrador ordenar páginas
+- [ ] Fix quando o grupo esta vazio para nao aparecer pagina de 404
+- [ ] Pagina para gerir paginas, aparecer primeiro so os grupo e depois clicar nos grupos para aparecer as paginas desses grupos
+- [ ] Ver alerta que não sai sozinho depois de criar um registo
+- [ ] ~Meter no fim de cada registo um texto ou algum tipo de indicação para indicar que para aceder aos ficheiros tem se que clicar la~
+- [ ] Fazer campo para dar upload de ficheiros ao criar paginas
+- [ ] Criar novo tipo de permissão para adição (ou seja pode inserir nos campoes vazios de um registo, mas nao pode editar o que ja foi preenchido)
+- [ ] Make the color of checkboxes consistent
 
-- [ ] Adicionar sistema de maração de férias administrador ao criar utilizador define dias por ano que o trabalhador ainda pode gozar.
-  - [ ] Página especial (Sempre no menu) para férias
-  - [ ] Na página de marcação de férias vai ter um unico anual calendar (em que da para alterar o ano) em que utilizadores podem ver, mas não selecionar dias em que outras pessoas do mesmo cargo já tenham selecionado. Ou seja um trabalhador só pode ver ferias de pessoas com o mesmo cargo.
-  - [ ] Adicionar um campo nos cargos que é "é cargo de férias?", pessoas com cargos que tem este campo só podem ver/influenciar outra pessoas com o mesmo cargo
-  - [ ] Dias selecionados tem 3 tipos: Hover (ou seja não guardado), Solicitado (ou seja guardado mas não confirmado) e concedido (ou seja ferias que o administrador já verificou e aprovou)
-  - [ ] Administrador tem que ter uma página para a a gestão de férias, em que tem uma tabela inicial com todos os cargos de férias. Depois de clicar um cargo de férias, tem todos as solicitações de férias ordenadas por data.
-  - [ ] Administrador pode recusar e dar um motivo em especifico por ter recusado ou não.
-  - [ ] Notificar administrador quando há novas solicitações de férias
-  - [ ] Notificar colegas do mesmo cargo de férias quando há novas férias aprovadas
+- [X] Adicionar sistema de maração de férias administrador ao criar utilizador define dias por ano que o trabalhador ainda pode gozar.
+  - [ ] Calendar Performance
+  - [ ] Integração com feriados
+  - [X] Página especial (Sempre no menu) para férias
+  - [X] Na página de marcação de férias vai ter um unico anual calendar (em que da para alterar o ano) em que utilizadores podem ver, mas não selecionar dias em que outras pessoas do mesmo cargo já tenham selecionado. Ou seja um trabalhador só pode ver ferias de pessoas com o mesmo cargo.
+  - [X] Adicionar um campo nos cargos que é "é cargo de férias?", pessoas com cargos que tem este campo só podem ver/influenciar outra pessoas com o mesmo cargo
+  - [X] Dias selecionados tem 3 tipos: Hover (ou seja não guardado), Solicitado (ou seja guardado mas não confirmado) e concedido (ou seja ferias que o administrador já verificou e aprovou)
+  - [X] Administrador tem que ter uma página para a a gestão de férias, em que tem uma tabela inicial com todos os cargos de férias. Depois de clicar um cargo de férias, tem todos as solicitações de férias ordenadas por data.
+  - [X] Administrador pode recusar e dar um motivo em especifico por ter recusado ou não.
+  - [X] Notificar administrador quando há novas solicitações de férias
+  - [X] Notificar colegas do mesmo cargo de férias quando há novas férias solicitadas
 
-- [ ] Página especial (Sempre no menu) para o inicio
+- [X] Página especial (Sempre no menu) para o inicio
 - [ ] Make inputs have the same hover effects
 - [ ] Administrador ao criar utilizador submete num date picker quando é que o trabalhador nasceu.
 - [ ] Ver coisas giras para se meter na pagina inicial (editor de markdown para o admin, aniversários)
 - [ ] Fazer com que ao editar uma pagina novos campos tenham um nome interno decente
 
 - [ ] Logotipo para notificações
+- [ ] Traduzir caminhos de paginas
+- [ ] Performance
 
 - [ ] Ver possivel bug quando o admin enviar uma mensagem/notifica utilizadores que o alert nao sai automaticamente
 

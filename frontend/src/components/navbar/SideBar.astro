@@ -2,6 +2,7 @@
 import { Image } from "astro:assets";
 import jccBigLogo from "@assets/jcc_big.svg";
 import RecursiveMenu from "@components/navbar/RecursiveMenu.astro";
+import StaticMenu from "@components/navbar/StaticMenu.astro";
 import { getNavigationMenu } from "@api/custom-pages-api";
 import type { NavigationItem } from "@lib/types/custom-page";
 import { updatePathNames } from "@utils/route-utils"; // Import the update function
@@ -30,6 +31,9 @@ try {
       <h1 class="sidebar__title font-bold">Gestão Documental</h1>
     </a>
     <nav>
+      {/* Static menu items */}
+      <StaticMenu />
+
       {/* Conditional Rendering using JSX-like syntax */}
       {error && (
         <div class="p-4 text-error">{error}</div>
@@ -42,7 +46,12 @@ try {
       {!error && menuItems.length === 0 && (
         <div class="p-4 text-base-content/70">Nenhum item de menu disponível.</div>
         <ul class="menu bg-base-100 border border-zinc-200 rounded-box w-56">
-            <li><a href="/">Início</a></li>
+            <li>
+                <a href="/">
+                    <i class="fa-solid fa-indent"></i>
+                    Início
+                </a>
+            </li>
         </ul>
       )}
     </nav>
