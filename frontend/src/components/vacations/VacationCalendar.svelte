@@ -54,6 +54,8 @@
     }
 
     let currentYear = $state(new Date().getFullYear());
+    let previousYear = $state(currentYear); // Track previous year to detect changes
+    let realCurrentYear = $derived(new Date().getFullYear()); // Track actual current year
     let baseCalendarStructure = $state<CalendarMonth[]>([]);
     let displayedCalendarData = $state<CalendarMonth[]>([]);
 
@@ -110,10 +112,19 @@
         let roundingClasses = "rounded"; // Default to fully rounded
         let hoverClasses = "hover:bg-base-300"; // Default hover
 
+        // Check if this day is in the current year (to disable selection)
+        const isCurrentYear = currentYear === realCurrentYear;
+        
         if (!day.isCurrentMonth) {
             return `${base} opacity-40 cursor-not-allowed rounded`;
         }
 
+        // If not in current year, make all days non-interactive
+        if (!isCurrentYear) {
+            styleClasses += " opacity-70 cursor-not-allowed";
+            hoverClasses = "";
+        }
+        
         styleClasses += " font-semibold";
 
         const isPreviewing =
@@ -517,26 +528,33 @@
         isLoadingRequests = true;
         isLoadingShared = true; // Set loading for shared data
         error = null;
+        
         try {
-            // Fetch all three data points in parallel
-            const [daysData, requestsData, sharedColleagueData] =
-                await Promise.all([
-                    getMyRemainingVacationDays(),
-                    getMyVacationRequests(),
-                    getSharedCalendarVacations(year), // Fetch colleague data
-                ]);
+            // Always fetch data for the specific year requested
+            const [daysData, requestsData, sharedColleagueData] = await Promise.all([
+                getMyRemainingVacationDays(year),
+                getMyVacationRequests(year),
+                getSharedCalendarVacations(year)
+            ]);
 
+            // Process data for the specific year
             if (daysData) {
                 remainingDaysInfo = daysData;
             } else {
-                showAlert(
-                    "Não foi possível carregar os seus dias de férias.",
-                    AlertType.WARNING,
-                    AlertPosition.TOP,
-                );
+                // If no data returned for this year, show zeros
+                remainingDaysInfo = {
+                    total_allocated_days: 0,
+                    approved_days_taken: 0,
+                    pending_days_requested: 0,
+                    remaining_days: 0
+                };
             }
-            myRequests = processVacationRequestsForDisplay(requestsData || []);
-            colleagueVacations = sharedColleagueData || []; // Store colleague data
+
+            // Process vacation requests for the specific year
+            myRequests = processVacationRequestsForDisplay(requestsData || [], year);
+            colleagueVacations = sharedColleagueData || [];
+
+            // Handle year-specific UI logic in the template
         } catch (e: any) {
             console.error("Error fetching vacation data for year:", year, e);
             error = `Erro ao carregar dados: ${e.message}`;
@@ -549,30 +567,27 @@
     }
 
     onMount(async () => {
+        // Load data for initial year (current year)
         await fetchAllCalendarData(currentYear);
-        try {
-            const [daysData, requestsData] = await Promise.all([
-                getMyRemainingVacationDays(),
-                getMyVacationRequests(),
-            ]);
+    });
 
-            if (daysData) {
-                remainingDaysInfo = daysData;
-            } else {
-                showAlert(
-                    "Não foi possível carregar os seus dias de férias.",
-                    AlertType.WARNING,
-                    AlertPosition.TOP,
-                );
+    // Add effect to reload data when year changes
+    $effect(() => {
+        const year = currentYear;
+        
+        // Don't have any other effects in here - this should ONLY be triggered
+        // when the user explicitly changes the year via the UI controls
+        if (year !== previousYear) {
+            // Only reload data when the year changes
+            fetchAllCalendarData(year);
+            
+            // Clear any date selection when changing years
+            if (selectionStartDate || selectionEndDate) {
+                clearSelection();
             }
-            myRequests = processVacationRequestsForDisplay(requestsData || []);
-        } catch (e: any) {
-            console.error("Error fetching vacation data:", e);
-            error = `Erro ao carregar dados: ${e.message}`;
-            showAlert(error, AlertType.ERROR, AlertPosition.TOP);
-        } finally {
-            isLoadingDays = false;
-            isLoadingRequests = false;
+            
+            // Update previous year
+            previousYear = year;
         }
     });
 
@@ -585,21 +600,27 @@
         const _selectionEndDate = selectionEndDate;
         const _hoveredDate = hoveredDate;
 
-        // Log to see if effect is running and with what data
-        // console.log('Effect triggered:', { year, numMyRequests: _myRequests.length, numColleagueVacations: _colleagueVacations.length, start: _selectionStartDate, end: _selectionEndDate, hover: _hoveredDate });
+        console.log('Calendar update effect:', { 
+            year, 
+            hasRequests: _myRequests.length > 0, 
+            hasColleagueData: _colleagueVacations.length > 0, 
+            start: _selectionStartDate, 
+            end: _selectionEndDate, 
+            hover: _hoveredDate 
+        });
 
         let currentBase = baseCalendarStructure;
         if (
             !currentBase.length ||
             (currentBase[0] && currentBase[0].year !== year)
         ) {
-            // console.log('Generating new base structure for year:', year);
+            console.log('Generating new base structure for year:', year);
             currentBase = generateBaseCalendarStructure(year);
             baseCalendarStructure = currentBase;
         }
 
         if (currentBase.length > 0) {
-            // console.log('Applying visuals...');
+            console.log('Applying visuals to calendar with selection:', _selectionStartDate, _selectionEndDate);
             displayedCalendarData = applyVisualsToCalendar(
                 currentBase,
                 _myRequests,
@@ -621,7 +642,19 @@
 
     function handleDayClick(day: CalendarDay) {
         if (!day.isCurrentMonth) return;
+        
+        // Prevent selecting dates if not in the current year
+        if (currentYear !== realCurrentYear) {
+            showAlert(
+                `Não é possível selecionar datas fora do ano atual (${realCurrentYear}).`,
+                AlertType.INFO,
+                AlertPosition.TOP
+            );
+            return;
+        }
+        
         const clickedDate: Date = day.date;
+        console.log("Day clicked:", clickedDate);
 
         if (day.status && day.status === "colleague_approved") {
             showAlert(
@@ -649,6 +682,7 @@
         }
 
         if (!selectionStartDate) {
+            console.log("Setting selection start date:", clickedDate);
             selectionStartDate = clickedDate;
             selectionEndDate = null;
             selectedDaysCount = 1;
@@ -657,30 +691,46 @@
             // Start is selected, now selecting end
             if (clickedDate.getTime() === selectionStartDate.getTime()) {
                 // Clicking the start date again when only start is selected means make it a single-day selection
+                console.log("Same day clicked, setting as both start and end date");
                 selectionEndDate = clickedDate;
                 selectedDaysCount = 1;
             } else if (clickedDate < selectionStartDate) {
+                console.log("Earlier date clicked, swapping start/end dates");
                 selectionEndDate = selectionStartDate;
                 selectionStartDate = clickedDate;
                 selectedDaysCount = Math.round((selectionEndDate.getTime() - selectionStartDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
             } else {
+                console.log("Later date clicked, setting end date");
                 selectionEndDate = clickedDate;
                 selectedDaysCount = Math.round((selectionEndDate.getTime() - selectionStartDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
             }
             updateProjectedRemainingDays();
         } else {
             // Both start and end are already selected, this is a new selection
+            console.log("Both dates were already set, starting new selection");
             selectionStartDate = clickedDate;
             selectionEndDate = null;
             selectedDaysCount = 1;
             updateProjectedRemainingDays();
         }
+        
+        console.log("After click handling - Start:", selectionStartDate, "End:", selectionEndDate, "Count:", selectedDaysCount);
     }
 
     function updateProjectedRemainingDays() {
+        // Only calculate projection for current year
+        if (currentYear !== realCurrentYear) {
+            projectedRemainingDays = null;
+            return;
+        }
+        
         if (remainingDaysInfo && selectedDaysCount > 0) {
             // Calculate remaining days directly from total, not from already calculated remaining_days
-            projectedRemainingDays = Math.max(0, remainingDaysInfo.total_allocated_days - remainingDaysInfo.approved_days_taken - remainingDaysInfo.pending_days_requested - selectedDaysCount);
+            projectedRemainingDays = Math.max(0, 
+                (remainingDaysInfo.total_allocated_days || 0) - 
+                (remainingDaysInfo.approved_days_taken || 0) - 
+                (remainingDaysInfo.pending_days_requested || 0) - 
+                selectedDaysCount);
         } else {
             projectedRemainingDays = null;
         }
@@ -696,7 +746,19 @@
 
     function processVacationRequestsForDisplay(
         requests: VacationRequest[],
+        year?: number
     ): VacationRequestDisplay[] {
+        // If a specific year is provided, filter requests for that year
+        if (year !== undefined) {
+            const yearStart = new Date(Date.UTC(year, 0, 1)); // Jan 1 of the year
+            const yearEnd = new Date(Date.UTC(year, 11, 31)); // Dec 31 of the year
+            
+            requests = requests.filter(req => {
+                const startDate = new Date(req.start_date + "T00:00:00Z");
+                return startDate >= yearStart && startDate <= yearEnd;
+            });
+        }
+
         return requests.map((req) => {
             let statusEnum: VacationRequestStatus;
             switch (
@@ -761,6 +823,16 @@
 
     // --- New Request Modal ---\
     function openRequestModal() {
+        // Only allow requests for the current year
+        if (currentYear !== realCurrentYear) {
+            showAlert(
+                `Os pedidos de férias só podem ser feitos para o ano atual (${realCurrentYear}).`,
+                AlertType.INFO,
+                AlertPosition.TOP
+            );
+            return;
+        }
+
         if (selectionStartDate && selectionEndDate) {
             const yyyyMMDD = (date: Date) => date.toISOString().split("T")[0];
             newRequestStartDate = yyyyMMDD(selectionStartDate);
@@ -828,7 +900,7 @@
                     AlertPosition.TOP,
                 );
                 
-                // Refresh data
+                // Refresh data with current year since we're modifying current year data
                 await fetchAllCalendarData(currentYear);
             } else {
                 showAlert(
@@ -900,16 +972,8 @@
                 requestModalRef?.close();
                 clearSelection();
 
-                isLoadingRequests = true;
-                isLoadingDays = true;
-                const [daysData, requestsData] = await Promise.all([
-                    getMyRemainingVacationDays(),
-                    getMyVacationRequests(),
-                ]);
-                if (daysData) remainingDaysInfo = daysData;
-                myRequests = processVacationRequestsForDisplay(
-                    requestsData || [],
-                );
+                // Refresh data for the current year (not necessarily the displayed year)
+                await fetchAllCalendarData(currentYear);
             } else {
                 showAlert(
                     result.message || "Falha ao submeter pedido de férias.",
@@ -949,7 +1013,7 @@
             <button
                 class="btn btn-primary"
                 onclick={openRequestModal}
-                disabled={!selectionStartDate || !selectionEndDate}
+                disabled={!selectionStartDate || !selectionEndDate || currentYear !== new Date().getFullYear()}
             >
                 <i class="fa-solid fa-calendar-plus mr-2"></i>
                 Pedir Férias
@@ -971,60 +1035,70 @@
                 <div class="flex justify-center py-3">
                     <span class="loading loading-dots loading-md"></span>
                 </div>
-            {:else if remainingDaysInfo}
-                <div class="flex w-full justify-between gap-2 text-sm mt-2" role="list">
+            {:else}
+                <!-- Display year-specific message -->
+                {#if currentYear > realCurrentYear}
+                    <div class="alert alert-info mt-2">
+                        <i class="fa-solid fa-circle-info"></i>
+                        <span>Os dias de férias para {currentYear} ainda não foram atribuídos. Serão disponibilizados automaticamente quando o ano começar.</span>
+                    </div>
+                {:else if currentYear < new Date().getFullYear()}
+                    <div class="alert alert-info mt-2">
+                        <i class="fa-solid fa-circle-info"></i>
+                        <span>A ver dados históricos de {currentYear}. {remainingDaysInfo?.total_allocated_days === 0 ? 'Não existem registos para este ano.' : ''} Os pedidos de férias só podem ser feitos para o ano atual ({realCurrentYear}).</span>
+                    </div>
+                {/if}
+                
+                <!-- Always show the summary data -->
+                <div class="flex w-full justify-between gap-2 text-sm mt-2 {currentYear !== new Date().getFullYear() ? 'opacity-70' : ''}" role="list">
                     <div class="text-center p-2 bg-base-100 rounded w-full">
                         <div class="font-semibold relative group cursor-help">
                             Total Dias Férias
                             <div class="absolute z-10 hidden group-hover:block bg-base-300 p-2 rounded shadow-lg text-xs w-64 text-left mt-1">
-                                <p>Número total de dias de férias atribuídos a si para o ano corrente. Este valor é definido pelo administrador.</p>
+                                <p>Número total de dias de férias atribuídos a si para {currentYear}.</p>
                             </div>
                         </div>
                         <div class="text-lg">
-                            {remainingDaysInfo.total_allocated_days}
+                            {remainingDaysInfo?.total_allocated_days || 0}
                         </div>
                     </div>
                     <div class="text-center p-2 bg-base-100 rounded w-full">
                         <div class="font-semibold relative group cursor-help">
                             Aprovados
                             <div class="absolute z-10 hidden group-hover:block bg-base-300 p-2 rounded shadow-lg text-xs w-64 text-left mt-1">
-                                <p>Dias de férias que já foram aprovados para o ano corrente. Estes dias já estão confirmados e não podem ser cancelados.</p>
+                                <p>Dias de férias que foram aprovados para {currentYear}.</p>
                             </div>
                         </div>
                         <div class="text-lg text-success">
-                            {remainingDaysInfo.approved_days_taken}
+                            {remainingDaysInfo?.approved_days_taken || 0}
                         </div>
                     </div>
                     <div class="text-center p-2 bg-base-100 rounded w-full">
                         <div class="font-semibold relative group cursor-help">
                             Pendentes
                             <div class="absolute z-10 hidden group-hover:block bg-base-300 p-2 rounded shadow-lg text-xs w-64 text-left mt-1">
-                                <p>Dias de férias que foram solicitados mas ainda aguardam aprovação. Estes dias são descontados dos dias disponíveis mas podem ser cancelados.</p>
+                                <p>Dias de férias que foram solicitados mas ainda aguardam aprovação para {currentYear}.</p>
                             </div>
                         </div>
                         <div class="text-lg text-warning">
-                            {remainingDaysInfo.pending_days_requested}
+                            {remainingDaysInfo?.pending_days_requested || 0}
                         </div>
                     </div>
                     <div class="text-center p-2 bg-base-100 rounded w-full">
                         <div class="font-semibold relative group cursor-help">
                             Dias Disponíveis
                             <div class="absolute z-10 hidden group-hover:block bg-base-300 p-2 rounded shadow-lg text-xs w-64 text-left mt-1">
-                                <p class="mb-1">Cálculo de dias disponíveis:</p>
-                                <p>Total ({remainingDaysInfo.total_allocated_days}) - Aprovados ({remainingDaysInfo.approved_days_taken}) - Pendentes ({remainingDaysInfo.pending_days_requested}){selectedDaysCount > 0 ? ` - Selecionados (${selectedDaysCount})` : ''} = <strong>{projectedRemainingDays !== null && selectedDaysCount > 0 ? projectedRemainingDays : remainingDaysInfo.remaining_days}</strong></p>
+                                <p class="mb-1">Cálculo de dias disponíveis para {currentYear}:</p>
+                                <p>Total ({remainingDaysInfo?.total_allocated_days || 0}) - Aprovados ({remainingDaysInfo?.approved_days_taken || 0}) - Pendentes ({remainingDaysInfo?.pending_days_requested || 0}){selectedDaysCount > 0 && currentYear === realCurrentYear ? ` - Selecionados (${selectedDaysCount})` : ''} = <strong>{projectedRemainingDays !== null && selectedDaysCount > 0 && currentYear === realCurrentYear ? projectedRemainingDays : (remainingDaysInfo?.remaining_days || 0)}</strong></p>
                             </div>
                         </div>
                         <div class="text-lg font-bold text-primary">
-                            {projectedRemainingDays !== null && selectedDaysCount > 0 ? 
+                            {projectedRemainingDays !== null && selectedDaysCount > 0 && currentYear === realCurrentYear ? 
                               `${projectedRemainingDays} (após seleção)` : 
-                              remainingDaysInfo.remaining_days}
+                              (remainingDaysInfo?.remaining_days || 0)}
                         </div>
                     </div>
                 </div>
-            {:else}
-                <p class="text-center text-base-content/70">
-                    Não foi possível carregar o resumo de dias.
-                </p>
             {/if}
         </div>
     </div>
@@ -1047,7 +1121,7 @@
                     </button>
                     <button
                         class="btn btn-sm btn-ghost"
-                        onclick={() => (currentYear = new Date().getFullYear())}
+                        onclick={() => (currentYear = realCurrentYear)}
                         title="Ano Atual"
                         aria-label="Ano Atual"
                     >
@@ -1184,15 +1258,27 @@
 
     <div class="card bg-base-100 shadow">
         <div class="card-body">
-            <h2 class="card-title text-base">Meus Pedidos Registados</h2>
+            <h2 class="card-title text-base">
+                {currentYear < new Date().getFullYear() ? 'Histórico de' : ''} Meus Pedidos Registados {currentYear !== new Date().getFullYear() ? `(${currentYear})` : ''}
+            </h2>
             {#if isLoadingRequests}
                 <div class="flex justify-center py-5">
                     <span class="loading loading-spinner loading-lg"></span>
                 </div>
             {:else if myRequests.length === 0}
-                <p class="text-center text-base-content/70 py-5">
-                    Ainda não tem pedidos de férias registados.
-                </p>
+                {#if currentYear > realCurrentYear}
+                    <p class="text-center text-base-content/70 py-5">
+                        Sem registos disponíveis para {currentYear}. Os pedidos de férias para anos futuros ainda não estão disponíveis.
+                    </p>
+                {:else if currentYear < new Date().getFullYear()}
+                    <p class="text-center text-base-content/70 py-5">
+                        Sem registos históricos de férias para {currentYear}.
+                    </p>
+                {:else}
+                    <p class="text-center text-base-content/70 py-5">
+                        Ainda não tem pedidos de férias registados para {currentYear}.
+                    </p>
+                {/if}
             {:else}
                 <div class="overflow-x-auto">
                     <table class="table table-sm w-full">
@@ -1208,7 +1294,7 @@
                                 <th>Ações</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody class={currentYear !== new Date().getFullYear() ? 'opacity-70' : ''}>
                             {#each myRequests as req (req.id)}
                                 <tr>
                                     <td>{req.startDateDisplay}</td>
@@ -1249,7 +1335,7 @@
                                     <td>{req.requestedAtDisplay}</td>
                                     <td>{req.actionedAtDisplay || "-"}</td>
                                     <td>
-                                        {#if req.status === VacationRequestStatus.Pending}
+                                        {#if req.status === VacationRequestStatus.Pending && currentYear === realCurrentYear}
                                             <button 
                                                 class="btn btn-xs btn-error" 
                                                 disabled={isCancelling && cancelRequestId === req.id}

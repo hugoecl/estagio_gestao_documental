@@ -17,6 +17,7 @@ use crate::{
 };
 use actix_web::HttpRequest; // Added for HttpRequest
 use serde::Deserialize;
+use std::collections::HashMap;
 
 // Use notification constants from the Notification module
 use crate::models::notification::{
@@ -336,14 +337,42 @@ pub async fn submit_vacation_request(
 }
 
 // Handler for a user to fetch their own vacation requests
-pub async fn get_my_vacation_requests(state: web::Data<State>, session: Session) -> impl Responder {
+pub async fn get_my_vacation_requests(
+    state: web::Data<State>, 
+    session: Session,
+    query: web::Query<HashMap<String, String>>,
+) -> impl Responder {
     let user_id = match validate_session(&session) {
         Ok(id) => id as u32,
         Err(resp) => return resp,
     };
 
+    // Get year from query parameters or use current year as default
+    let year_filter = match query.get("year") {
+        Some(year_str) => match year_str.parse::<i32>() {
+            Ok(year) => Some(year),
+            Err(_) => {
+                log::error!("Invalid year parameter: {}", year_str);
+                return HttpResponse::BadRequest().body("Invalid year parameter");
+            }
+        },
+        None => None,
+    };
+
     match VacationRequest::get_by_user_id(&state.db.pool, user_id).await {
-        Ok(requests) => json_response(&requests),
+        Ok(mut requests) => {
+            // Filter requests by year if year parameter was provided
+            if let Some(year) = year_filter {
+                requests = requests
+                    .into_iter()
+                    .filter(|req| {
+                        // Include request if it overlaps with the specified year
+                        req.start_date.year() == year || req.end_date.year() == year
+                    })
+                    .collect();
+            }
+            json_response(&requests)
+        },
         Err(e) => {
             log::error!(
                 "Error fetching vacation requests for user {}: {}",
@@ -367,10 +396,23 @@ struct RemainingVacationDaysResponse {
 pub async fn get_my_remaining_vacation_days(
     state: web::Data<State>,
     session: Session,
+    query: web::Query<HashMap<String, String>>,
 ) -> impl Responder {
     let user_id = match validate_session(&session) {
         Ok(id) => id as u32,
         Err(resp) => return resp,
+    };
+
+    // Get year from query parameters or use current year as default
+    let year = match query.get("year") {
+        Some(year_str) => match year_str.parse::<i32>() {
+            Ok(year) => year,
+            Err(_) => {
+                log::error!("Invalid year parameter: {}", year_str);
+                return HttpResponse::BadRequest().body("Invalid year parameter");
+            }
+        },
+        None => chrono::Utc::now().year(),
     };
 
     let user_details = match sqlx::query!(
@@ -391,12 +433,11 @@ pub async fn get_my_remaining_vacation_days(
     };
 
     let total_allocated_days = user_details.vacation_days_current_year.unwrap_or(0);
-    let current_year = chrono::Utc::now().year();
 
     let approved_days_taken = match VacationRequest::count_approved_vacation_days_for_year(
         &state.db.pool,
         user_id,
-        current_year,
+        year, // Use requested year instead of current year
     )
     .await
     {
@@ -427,15 +468,15 @@ pub async fn get_my_remaining_vacation_days(
     let mut pending_days_requested = 0;
     for req in all_user_requests {
         if req.status == VacationRequestStatus::Pending {
-            // Ensure the request is for the current year before counting
-            if req.start_date.year() == current_year || req.end_date.year() == current_year {
+            // Ensure the request is for the specified year before counting
+            if req.start_date.year() == year || req.end_date.year() == year {
                 let start_date = std::cmp::max(
                     req.start_date,
-                    chrono::NaiveDate::from_ymd_opt(current_year, 1, 1).unwrap(),
+                    chrono::NaiveDate::from_ymd_opt(year, 1, 1).unwrap(),
                 );
                 let end_date = std::cmp::min(
                     req.end_date,
-                    chrono::NaiveDate::from_ymd_opt(current_year, 12, 31).unwrap(),
+                    chrono::NaiveDate::from_ymd_opt(year, 12, 31).unwrap(),
                 );
                 if start_date <= end_date {
                     pending_days_requested += (end_date - start_date).num_days() + 1;

@@ -8,10 +8,12 @@ import type {
 
 /**
  * Fetches all vacation requests for the currently logged-in user.
+ * @param year The year for which to fetch vacation requests.
  */
-export async function getMyVacationRequests(): Promise<VacationRequest[]> {
+export async function getMyVacationRequests(year?: number): Promise<VacationRequest[]> {
+  const yearParam = year ? `?year=${year}` : '';
   const response = await handleFetch(
-    `${API_BASE_URL}/vacation-requests/me`,
+    `${API_BASE_URL}/vacation-requests/me${yearParam}`,
     {
       method: "GET",
       credentials: "include",
@@ -30,10 +32,12 @@ export async function getMyVacationRequests(): Promise<VacationRequest[]> {
 
 /**
  * Fetches the remaining vacation days for the currently logged-in user.
+ * @param year The year for which to fetch vacation days information.
  */
-export async function getMyRemainingVacationDays(): Promise<RemainingVacationDaysResponse | null> {
+export async function getMyRemainingVacationDays(year?: number): Promise<RemainingVacationDaysResponse | null> {
+  const yearParam = year ? `?year=${year}` : '';
   const response = await handleFetch(
-    `${API_BASE_URL}/users/me/vacation-days`,
+    `${API_BASE_URL}/users/me/vacation-days${yearParam}`,
     {
       method: "GET",
       credentials: "include",
