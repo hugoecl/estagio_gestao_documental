@@ -21,7 +21,6 @@
   onMount(async () => {
     try {
       const data = await getNavigationMenu();
-      console.log("Menu items loaded:", data);
       menuItems = data;
       isLoading = false;
     } catch (e) {
@@ -181,7 +180,7 @@
     {@html jccBigLogo}
     <h1 class="sidebar__title font-bold">Gestão Documental</h1>
   </a>
-  
+
   <nav>
     {@html StaticMenu }
     <div class="pb-3 flex justify-center items-center">
