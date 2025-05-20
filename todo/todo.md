@@ -50,7 +50,7 @@
 - [X] Make button shape consistent (square)
 - [X] Fix quando o grupo esta vazio para nao aparecer pagina de 404
 - [ ] Pagina para gerir paginas, aparecer primeiro so os grupo e depois clicar nos grupos para aparecer as paginas desses grupos
-- [ ] Fazer campo para dar upload de ficheiros ao criar paginas
+- [ ] Fazer campo para dar upload de ficheiros ao criar paginas para icon
 - [X] Criar novo tipo de permissão para adição (ou seja pode inserir nos campoes vazios de um registo, mas nao pode editar o que ja foi preenchido)
 - [ ] Make the color of checkboxes consistent
 - [ ] Add static menu on admin menu

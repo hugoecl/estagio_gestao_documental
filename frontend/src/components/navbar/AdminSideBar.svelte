@@ -8,6 +8,7 @@
   import jccBigLogo from "src/assets/jcc_big.svg?raw"; // Import logo correctly
   import MenuItems from "./MenuItems.svelte";
   import ReorderItem from "./ReorderItem.svelte";
+  import StaticMenu from "@components/navbar/StaticMenu.astro?raw";
 
   let isLoading = $state(true);
   let hasError = $state(false);
@@ -217,6 +218,7 @@
   </div>
 
   <nav>
+    {@html StaticMenu }
     {#if isLoading}
       <div class="flex justify-center p-4">
         <span class="loading loading-spinner loading-md"></span>
