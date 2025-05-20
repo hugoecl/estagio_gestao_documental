@@ -22,10 +22,6 @@
             }
 
             if (!arraysAreEqual(uiOptions, newUiOptions)) {
-                console.log(
-                    "FieldOptionsEditor: Syncing optionsJson to uiOptions",
-                    newUiOptions,
-                );
                 uiOptions = newUiOptions;
                 errors = null;
             }
@@ -44,10 +40,6 @@
 
     // Effect 2: Sync from local (uiOptions) to parent (optionsJson)
     $effect(() => {
-        console.log(
-            "FieldOptionsEditor: uiOptions changed, preparing to update optionsJson",
-            uiOptions,
-        );
         internalUpdate = true; // Signal that the next optionsJson change is from here
         optionsJson = uiOptions.length > 0 ? [...uiOptions] : null;
         // No need to clear errors here unless this effect itself causes an error
@@ -69,14 +61,12 @@
         // This will mutate uiOptions, triggering Effect 2
         uiOptions.push("");
         uiOptions = [...uiOptions]; // Ensure reactivity for Svelte 5 if .push isn't enough
-        console.log("FieldOptionsEditor: addOption, uiOptions:", uiOptions);
     }
 
     function removeOption(index: number) {
         // This will mutate uiOptions, triggering Effect 2
         uiOptions.splice(index, 1);
         uiOptions = [...uiOptions]; // Ensure reactivity
-        console.log("FieldOptionsEditor: removeOption, uiOptions:", uiOptions);
     }
 
     // The bind:value on the input will directly update uiOptions[index].

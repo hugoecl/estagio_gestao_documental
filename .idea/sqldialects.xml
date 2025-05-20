@@ -4,5 +4,6 @@
     <file url="file://$PROJECT_DIR$/backend/sql/migrations/20240630_add_can_add_permission.sql" dialect="MariaDB" />
     <file url="file://$PROJECT_DIR$/backend/sql/schema.sql" dialect="MariaDB" />
     <file url="file://$PROJECT_DIR$/backend/sql/updates/add_display_order_to_custom_pages.sql" dialect="MariaDB" />
+    <file url="file://$PROJECT_DIR$/backend/sql/updates/add_icon_type_and_image_path.sql" dialect="MariaDB" />
   </component>
 </project>

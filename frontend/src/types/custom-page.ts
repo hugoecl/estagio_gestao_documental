@@ -8,6 +8,8 @@ export interface CustomPage {
   is_group: boolean;
   description: string | null;
   icon: string | null;
+  icon_type: 'fontawesome' | 'image' | null;
+  icon_image_path: string | null;
   created_at: string; // Consider using Date objects after fetching
   updated_at: string; // Consider using Date objects after fetching
 }
@@ -42,6 +44,8 @@ export interface CreateCustomPageRequest {
   is_group: boolean;
   description: string | null;
   icon: string | null;
+  icon_type: 'fontawesome' | 'image' | null;
+  icon_image?: File | null;
   notify_on_new_record: boolean;
   requires_acknowledgment: boolean;
   fields: CreatePageFieldRequest[]; // Empty if is_group is true
@@ -53,6 +57,8 @@ export interface UpdateCustomPageRequest {
   parent_path?: string | null;
   description: string | null;
   icon: string | null;
+  icon_type?: 'fontawesome' | 'image' | null;
+  icon_image?: File | null;
   notify_on_new_record?: boolean;
   requires_acknowledgment?: boolean;
 }
@@ -98,6 +104,8 @@ export interface NavigationItem {
   path: string | null; // The actual href path for pages, null for groups
   id: number; // ID is now included for admin reordering
   icon: string | null;
+  icon_type: 'fontawesome' | 'image' | null;
+  icon_image_path: string | null;
   display_order: number; // Display order for menu items
   children: NavigationItem[];
 }

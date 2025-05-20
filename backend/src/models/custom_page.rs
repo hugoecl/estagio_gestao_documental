@@ -22,10 +22,15 @@ pub struct CustomPage {
     pub name: String,
     pub path: String,
     pub parent_path: Option<String>,
+    #[sqlx(rename = "is_group")]
     pub is_group: bool,
     pub description: Option<String>,
     pub icon: Option<String>,
+    pub icon_type: Option<String>,
+    pub icon_image_path: Option<String>,
+    #[sqlx(rename = "notify_on_new_record")]
     pub notify_on_new_record: bool,
+    #[sqlx(rename = "requires_acknowledgment")]
     pub requires_acknowledgment: bool,
     pub display_order: u32, // Display order for menu items
     pub created_at: DateTime<Utc>,
@@ -40,9 +45,9 @@ pub struct CreateCustomPageRequest {
     pub is_group: bool,
     pub description: Option<String>,
     pub icon: Option<String>,
+    pub icon_type: Option<String>,
     pub notify_on_new_record: bool,
-    pub requires_acknowledgment: bool, // New field
-    // Fields and permissions might be empty if is_group is true
+    pub requires_acknowledgment: bool,
     pub fields: Vec<CreatePageFieldRequest>,
     pub permissions: Vec<RolePermissionRequest>,
 }
@@ -50,12 +55,12 @@ pub struct CreateCustomPageRequest {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UpdateCustomPageRequest {
     pub name: String,
-    pub parent_path: Option<String>, // Allow changing parent
+    pub parent_path: Option<String>,
     pub description: Option<String>,
     pub icon: Option<String>,
+    pub icon_type: Option<String>,
     pub notify_on_new_record: Option<bool>,
-    pub requires_acknowledgment: Option<bool>, // New field, optional for update
-                                               // is_group is generally not updatable after creation easily
+    pub requires_acknowledgment: Option<bool>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -125,18 +130,13 @@ pub struct PagePermission {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct NavigationItem {
+    pub id: u32,
     pub title: String,
-    pub path: Option<String>, // Null for groups
-    // Include ID for admins to use when reordering
-    pub id: u32, // ID is now exposed to frontend for admin reordering
-    #[serde(skip_serializing)]
-    pub is_group: bool, // Keep track if it's a group
-    #[serde(skip_serializing)]
-    pub parent_db_path: Option<String>,
-    #[serde(skip_serializing)]
-    pub db_path: String,
+    pub path: Option<String>, // null for groups
     pub icon: Option<String>,
-    pub display_order: u32, // Include display order for sorting
+    pub icon_type: Option<String>,
+    pub icon_image_path: Option<String>,
+    pub display_order: u32,
     pub children: Vec<NavigationItem>,
 }
 
@@ -164,8 +164,8 @@ impl CustomPage {
         // Insert the page/group
         let result = sqlx::query!(
             r#"
-            INSERT INTO custom_pages (name, path, parent_path, is_group, description, icon, notify_on_new_record, requires_acknowledgment)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO custom_pages (name, path, parent_path, is_group, description, icon, icon_type, notify_on_new_record, requires_acknowledgment, display_order)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             "#,
             request.name,
             cleaned_path,        // Use cleaned path
@@ -173,8 +173,10 @@ impl CustomPage {
             request.is_group,
             request.description,
             request.icon,
+            request.icon_type,
             request.notify_on_new_record,
-            request.requires_acknowledgment
+            request.requires_acknowledgment,
+            0  // Default display order to 0
         )
         .execute(&mut *tx)
         .await?;
@@ -226,7 +228,7 @@ impl CustomPage {
             r#"
             SELECT
                 id, name, path, parent_path, is_group as "is_group: bool", description,
-                icon, notify_on_new_record as "notify_on_new_record: bool",
+                icon, icon_type, icon_image_path, notify_on_new_record as "notify_on_new_record: bool",
                 requires_acknowledgment as "requires_acknowledgment: bool", display_order,
                 created_at as "created_at!", updated_at as "updated_at!"
             FROM custom_pages
@@ -247,7 +249,7 @@ impl CustomPage {
             r#"
             SELECT
                 id, name, path, parent_path, is_group as "is_group: bool", description,
-                icon, notify_on_new_record as "notify_on_new_record: bool",
+                icon, icon_type, icon_image_path, notify_on_new_record as "notify_on_new_record: bool",
                 requires_acknowledgment as "requires_acknowledgment: bool", display_order,
                 created_at as "created_at!", updated_at as "updated_at!"
             FROM custom_pages
@@ -457,7 +459,7 @@ impl CustomPage {
             r#"
             SELECT
                 id, name, path, parent_path, is_group as "is_group: bool", description,
-                icon, notify_on_new_record as "notify_on_new_record: bool",
+                icon, icon_type, icon_image_path, notify_on_new_record as "notify_on_new_record: bool",
                 requires_acknowledgment as "requires_acknowledgment: bool", display_order,
                 created_at as "created_at!", updated_at as "updated_at!"
             FROM custom_pages
@@ -494,52 +496,68 @@ impl CustomPage {
         .fetch_one(pool)
         .await? == 1;
 
-        // 4. Build a map of all items by their `path` (for groups) or `id` (for pages)
-        // and a map for children lookup: parent_path -> Vec<NavigationItem>
-        let mut items_by_path = HashMap::new(); // Keyed by their own path (used for parent lookup)
-        let mut items_by_id = HashMap::new(); // Keyed by ID (for direct page lookup)
+            // 4. Build a map of all items by their `path` (for groups) or `id` (for pages)
+    // and a map for children lookup: parent_path -> Vec<NavigationItem>
+    let mut items_by_path = HashMap::new(); // Keyed by their own path (used for parent lookup)
+    let mut items_by_id = HashMap::new(); // Keyed by ID (for direct page lookup)
+    // Store extra metadata for tree building
+    let mut item_metadata: HashMap<u32, (bool, Option<String>, String)> = HashMap::new(); // is_group, parent_path, db_path
 
-        for db_item in all_db_items {
-            let nav_item = NavigationItem {
-                id: db_item.id,
-                is_group: db_item.is_group,
-                title: db_item.name.clone(),
-                // For pages, path is its own path. For groups, path is None in NavItem,
-                // but we use db_item.path for structuring.
-                path: if db_item.is_group {
-                    None
-                } else {
-                    Some(db_item.path.clone())
-                },
-                parent_db_path: db_item.parent_path.clone(), // Store the DB parent_path
-                db_path: db_item.path.clone(),               // Store the DB path for grouping
-                icon: db_item.icon.clone(),
-                display_order: db_item.display_order, // Use the display_order from DB
-                children: Vec::new(),
-            };
-            items_by_path.insert(db_item.path.clone(), nav_item.clone());
-            items_by_id.insert(db_item.id, nav_item);
-        }
+    for db_item in all_db_items {
+        let nav_item = NavigationItem {
+            id: db_item.id,
+            title: db_item.name.clone(),
+            // For pages, path is its own path. For groups, path is None in NavItem,
+            // but we use db_item.path for structuring.
+            path: if db_item.is_group {
+                None
+            } else {
+                Some(db_item.path.clone())
+            },
+            icon: db_item.icon.clone(),
+            icon_type: db_item.icon_type.clone(),
+            icon_image_path: db_item.icon_image_path.clone(),
+            display_order: db_item.display_order, // Use the display_order from DB
+            children: Vec::new(),
+        };
+        
+        // Store metadata separately
+        item_metadata.insert(
+            db_item.id, 
+            (
+                db_item.is_group,
+                db_item.parent_path.clone(),
+                db_item.path.clone()
+            )
+        );
+        
+        items_by_path.insert(db_item.path.clone(), nav_item.clone());
+        items_by_id.insert(db_item.id, nav_item);
+    }
 
-        // 5. Recursive function to build and filter the tree
-        fn build_tree_level(
-            current_parent_db_path: Option<&String>, // The DB path of the parent we are looking for children of
-            all_items: &HashMap<u32, NavigationItem>, // All items by ID
-            viewable_page_ids: &HashSet<u32>,
-            is_admin: bool,
-        ) -> Vec<NavigationItem> {
-            let mut level_children: Vec<NavigationItem> = Vec::new();
+            // 5. Recursive function to build and filter the tree
+    fn build_tree_level(
+        current_parent_path: Option<&String>, // The DB path of the parent we are looking for children of
+        all_items: &HashMap<u32, NavigationItem>, // Navigation items by ID
+        metadata: &HashMap<u32, (bool, Option<String>, String)>, // Metadata: (is_group, parent_path, db_path)
+        viewable_page_ids: &HashSet<u32>,
+        is_admin: bool,
+    ) -> Vec<NavigationItem> {
+        let mut level_children: Vec<NavigationItem> = Vec::new();
 
-            for (_id, item_template) in all_items {
+        for (id, item_template) in all_items {
+            // Get metadata for this item
+            if let Some((is_group, parent_path, db_path)) = metadata.get(id) {
                 // Match parent
-                if item_template.parent_db_path.as_ref() == current_parent_db_path {
+                if parent_path.as_ref() == current_parent_path {
                     let mut current_nav_item = item_template.clone();
 
-                    if current_nav_item.is_group {
+                    if *is_group {
                         // It's a group, recursively find its children
                         let grandchildren = build_tree_level(
-                            Some(&current_nav_item.db_path), // Children of this group
+                            Some(db_path), // Children of this group
                             all_items,
+                            metadata,
                             viewable_page_ids,
                             is_admin,
                         );
@@ -550,19 +568,20 @@ impl CustomPage {
                         }
                     } else {
                         // It's a page, check direct view permission
-                        if is_admin || viewable_page_ids.contains(&current_nav_item.id) {
+                        if is_admin || viewable_page_ids.contains(id) {
                             level_children.push(current_nav_item);
                         }
                     }
                 }
             }
-            // Sort children at this level by display_order
-            level_children.sort_by(|a, b| a.display_order.cmp(&b.display_order));
-            level_children
         }
+        // Sort children at this level by display_order
+        level_children.sort_by(|a, b| a.display_order.cmp(&b.display_order));
+        level_children
+    }
 
-        // Start building from the root (items with parent_db_path = None)
-        let root_items = build_tree_level(None, &items_by_id, &viewable_page_ids, is_admin);
+        // Start building from the root (items with parent_path = None)
+        let root_items = build_tree_level(None, &items_by_id, &item_metadata, &viewable_page_ids, is_admin);
 
         Ok(root_items)
     }

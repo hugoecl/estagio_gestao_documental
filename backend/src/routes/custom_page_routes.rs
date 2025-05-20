@@ -20,6 +20,10 @@ pub fn init(cfg: &mut web::ServiceConfig) {
             .route("", web::get().to(custom_page_handlers::get_custom_pages))
             .route("", web::post().to(custom_page_handlers::create_custom_page))
             .route(
+                "/json",
+                web::post().to(custom_page_handlers::create_custom_page_json),
+            )
+            .route(
                 "/{page_id}/fields",
                 web::get().to(field_handlers::get_page_fields),
             )
@@ -38,6 +42,10 @@ pub fn init(cfg: &mut web::ServiceConfig) {
             .route(
                 "/{id}",
                 web::put().to(custom_page_handlers::update_custom_page),
+            )
+            .route(
+                "/{id}/json",
+                web::put().to(custom_page_handlers::update_custom_page_json),
             )
             .route(
                 "/{id}",

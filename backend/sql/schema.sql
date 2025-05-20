@@ -27,6 +27,8 @@ CREATE TABLE IF NOT EXISTS custom_pages (
     is_group BOOLEAN NOT NULL DEFAULT false COMMENT 'True if this entry is just a menu group/folder/submenu',
     description TEXT,
     icon VARCHAR(20) COMMENT 'FontAwesome icon name',
+    icon_type VARCHAR(20) DEFAULT 'fontawesome' COMMENT 'Type of icon: fontawesome or image',
+    icon_image_path VARCHAR(255) DEFAULT NULL COMMENT 'Path to uploaded image icon',
     notify_on_new_record BOOLEAN NOT NULL DEFAULT false COMMENT 'Notify users with access when a new record is created',
     requires_acknowledgment BOOLEAN NOT NULL DEFAULT false COMMENT 'Require users to acknowledge records before viewing details',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

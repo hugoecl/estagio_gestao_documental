@@ -126,7 +126,6 @@
 
   function toggleReordering() {
     isReordering = !isReordering;
-    console.log("Reordering mode:", isReordering);
   }
 
   async function saveOrderChanges() {
@@ -146,7 +145,6 @@
         }
       });
       
-      console.log("Saving order changes:", orders);
       const success = await reorderPages(orders);
       
       if (success) {

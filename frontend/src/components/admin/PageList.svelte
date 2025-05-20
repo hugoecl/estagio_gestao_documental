@@ -9,6 +9,7 @@
         AlertType,
         AlertPosition,
     } from "@components/alert/alert";
+    import API_BASE_URL from "@api/base-url";
 
     // Define an extended type for displayed pages
     type DisplayedPage = CustomPage & {
@@ -31,6 +32,8 @@
             cellRenderer: (value, row) => {
                 const icon = row.is_group ? 'fa-folder' : 'fa-file-alt';
                 const iconColor = row.is_group ? 'text-accent' : 'text-blue-500';
+                
+                // Always use the folder/file icon for the name column
                 return `<div class="flex items-center">
                     <i class="fa-solid ${icon} ${iconColor} mr-2"></i>
                     <span>${value}</span>
@@ -50,9 +53,16 @@
         { 
             header: "Ícone", 
             field: "icon",
-            cellRenderer: (value) => {
-                if (!value) return '';
-                return `<i class="fa-solid fa-${value}"></i> ${value}`;
+            cellRenderer: (value, row) => {
+                if (row.icon_type === 'image' && row.icon_image_path) {
+                    return `<div class="flex items-center">
+                        <img src="${API_BASE_URL}/${row.icon_image_path}" alt="Ícone" class="w-5 h-5 object-contain" />
+                        <span class="ml-2">Imagem</span>
+                    </div>`;
+                } else if (value && row.icon_type === 'fontawesome') {
+                    return `<i class="fa-solid fa-${value}"></i> ${value}`;
+                }
+                return '';
             }
         },
     ];
@@ -113,8 +123,8 @@
             navigateTo(row.path);
         } else {
             // If clicking a page, go to edit page
-            if (typeof window !== "undefined") {
-                window.location.href = `/admin/pages/edit/${id}/`;
+        if (typeof window !== "undefined") {
+            window.location.href = `/admin/pages/edit/${id}/`;
             }
         }
     }

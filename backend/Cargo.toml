@@ -14,6 +14,7 @@ actix-web = { version = "4", features = ["rustls-0_23"] }
 ahash = "0.8"
 argh = { version = "0.1", default-features = false, features = ["help"] }
 argon2-kdf = "1.6"
+bytes = "1"
 chrono = { version = "0.4", default-features = false, features = [
     "std",
     "clock",
@@ -23,6 +24,7 @@ chrono = { version = "0.4", default-features = false, features = [
 env_logger = { version = "0.11" }
 futures-core = "0.3"
 futures-util = "0.3"
+futures = "0.3"
 log = "0.4"
 mimalloc = "0.1"
 rustls = { version = "0.23", optional = true }
@@ -38,6 +40,7 @@ sqlx = { version = "0.8", default-features = false, features = [
     "chrono",
 ] }
 tokio = { version = "1", features = ["macros"] }
+uuid = { version = "1", features = ["v4"] }
 
 [features]
 deafult = []

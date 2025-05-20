@@ -59,6 +59,11 @@
     let roles = $state<Role[]>([]);
     let availableGroups = $state<CustomPage[]>([]); // For parent group selector
     let selectedParentGroupId = $state<string | null>(null); // Store ID of selected parent group
+    let iconImage = $state<File | null>(null);
+    let imagePreview = $state<string | null>(null);
+    let iconFileInput = $state<HTMLInputElement | null>(null);
+    let currentIconType = $state<'fontawesome' | 'image' | null>('fontawesome');
+    let iconImagePath = $state<string | null>(null);
 
     let isLoading = $state(true);
     let isSubmitting = $state(false);
@@ -112,9 +117,12 @@
                 parent_path: fetchedPageData.page.parent_path,
                 description: fetchedPageData.page.description,
                 icon: fetchedPageData.page.icon,
+                icon_type: fetchedPageData.page.icon_type || 'fontawesome',
                 notify_on_new_record: fetchedPageData.page.notify_on_new_record,
                 requires_acknowledgment: fetchedPageData.page.requires_acknowledgment,
             };
+            currentIconType = fetchedPageData.page.icon_type || 'fontawesome';
+            iconImagePath = fetchedPageData.page.icon_image_path;
             isGroup = fetchedPageData.page.is_group;
             originalPageDataJson = JSON.stringify(pageData);
             pagePath = fetchedPageData.page.path;
@@ -704,6 +712,51 @@
         }
         // --- End API Calls ---
     }
+
+    // Add these functions for icon handling
+    function handleIconFileChange(event: Event) {
+        const input = event.target as HTMLInputElement;
+        if (input.files && input.files.length > 0) {
+            const file = input.files[0];
+            if (file.type.startsWith('image/')) {
+                iconImage = file;
+                pageData.icon_type = "image";
+                pageData.icon_image = file;
+                iconImagePath = null; // Clear existing path when uploading a new image
+                
+                // Create preview
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    imagePreview = e.target?.result as string;
+                };
+                reader.readAsDataURL(file);
+            } else {
+                showAlert("Por favor, selecione apenas ficheiros de imagem.", AlertType.ERROR, AlertPosition.TOP);
+                input.value = '';
+            }
+        }
+    }
+    
+    function clearIconImage() {
+        iconImage = null;
+        imagePreview = null;
+        pageData.icon_image = null;
+        if (iconFileInput) iconFileInput.value = '';
+    }
+    
+    function switchIconType(type: 'fontawesome' | 'image') {
+        pageData.icon_type = type;
+        currentIconType = type;
+        
+        // When switching to image type, ensure icon_image_path is used
+        if (type === 'image') {
+            // No action needed, just preserve the existing path if any
+        } else if (type === 'fontawesome') {
+            // When switching to fontawesome, clear any image data
+            clearIconImage();
+            iconImagePath = null;
+        }
+    }
 </script>
 
 {#if isLoading}
@@ -783,24 +836,93 @@
             </label>
             <label class="form-control w-full">
                 <div class="label">
-                    <span class="label-text">Ícone (FontAwesome, Opcional)</span
-                    >
+                    <span class="label-text">Ícone</span>
                 </div>
-                <input
-                    type="text"
-                    placeholder="Ex: user-shield (apenas nome)"
-                    class="input input-bordered w-full"
-                    bind:value={pageData.icon}
-                />
-                <div class="label">
-                    <span class="label-text-alt"
-                        ><a
-                            href="https://fontawesome.com/search?m=free&s=solid"
-                            target="_blank"
-                            class="link link-primary">Ver ícones</a
-                        ></span
-                    >
+                
+                <div class="tabs tabs-boxed w-full mb-2">
+                    <button 
+                        type="button"
+                        class="tab {currentIconType === 'fontawesome' ? 'tab-active' : ''}" 
+                        onclick={() => switchIconType('fontawesome')}>
+                        <i class="fa-solid fa-icons mr-2"></i> FontAwesome
+                    </button>
+                    <button 
+                        type="button"
+                        class="tab {currentIconType === 'image' ? 'tab-active' : ''}" 
+                        onclick={() => switchIconType('image')}>
+                        <i class="fa-solid fa-image mr-2"></i> Imagem
+                    </button>
                 </div>
+                
+                {#if currentIconType === 'fontawesome'}
+                    <input
+                        type="text"
+                        placeholder="Ex: user-shield (apenas nome)"
+                        class="input input-bordered w-full"
+                        bind:value={pageData.icon}
+                    />
+                    <div class="label">
+                        <span class="label-text-alt"
+                            ><a
+                                href="https://fontawesome.com/search?m=free&s=solid"
+                                target="_blank"
+                                class="link link-primary">Ver ícones</a
+                            ></span
+                        >
+                    </div>
+                    
+                    {#if pageData.icon}
+                        <div class="mt-2 text-center p-2">
+                            <i class="fa-solid fa-{pageData.icon} text-3xl"></i>
+                        </div>
+                    {/if}
+                {:else if currentIconType === 'image'}
+                    <div class="flex flex-col items-center">
+                        <input 
+                            type="file"
+                            accept="image/*"
+                            class="hidden"
+                            bind:this={iconFileInput}
+                            onchange={handleIconFileChange}
+                        />
+                        
+                        {#if imagePreview}
+                            <div class="w-full my-2 flex flex-col items-center">
+                                <img src={imagePreview} alt="Ícone personalizado" class="w-16 h-16 object-contain border rounded-md" />
+                                <button 
+                                    type="button" 
+                                    class="btn btn-sm btn-error mt-2"
+                                    onclick={clearIconImage}>
+                                    <i class="fa-solid fa-trash-can mr-2"></i> Remover
+                                </button>
+                            </div>
+                        {:else if iconImagePath}
+                            <div class="w-full my-2 flex flex-col items-center">
+                                <img src={API_BASE_URL + '/' + iconImagePath} alt="Ícone personalizado" class="w-16 h-16 object-contain border rounded-md" />
+                                <button 
+                                    type="button" 
+                                    class="btn btn-sm btn-error mt-2"
+                                    onclick={() => {
+                                        iconImagePath = null;
+                                        pageData.icon_type = 'fontawesome'; // Set to 'fontawesome' instead of null
+                                        pageData.icon_image = null;
+                                    }}>
+                                    <i class="fa-solid fa-trash-can mr-2"></i> Remover
+                                </button>
+                            </div>
+                        {:else}
+                            <button 
+                                type="button" 
+                                class="btn btn-primary w-full"
+                                onclick={() => iconFileInput?.click()}>
+                                <i class="fa-solid fa-upload mr-2"></i> Carregar Imagem
+                            </button>
+                            <div class="label">
+                                <span class="label-text-alt">Formatos suportados: PNG, JPG, SVG (recomendado)</span>
+                            </div>
+                        {/if}
+                    </div>
+                {/if}
             </label>
 
             <!-- Requires Acknowledgment Checkbox was here, but the correct ones are at the end of this fieldset -->

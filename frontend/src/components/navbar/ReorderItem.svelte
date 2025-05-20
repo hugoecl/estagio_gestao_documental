@@ -1,5 +1,6 @@
 <script>
   import { dndzone } from 'svelte-dnd-action';
+  import API_BASE_URL from "@api/base-url";
   
   // Props
   export let item;
@@ -42,6 +43,18 @@
      class:is-dragging={isDragging}>
   <div class="handle p-2 bg-base-200 flex items-center cursor-grab">
     <i class="fa-solid fa-grip-vertical mr-2"></i>
+    
+    <!-- Display the appropriate icon -->
+    {#if item.icon_type === 'image' && item.icon_image_path}
+      <img 
+        src={`${API_BASE_URL}/${item.icon_image_path}`} 
+        alt={item.title} 
+        class="w-5 h-5 object-contain inline-block mr-2" 
+      />
+    {:else if item.icon && (!item.icon_type || item.icon_type === 'fontawesome')}
+      <i class="fa-solid fa-{item.icon} mr-2"></i>
+    {/if}
+    
     <span>{item.title}</span>
   </div>
   

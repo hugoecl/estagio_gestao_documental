@@ -8,6 +8,8 @@ interface Props {
 }
 
 const { items, isRoot = false } = Astro.props;
+// Import API_BASE_URL for image paths
+import API_BASE_URL from "@api/base-url";
 ---
 
 <ul
@@ -31,35 +33,59 @@ const { items, isRoot = false } = Astro.props;
                     {hasChildren ? (
                         <details open={false}>
                             <summary>
-                                {item.icon && (
+                                {item.icon_type === 'image' && item.icon_image_path ? (
+                                    <img 
+                                        src={`${API_BASE_URL}/${item.icon_image_path}`} 
+                                        alt={item.title} 
+                                        class="w-5 h-5 object-contain inline-block mr-2" 
+                                    />
+                                ) : item.icon && (!item.icon_type || item.icon_type === 'fontawesome') ? (
                                     <i class={`fa-solid fa-${item.icon} `} />
-                                )}
+                                ) : null}
                                 {item.title}
                             </summary>
                             <Astro.self items={item.children} />
                         </details>
                     ) : path && item.path ? (
                         <a href={path}>
-                            {item.icon && (
+                            {item.icon_type === 'image' && item.icon_image_path ? (
+                                <img 
+                                    src={`${API_BASE_URL}/${item.icon_image_path}`} 
+                                    alt={item.title} 
+                                    class="w-5 h-5 object-contain inline-block mr-2" 
+                                />
+                            ) : item.icon && (!item.icon_type || item.icon_type === 'fontawesome') ? (
                                 <i class={`fa-solid fa-${item.icon} `} />
-                            )}
+                            ) : null}
                             {item.title}
                         </a>
                     ) : item.path === null ? (
                         <details open={false}>
                             <summary>
-                                {item.icon && (
+                                {item.icon_type === 'image' && item.icon_image_path ? (
+                                    <img 
+                                        src={`${API_BASE_URL}/${item.icon_image_path}`} 
+                                        alt={item.title} 
+                                        class="w-5 h-5 object-contain inline-block mr-2" 
+                                    />
+                                ) : item.icon && (!item.icon_type || item.icon_type === 'fontawesome') ? (
                                     <i class={`fa-solid fa-${item.icon} `} />
-                                )}
+                                ) : null}
                                 {item.title}
                             </summary>
                         </details>
 
                     ) : (
                         <span>
-                            {item.icon && (
+                            {item.icon_type === 'image' && item.icon_image_path ? (
+                                <img 
+                                    src={`${API_BASE_URL}/${item.icon_image_path}`} 
+                                    alt={item.title} 
+                                    class="w-5 h-5 object-contain inline-block mr-2" 
+                                />
+                            ) : item.icon && (!item.icon_type || item.icon_type === 'fontawesome') ? (
                                 <i class={`fa-solid fa-${item.icon} `} />
-                            )}
+                            ) : null}
                             {item.title} (Grupo sem link direto)
                         </span>
                     ) }

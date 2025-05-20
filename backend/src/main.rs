@@ -13,6 +13,7 @@ use actix_web::{
     rt::spawn,                                      // Import spawn
     web,
 };
+use actix_files::Files;
 use mimalloc::MiMalloc;
 use tokio::time::{Duration as TokioDuration, interval}; // Import interval and Duration
 
@@ -162,6 +163,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(actix_web::middleware::Compress::default())
             .wrap(actix_web::middleware::Logger::default())
             .app_data(state.clone())
+            .service(Files::new("/media", "media").show_files_listing())
     });
     #[cfg(feature = "https")]
     let result = if args.https {

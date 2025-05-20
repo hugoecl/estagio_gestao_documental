@@ -263,7 +263,7 @@ pub async fn update_record(
         Err(e) => {
             log::error!("Error checking edit permissions: {}", e);
             return HttpResponse::InternalServerError().finish();
-        }
+            }
     };
 
     // Check if user can add

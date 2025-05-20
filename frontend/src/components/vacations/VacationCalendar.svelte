@@ -600,27 +600,17 @@
         const _selectionEndDate = selectionEndDate;
         const _hoveredDate = hoveredDate;
 
-        console.log('Calendar update effect:', { 
-            year, 
-            hasRequests: _myRequests.length > 0, 
-            hasColleagueData: _colleagueVacations.length > 0, 
-            start: _selectionStartDate, 
-            end: _selectionEndDate, 
-            hover: _hoveredDate 
-        });
 
         let currentBase = baseCalendarStructure;
         if (
             !currentBase.length ||
             (currentBase[0] && currentBase[0].year !== year)
         ) {
-            console.log('Generating new base structure for year:', year);
             currentBase = generateBaseCalendarStructure(year);
             baseCalendarStructure = currentBase;
         }
 
         if (currentBase.length > 0) {
-            console.log('Applying visuals to calendar with selection:', _selectionStartDate, _selectionEndDate);
             displayedCalendarData = applyVisualsToCalendar(
                 currentBase,
                 _myRequests,
@@ -654,7 +644,6 @@
         }
         
         const clickedDate: Date = day.date;
-        console.log("Day clicked:", clickedDate);
 
         if (day.status && day.status === "colleague_approved") {
             showAlert(
@@ -682,7 +671,6 @@
         }
 
         if (!selectionStartDate) {
-            console.log("Setting selection start date:", clickedDate);
             selectionStartDate = clickedDate;
             selectionEndDate = null;
             selectedDaysCount = 1;
@@ -691,30 +679,25 @@
             // Start is selected, now selecting end
             if (clickedDate.getTime() === selectionStartDate.getTime()) {
                 // Clicking the start date again when only start is selected means make it a single-day selection
-                console.log("Same day clicked, setting as both start and end date");
                 selectionEndDate = clickedDate;
                 selectedDaysCount = 1;
             } else if (clickedDate < selectionStartDate) {
-                console.log("Earlier date clicked, swapping start/end dates");
                 selectionEndDate = selectionStartDate;
                 selectionStartDate = clickedDate;
                 selectedDaysCount = Math.round((selectionEndDate.getTime() - selectionStartDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
             } else {
-                console.log("Later date clicked, setting end date");
                 selectionEndDate = clickedDate;
                 selectedDaysCount = Math.round((selectionEndDate.getTime() - selectionStartDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
             }
             updateProjectedRemainingDays();
         } else {
             // Both start and end are already selected, this is a new selection
-            console.log("Both dates were already set, starting new selection");
             selectionStartDate = clickedDate;
             selectionEndDate = null;
             selectedDaysCount = 1;
             updateProjectedRemainingDays();
         }
         
-        console.log("After click handling - Start:", selectionStartDate, "End:", selectionEndDate, "Count:", selectedDaysCount);
     }
 
     function updateProjectedRemainingDays() {

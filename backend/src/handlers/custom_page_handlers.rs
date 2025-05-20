@@ -1,5 +1,11 @@
 use actix_session::Session;
-use actix_web::{HttpRequest, HttpResponse, Responder, web};
+use actix_web::{HttpRequest, HttpResponse, Responder, web, FromRequest};
+use actix_multipart::Multipart;
+use futures_util::{StreamExt, TryStreamExt};
+use std::fs;
+use std::io::Write;
+use std::path::Path;
+use uuid::Uuid;
 
 use crate::{
     State,
@@ -29,7 +35,8 @@ pub async fn get_group_pages(
         r#"
         SELECT 
             id, name, path, parent_path, is_group as "is_group: bool", description, 
-            icon, notify_on_new_record as "notify_on_new_record: bool", requires_acknowledgment as "requires_acknowledgment: bool", display_order, 
+            icon, icon_type, icon_image_path, notify_on_new_record as "notify_on_new_record: bool", 
+            requires_acknowledgment as "requires_acknowledgment: bool", display_order, 
             created_at as "created_at!", updated_at as "updated_at!"
         FROM custom_pages 
         WHERE is_group = true 
@@ -99,30 +106,165 @@ pub async fn get_custom_page(
 pub async fn create_custom_page(
     state: web::Data<State>,
     session: Session,
-    data: web::Bytes,
+    mut payload: Multipart,
 ) -> impl Responder {
     if let Err(resp) = is_admin(&session) {
         return resp;
     }
 
-    let Json(custom_page_req): Json<CreateCustomPageRequest> = match Json::from_bytes(&data) {
-        Ok(data) => data,
+    // Check if this is a multipart form (with file) or a JSON request
+    let mut fields = std::collections::HashMap::new();
+    let mut icon_image: Option<(Vec<u8>, String)> = None;
+    
+    // Process multipart form
+    while let Ok(Some(mut field)) = payload.try_next().await {
+        // Clone the content disposition to avoid borrow issues
+        let cd = field.content_disposition().unwrap().clone();
+        
+        let name = cd.get_name();
+        if let Some(name) = name {
+            // Handle file upload
+            if name == "icon_image" {
+                let mut data = Vec::new();
+                while let Some(chunk) = field.next().await {
+                    data.extend_from_slice(&chunk.unwrap());
+                }
+                
+                // Get filename from the cloned content disposition
+                let filename = cd.get_filename();
+                if let Some(filename) = filename {
+                    icon_image = Some((data, filename.to_string()));
+                } else {
+                    log::warn!("Icon image field found but no filename provided");
+                }
+            } else {
+                // Handle form fields
+                let mut field_data = Vec::new();
+                while let Some(chunk) = field.next().await {
+                    field_data.extend_from_slice(&chunk.unwrap());
+                }
+                if let Ok(field_value) = String::from_utf8(field_data) {
+                    log::debug!("Form field: {} = {}", name, field_value);
+                    fields.insert(name.to_string(), field_value);
+                }
+            }
+        }
+    }
+    
+    // If we have form fields, build a request from them
+    if !fields.is_empty() {
+        let mut custom_page_req = CreateCustomPageRequest {
+            name: fields.get("name").unwrap_or(&String::new()).clone(),
+            path: fields.get("path").unwrap_or(&String::new()).clone(),
+            parent_path: fields.get("parent_path").map(|v| if v.is_empty() { None } else { Some(v.clone()) }).unwrap_or(None),
+            is_group: fields.get("is_group").map(|v| v == "true").unwrap_or(false),
+            description: fields.get("description").map(|v| if v.is_empty() { None } else { Some(v.clone()) }).unwrap_or(None),
+            icon: fields.get("icon").map(|v| if v.is_empty() { None } else { Some(v.clone()) }).unwrap_or(None),
+            icon_type: fields.get("icon_type").map(|v| if v.is_empty() { None } else { Some(v.clone()) }).unwrap_or(None),
+            notify_on_new_record: fields.get("notify_on_new_record").map(|v| v == "true").unwrap_or(false),
+            requires_acknowledgment: fields.get("requires_acknowledgment").map(|v| v == "true").unwrap_or(false),
+            fields: Vec::new(),
+            permissions: Vec::new(),
+        };
+        
+        // Parse JSON fields
+        if let Some(permissions_json) = fields.get("permissions") {
+            if let Ok(permissions) = serde_json::from_str::<Vec<RolePermissionRequest>>(permissions_json) {
+                custom_page_req.permissions = permissions;
+            }
+        }
+        
+        if let Some(fields_json) = fields.get("fields") {
+            if let Ok(fields) = serde_json::from_str(fields_json) {
+                custom_page_req.fields = fields;
+            }
+        }
+        
+        // Create the page first to get its ID
+        let page_id = match CustomPage::create(&state.db.pool, &custom_page_req).await {
+            Ok(id) => id,
+            Err(e) => {
+                log::error!("Error creating custom page: {}", e);
+                return HttpResponse::InternalServerError().finish();
+            }
+        };
+        
+        log::info!("Successfully created page with ID: {}", page_id);
+        
+        // Handle icon image if present
+        if let Some((image_data, filename)) = icon_image {
+            
+            // Force icon_type to 'image' in the database
+            let set_icon_type_result = sqlx::query!(
+                "UPDATE custom_pages SET icon_type = 'image' WHERE id = ?",
+                page_id
+            )
+            .execute(&state.db.pool)
+            .await;
+            
+            if let Err(e) = set_icon_type_result {
+                log::error!("Error setting icon_type to 'image' for page {}: {}", page_id, e);
+            } 
+            
+            let icon_path = handle_icon_upload(page_id, image_data, filename).await;
+            
+            if let Some(icon_path) = icon_path {
+                // Update the page with the icon path and ensure icon_type is set to "image"
+                let update_result = sqlx::query!(
+                    "UPDATE custom_pages SET icon_image_path = ?, icon_type = 'image' WHERE id = ?",
+                    icon_path, page_id
+                )
+                .execute(&state.db.pool)
+                .await;
+                
+                if let Err(e) = update_result {
+                    log::error!("Error updating icon path: {}", e);
+                    // We've created the page, so return success anyway
+                }
+            } else {
+                log::error!("Failed to get icon path for page {}", page_id);
+            }
+        } else {
+            log::info!("No icon image provided for page {}", page_id);
+        }
+        
+        return HttpResponse::Created().body(page_id.to_string());
+    } else {
+        // If no form fields, suggest using the JSON endpoint
+        log::warn!("No form fields detected - client should use the JSON endpoint instead");
+        return HttpResponse::BadRequest().body("No form fields detected. For JSON requests, use the /custom_pages/json endpoint");
+    }
+}
+
+// Add a new handler for JSON requests
+pub async fn create_custom_page_json(
+    state: web::Data<State>,
+    req: HttpRequest,
+    session: Session,
+) -> impl Responder {
+    if let Err(resp) = is_admin(&session) {
+        return resp;
+    }
+
+    // Parse request body
+    let body = match web::Json::<CreateCustomPageRequest>::extract(&req).await {
+        Ok(json_data) => json_data.into_inner(),
         Err(e) => {
             log::error!("Error parsing JSON: {}", e);
             return HttpResponse::BadRequest().finish();
         }
     };
 
-    if !custom_page_req.is_group && (custom_page_req.path.is_empty() || custom_page_req.path == "/")
+    if !body.is_group && (body.path.is_empty() || body.path == "/")
     {
         log::error!(
             "Attempted to create a page with an invalid path: {}",
-            custom_page_req.path
+            body.path
         );
         return HttpResponse::BadRequest().finish();
     }
 
-    match CustomPage::create(&state.db.pool, &custom_page_req).await {
+    match CustomPage::create(&state.db.pool, &body).await {
         Ok(page_id) => HttpResponse::Created().body(page_id.to_string()),
         Err(e) => {
             log::error!("Error creating custom page: {}", e);
@@ -134,7 +276,7 @@ pub async fn create_custom_page(
 pub async fn update_custom_page(
     state: web::Data<State>,
     path: web::Path<u32>,
-    data: web::Bytes,
+    mut payload: Multipart,
     session: Session,
 ) -> impl Responder {
     let page_id = path.into_inner();
@@ -154,21 +296,182 @@ pub async fn update_custom_page(
         }
     };
 
-    let Json(data): Json<UpdateCustomPageRequest> = match Json::from_bytes(&data) {
-        Ok(data) => data,
+    // Check if this is a multipart form (with file) or a JSON request
+    let mut fields = std::collections::HashMap::new();
+    let mut icon_image: Option<(Vec<u8>, String)> = None;
+    
+    // Process multipart form
+    while let Ok(Some(mut field)) = payload.try_next().await {
+        // Clone the content disposition to avoid borrow issues
+        let cd = field.content_disposition().unwrap().clone();
+        
+        let name = cd.get_name();
+        if let Some(name) = name {
+            // Handle file upload
+            if name == "icon_image" {
+                let mut data = Vec::new();
+                while let Some(chunk) = field.next().await {
+                    data.extend_from_slice(&chunk.unwrap());
+                }
+                
+                // Get filename from the cloned content disposition
+                let filename = cd.get_filename();
+                if let Some(filename) = filename {
+                    icon_image = Some((data, filename.to_string()));
+                }
+            } else {
+                // Handle form fields
+                let mut field_data = Vec::new();
+                while let Some(chunk) = field.next().await {
+                    field_data.extend_from_slice(&chunk.unwrap());
+                }
+                if let Ok(field_value) = String::from_utf8(field_data) {
+                    fields.insert(name.to_string(), field_value);
+                }
+            }
+        }
+    }
+    
+    // If we have form fields, build a request from them
+    if !fields.is_empty() {
+        let update_req = UpdateCustomPageRequest {
+            name: fields.get("name").unwrap_or(&String::new()).clone(),
+            parent_path: fields.get("parent_path").map(|v| if v.is_empty() { None } else { Some(v.clone()) }).unwrap_or(None),
+            description: fields.get("description").map(|v| if v.is_empty() { None } else { Some(v.clone()) }).unwrap_or(None),
+            icon: fields.get("icon").map(|v| if v.is_empty() { None } else { Some(v.clone()) }).unwrap_or(None),
+            icon_type: fields.get("icon_type").map(|v| if v.is_empty() { None } else { Some(v.clone()) }).unwrap_or(None),
+            notify_on_new_record: fields.get("notify_on_new_record").map(|v| Some(v == "true")).unwrap_or(None),
+            requires_acknowledgment: fields.get("requires_acknowledgment").map(|v| Some(v == "true")).unwrap_or(None),
+        };
+        
+        // Update the page
+        match CustomPage::update(&state.db.pool, page_id, &update_req).await {
+            Ok(_) => (),
+            Err(e) => {
+                log::error!("Error updating custom page: {}", e);
+                return HttpResponse::InternalServerError().finish();
+            }
+        }
+        
+        // Check if we should clear the icon image
+        if fields.get("clear_icon_image").map(|v| v == "true").unwrap_or(false) {
+            let clear_image_result = sqlx::query!(
+                "UPDATE custom_pages SET icon_image_path = NULL, icon_type = 'fontawesome' WHERE id = ?", 
+                page_id
+            )
+            .execute(&state.db.pool)
+            .await;
+            
+            if let Err(e) = clear_image_result {
+                log::error!("Error clearing icon image path: {}", e);
+                // Continue anyway, as the main update succeeded
+            }
+        }
+        
+        // Handle icon image if present
+        if let Some((image_data, filename)) = icon_image {
+            let icon_path = handle_icon_upload(page_id, image_data, filename).await;
+            
+            if let Some(icon_path) = icon_path {
+                // Update the page with the icon path and ensure icon_type is set to "image"
+                let update_result = sqlx::query!(
+                    "UPDATE custom_pages SET icon_image_path = ?, icon_type = 'image' WHERE id = ?",
+                    icon_path, page_id
+                )
+                .execute(&state.db.pool)
+                .await;
+                
+                if let Err(e) = update_result {
+                    log::error!("Error updating icon path: {}", e);
+                    // We've created the page, so return success anyway
+                }
+            }
+        }
+        
+        return HttpResponse::Ok().finish();
+    } else {
+        // If no form fields, suggest using the JSON endpoint
+        log::warn!("No form fields detected - client should use the JSON endpoint instead");
+        return HttpResponse::BadRequest().body(format!("No form fields detected. For JSON requests, use the /custom_pages/{}/json endpoint", page_id));
+    }
+}
+
+// Add a new handler for JSON requests
+pub async fn update_custom_page_json(
+    state: web::Data<State>,
+    path: web::Path<u32>,
+    req: HttpRequest,
+    session: Session,
+) -> impl Responder {
+    let page_id = path.into_inner();
+    let user_id = match validate_session(&session) {
+        Ok(id) => id,
+        Err(resp) => return resp,
+    };
+    match user_can_manage_page(&state.db.pool, user_id, page_id).await {
+        Ok(can) => {
+            if !can {
+                return HttpResponse::Forbidden().finish();
+            }
+        }
+        Err(e) => {
+            log::error!("Error checking permissions: {}", e);
+            return HttpResponse::InternalServerError().finish();
+        }
+    };
+
+    // Parse request body
+    let body = match web::Json::<UpdateCustomPageRequest>::extract(&req).await {
+        Ok(json_data) => json_data.into_inner(),
         Err(e) => {
             log::error!("Error parsing JSON: {}", e);
             return HttpResponse::BadRequest().finish();
         }
     };
 
-    match CustomPage::update(&state.db.pool, page_id, &data).await {
+    match CustomPage::update(&state.db.pool, page_id, &body).await {
         Ok(_) => HttpResponse::Ok().finish(),
         Err(e) => {
             log::error!("Error updating custom page: {}", e);
             HttpResponse::InternalServerError().finish()
         }
     }
+}
+
+// Helper function to handle icon uploads
+async fn handle_icon_upload(page_id: u32, image_data: Vec<u8>, filename: String) -> Option<String> {
+    // Create directory for icons if it doesn't exist
+    let icons_dir = "media/page_icons";
+    
+    if let Err(e) = fs::create_dir_all(icons_dir) {
+        log::error!("Error creating page icons directory: {}", e);
+        return None;
+    }
+    
+    // Generate a unique filename
+    let extension = Path::new(&filename)
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .unwrap_or("png");
+    
+    let unique_filename = format!("{}-{}.{}", page_id, Uuid::new_v4(), extension);
+    let file_path = format!("{}/{}", icons_dir, unique_filename);
+    
+    // Write the file
+    let mut file = match fs::File::create(&file_path) {
+        Ok(file) => file,
+        Err(e) => {
+            log::error!("Error creating icon file: {}", e);
+            return None;
+        }
+    };
+    
+    if let Err(e) = file.write_all(&image_data) {
+        log::error!("Error writing icon file: {}", e);
+        return None;
+    }
+    
+    Some(file_path)
 }
 
 pub async fn delete_custom_page(
@@ -343,7 +646,7 @@ pub async fn duplicate_custom_page(
         r#"
         SELECT 
             id, name, path, parent_path, is_group, description, 
-            icon, notify_on_new_record, requires_acknowledgment
+            icon, icon_type, icon_image_path, notify_on_new_record, requires_acknowledgment
         FROM custom_pages 
         WHERE id = ?
         "#,
@@ -379,15 +682,18 @@ pub async fn duplicate_custom_page(
     let mut request = crate::models::custom_page::CreateCustomPageRequest {
         name: format!("{} (Cópia)", original_page_data.name),
         path: format!("{}-copy", original_page_data.path),
-        parent_path: original_page_data.parent_path,
+        parent_path: original_page_data.parent_path.clone(), // Clone to avoid move
         is_group: original_page_data.is_group != 0, // Convert i8 to bool
-        description: original_page_data.description,
-        icon: original_page_data.icon,
+        description: original_page_data.description.clone(), // Clone to avoid move
+        icon: original_page_data.icon.clone(), // Clone to avoid move
+        icon_type: original_page_data.icon_type.clone(), // Clone to avoid move
         notify_on_new_record: original_page_data.notify_on_new_record != 0, // Convert i8 to bool
         requires_acknowledgment: original_page_data.requires_acknowledgment != 0, // Convert i8 to bool
         fields: Vec::new(),
         permissions: Vec::new(),
     };
+    
+    // We'll copy the icon image after the page is created, as we need its ID
     
     // If not a group, get fields and permissions
     if original_page_data.is_group == 0 { // Check if is_group is 0 (false)
@@ -489,6 +795,30 @@ pub async fn duplicate_custom_page(
             return HttpResponse::InternalServerError().finish();
         }
     };
+    
+    // Copy the icon image if it exists
+    if let Some(icon_image_path) = &original_page_data.icon_image_path {
+        if let Some(icon_type) = &original_page_data.icon_type {
+            if icon_type == "image" {
+                // Copy the image file to a new location
+                if let Ok(image_data) = std::fs::read(icon_image_path) {
+                    if let Some(file_path) = handle_icon_upload(new_page_id, image_data, icon_image_path.clone()).await {
+                        // Update the icon_image_path in the database
+                        if let Err(e) = sqlx::query!(
+                            "UPDATE custom_pages SET icon_image_path = ? WHERE id = ?",
+                            file_path, new_page_id
+                        )
+                        .execute(&state.db.pool)
+                        .await 
+                        {
+                            log::error!("Error updating icon image path: {}", e);
+                            // Continue anyway as this is not critical
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     // Commit transaction
     if let Err(e) = tx.commit().await {

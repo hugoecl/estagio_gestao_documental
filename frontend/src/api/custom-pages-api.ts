@@ -115,22 +115,57 @@ export async function getCustomPages(cookie?: string): Promise<CustomPage[]> {
 export async function createCustomPage(
   data: CreateCustomPageRequest,
 ): Promise<{ success: boolean; pageId?: number }> {
-  if (data.path.length > 1 && data.path.endsWith("/")) {
-    data.path = data.path.slice(0, -1);
+  try {
+    // Always use FormData for consistency
+    const formData = new FormData();
+    
+    // Debug image upload info
+    
+    // Add all standard fields
+    formData.append('name', data.name);
+    formData.append('path', data.path);
+    formData.append('parent_path', data.parent_path || '');
+    formData.append('is_group', data.is_group.toString());
+    formData.append('description', data.description || '');
+    formData.append('icon', data.icon || '');
+    formData.append('icon_type', data.icon_type || '');
+    formData.append('notify_on_new_record', data.notify_on_new_record.toString());
+    formData.append('requires_acknowledgment', data.requires_acknowledgment.toString());
+    
+    // Add icon image if available
+    if (data.icon_image) {
+      formData.append('icon_image', data.icon_image);
+      // Verify the file was added to FormData
+    }
+    
+    // Add permissions and fields as JSON strings
+    formData.append('permissions', JSON.stringify(data.permissions));
+    formData.append('fields', JSON.stringify(data.fields));
+    
+    // Log all keys in the FormData
+    const keys = [];
+    formData.forEach((value, key) => {
+      keys.push(key);
+    });
+    
+    const response = await handleFetch(`${API_BASE_URL}/custom_pages`, {
+      method: "POST",
+      credentials: "include",
+      body: formData,
+    });
+    
+    const responseText = await response.text();
+    
+    if (response.ok) {
+      const pageId = parseInt(responseText, 10);
+      return { success: true, pageId };
+    }
+    
+    return { success: false };
+  } catch (error) {
+    console.error("Error creating custom page:", error);
+    return { success: false };
   }
-
-  const response = await handleFetch(`${API_BASE_URL}/custom_pages`, {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
-
-  if (response.ok) {
-    const pageIdText = await response.text();
-    return { success: true, pageId: parseInt(pageIdText, 10) };
-  }
-  return { success: false };
 }
 
 export async function updatePagePermissions(
@@ -168,13 +203,59 @@ export async function updateCustomPage(
   pageId: number,
   data: UpdateCustomPageRequest,
 ): Promise<boolean> {
-  const response = await handleFetch(`${API_BASE_URL}/custom_pages/${pageId}`, {
-    method: "PUT",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
-  return response.ok;
+  try {
+    // Always use FormData for consistency
+    const formData = new FormData();
+    
+    // Add all standard fields
+    formData.append('name', data.name);
+    if (data.parent_path !== undefined) {
+      formData.append('parent_path', data.parent_path || '');
+    }
+    formData.append('description', data.description || '');
+    formData.append('icon', data.icon || '');
+    
+    // Always include icon_type to ensure it's set correctly
+    // If icon_type is null, it means we want to clear any existing icon
+    if (data.icon_type === null) {
+      // Explicitly set to null or empty to clear existing icon
+      formData.append('icon_type', '');
+      // Append a field to indicate we want to clear the image
+      formData.append('clear_icon_image', 'true');
+    } else {
+      formData.append('icon_type', data.icon_type || '');
+      // If icon_type is 'fontawesome' and we previously had an image, clear it
+      if (data.icon_type === 'fontawesome') {
+        formData.append('clear_icon_image', 'true');
+      }
+    }
+    
+    if (data.notify_on_new_record !== undefined) {
+      formData.append('notify_on_new_record', data.notify_on_new_record.toString());
+    }
+    if (data.requires_acknowledgment !== undefined) {
+      formData.append('requires_acknowledgment', data.requires_acknowledgment.toString());
+    }
+    
+    // Add icon image if available
+    if (data.icon_image) {
+      formData.append('icon_image', data.icon_image);
+    }
+    
+    const response = await handleFetch(
+      `${API_BASE_URL}/custom_pages/${pageId}`,
+      {
+        method: "PUT",
+        credentials: "include",
+        body: formData,
+      },
+    );
+    
+    return response.ok;
+  } catch (error) {
+    console.error("Error updating custom page:", error);
+    return false;
+  }
 }
 
 export async function deleteCustomPage(pageId: number): Promise<boolean> {
