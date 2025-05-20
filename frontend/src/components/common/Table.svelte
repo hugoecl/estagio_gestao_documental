@@ -22,7 +22,7 @@
         loading?: boolean;
         emptyMessage: string;
         searchEmptyMessage?: string;
-        rowClassName?: string;
+        rowClassName?: string | ((row: any) => string);
         onRowClick: (id: string, row: any) => void;
     } = $props();
 
@@ -323,7 +323,7 @@
                 {:else}
                     {#each paginatedEntries as [id, row] (id)}
                         <tr
-                            class={rowClassName}
+                            class={typeof rowClassName === 'function' ? rowClassName(row) : rowClassName}
                             onclick={() => onRowClick(id, row)}
                         >
                             {#each columns as column (column.field)}
@@ -332,7 +332,9 @@
                                     column.field,
                                 )}
                                 <td class={column.responsive || ""}>
-                                    {#if column.field === "roles" && isRoleArray(cellValue)}
+                                    {#if column.cellRenderer}
+                                        {@html column.cellRenderer(cellValue, row)}
+                                    {:else if column.field === "roles" && isRoleArray(cellValue)}
                                         <!-- Role rendering -->
                                         {#if cellValue.length > 0}{#each cellValue as role (role.id)}<span
                                                     class:badge-primary={role.is_admin}

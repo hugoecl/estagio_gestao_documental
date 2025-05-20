@@ -3,4 +3,5 @@ export type TableColumn = {
   field: string; // Field path in the data object (e.g., "name")
   responsive?: string; // Tailwind classes for responsive behavior (e.g., "hidden sm:table-cell")
   dateValueField?: string; // Date value for sorting
+  cellRenderer?: (value: any, row: any) => string; // Custom renderer function for cells
 };

@@ -10,32 +10,57 @@
         AlertPosition,
     } from "@components/alert/alert";
 
-    let pages = $state<Record<string, CustomPage>>({});
+    // Define an extended type for displayed pages
+    type DisplayedPage = CustomPage & {
+        typeIcon: string;
+        type: string;
+    };
+
+    let allPages = $state<CustomPage[]>([]);
+    let displayedPages = $state<Record<string, DisplayedPage>>({});
     let isLoading = $state(true);
     let error = $state<string | null>(null);
+    let currentPath = $state<string | null>(null);
+    let navigationHistory = $state<{name: string, path: string | null}[]>([]);
 
     const columns: TableColumn[] = [
         { header: "ID", field: "id" },
-        { header: "Nome", field: "name" },
-        { header: "Tipo", field: "is_group" }, // Add column for type
+        { 
+            header: "Nome", 
+            field: "name",
+            cellRenderer: (value, row) => {
+                const icon = row.is_group ? 'fa-folder' : 'fa-file-alt';
+                const iconColor = row.is_group ? 'text-accent' : 'text-blue-500';
+                return `<div class="flex items-center">
+                    <i class="fa-solid ${icon} ${iconColor} mr-2"></i>
+                    <span>${value}</span>
+                </div>`;
+            }
+        },
+        { 
+            header: "Tipo", 
+            field: "type",
+            cellRenderer: (value, row) => {
+                const badgeColor = row.is_group ? 'badge-accent' : 'badge-info';
+                return `<div class="badge ${badgeColor}">${value}</div>`;
+            }
+        }, 
         { header: "Caminho", field: "path" },
-        { header: "Grupo", field: "parent_path" },
         { header: "Descrição", field: "description" },
-        { header: "Ícone", field: "icon" },
+        { 
+            header: "Ícone", 
+            field: "icon",
+            cellRenderer: (value) => {
+                if (!value) return '';
+                return `<i class="fa-solid fa-${value}"></i> ${value}`;
+            }
+        },
     ];
 
     onMount(async () => {
         try {
-            const pagesArray = await getCustomPages();
-            const pagesRecord: Record<string, CustomPage> = {};
-            pagesArray.forEach((page) => {
-                // Add the is_group property if it's missing from the type (should be included by backend now)
-                pagesRecord[page.id.toString()] = {
-                    ...page,
-                    is_group: page.is_group ?? false,
-                };
-            });
-            pages = pagesRecord;
+            allPages = await getCustomPages();
+            filterPagesByParent(null); // Show root level initially
         } catch (e: any) {
             error = `Erro ao carregar páginas: ${e.message}`;
             showAlert(error, AlertType.ERROR, AlertPosition.TOP);
@@ -44,24 +69,105 @@
         }
     });
 
-    function handleRowClick(id: string, row: CustomPage) {
-        if (typeof window !== "undefined") {
-            window.location.href = `/admin/pages/edit/${id}/`;
+    function filterPagesByParent(parentPath: string | null) {
+        const filtered = allPages.filter(page => page.parent_path === parentPath);
+        const pagesRecord: Record<string, DisplayedPage> = {};
+        filtered.forEach(page => {
+            pagesRecord[page.id.toString()] = {
+                ...page,
+                type: page.is_group ? 'Grupo' : 'Página',
+                typeIcon: page.is_group ? 'fa-folder' : 'fa-file-alt'
+            };
+        });
+        displayedPages = pagesRecord;
+        currentPath = parentPath;
+    }
+
+    function navigateTo(path: string | null) {
+        if (path === null) {
+            // Reset to root
+            navigationHistory = [];
+        } else {
+            // Find the index of the path in history
+            const index = navigationHistory.findIndex(item => item.path === path);
+            if (index >= 0) {
+                // Keep only history up to that index
+                navigationHistory = navigationHistory.slice(0, index + 1);
+            } else {
+                // If it's a new path not in history, add it
+                const currentPage = allPages.find(p => p.path === path);
+                if (currentPage) {
+                    navigationHistory = [...navigationHistory, {
+                        name: currentPage.name,
+                        path: currentPage.path
+                    }];
+                }
+            }
+        }
+        filterPagesByParent(path);
+    }
+
+    function handleRowClick(id: string, row: DisplayedPage) {
+        if (row.is_group) {
+            // If clicking a group, navigate to its contents
+            navigateTo(row.path);
+        } else {
+            // If clicking a page, go to edit page
+            if (typeof window !== "undefined") {
+                window.location.href = `/admin/pages/edit/${id}/`;
+            }
         }
     }
 </script>
+
+<div class="mb-4">
+    <!-- Breadcrumb navigation -->
+    <div class="text-sm breadcrumbs mb-4">
+        <ul>
+            <li>
+                <a href="#" on:click|preventDefault={() => navigateTo(null)} class="text-primary">
+                    <i class="fa-solid fa-home mr-1"></i> Raiz
+                </a>
+            </li>
+            {#each navigationHistory as item}
+                <li>
+                    <a href="#" on:click|preventDefault={() => navigateTo(item.path)} class="text-primary">
+                        <i class="fa-solid fa-folder mr-1"></i> {item.name}
+                    </a>
+                </li>
+            {/each}
+        </ul>
+    </div>
+    
+    {#if currentPath !== null}
+        <div class="flex items-center mb-4">
+            <button class="btn btn-sm btn-outline" on:click={() => navigateTo(navigationHistory.length > 1 ? navigationHistory[navigationHistory.length - 2].path : null)}>
+                <i class="fa-solid fa-arrow-left mr-1"></i> Voltar
+            </button>
+            <div class="ml-4 font-semibold">
+                {#if navigationHistory.length > 0}
+                    Conteúdo de: {navigationHistory[navigationHistory.length - 1].name}
+                {:else}
+                    Nível Raiz
+                {/if}
+            </div>
+        </div>
+    {/if}
+</div>
 
 {#if error}
     <div class="alert alert-error">{error}</div>
 {/if}
 
 <Table
-    data={pages}
+    data={displayedPages}
     {columns}
     loading={isLoading}
-    emptyMessage="Nenhuma página customizada encontrada."
+    emptyMessage={currentPath === null 
+        ? "Nenhuma página ou grupo no nível raiz." 
+        : `Nenhuma página ou grupo encontrado em "${navigationHistory[navigationHistory.length - 1]?.name || currentPath}".`}
     keyField="id"
     searchFields={["name", "path", "description"]}
     onRowClick={handleRowClick}
-    rowClassName="hover:bg-base-300 cursor-pointer"
+    rowClassName={(row) => `hover:bg-base-300 cursor-pointer ${row.is_group ? 'bg-base-200' : ''}`}
 />

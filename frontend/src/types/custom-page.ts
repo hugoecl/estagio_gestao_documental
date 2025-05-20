@@ -5,6 +5,7 @@ export interface CustomPage {
   name: string;
   path: string;
   parent_path: string | null;
+  is_group: boolean;
   description: string | null;
   icon: string | null;
   created_at: string; // Consider using Date objects after fetching
