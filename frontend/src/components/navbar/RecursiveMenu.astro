@@ -24,7 +24,6 @@ const { items, isRoot = false } = Astro.props;
             const hasChildren = item.children && item.children.length > 0;
             // The `item.path` from backend NavigationItem is None for groups,
             // and a direct, correctly formatted path for pages.
-            console.log("item.title:", item.title, " item.path:", item.path);
             const path = item.path?.endsWith("/") ? item.path : item.path + "/";
 
             return (
