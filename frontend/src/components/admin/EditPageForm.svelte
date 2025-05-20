@@ -170,7 +170,8 @@
                               can_manage_fields: existingPerm.can_manage_fields,
                               can_view_acknowledgments:
                                   (existingPerm as any)
-                                      .can_view_acknowledgments || false, // Load if exists
+                                      .can_view_acknowledgments || false,
+                              can_add: existingPerm.can_add || false,
                           }
                         : {
                               role_id: role.id,
@@ -179,7 +180,8 @@
                               can_edit: false,
                               can_delete: false,
                               can_manage_fields: false,
-                              can_view_acknowledgments: false, // Default for new
+                              can_view_acknowledgments: false,
+                              can_add: false,
                           };
                 });
                 permissions = initialPermissions;
@@ -1186,6 +1188,7 @@
                                 <th class="text-center">Eliminar</th>
                                 <th class="text-center">Gerir Campos</th>
                                 <th class="text-center">Ver Confirmações</th>
+                                <th class="text-center">Adicionar</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1284,6 +1287,20 @@
                                                             perm as any
                                                         ).can_view_acknowledgments =
                                                             value)
+                                                }
+                                                disabled={role.is_admin}
+                                            /></td
+                                        >
+                                        <td class="text-center"
+                                            ><input
+                                                type="checkbox"
+                                                class="checkbox checkbox-xs"
+                                                bind:checked={
+                                                    () =>
+                                                        perm.can_add ||
+                                                        role.is_admin,
+                                                    (value) =>
+                                                        (perm.can_add = value)
                                                 }
                                                 disabled={role.is_admin}
                                             /></td

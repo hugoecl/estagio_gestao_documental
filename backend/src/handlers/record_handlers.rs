@@ -8,6 +8,7 @@ use crate::{
     auth::{
         get_user_ids_with_view_permission, user_can_create_record, user_can_delete_record,
         user_can_edit_record, user_can_view_page, validate_session,
+        user_can_add_to_record,
     },
     models::{
         custom_page::CustomPage, // Added for fetching page details
@@ -256,19 +257,30 @@ pub async fn update_record(
 
     let page_id = record_with_files.record.page_id;
 
-    match user_can_edit_record(&state.db.pool, user_id, page_id).await {
-        Ok(can_edit) => {
-            if !can_edit {
-                return HttpResponse::Forbidden().finish();
-            }
-        }
+    // Check if user can edit
+    let can_edit = match user_can_edit_record(&state.db.pool, user_id, page_id).await {
+        Ok(can_edit) => can_edit,
         Err(e) => {
-            log::error!("Error checking user permissions: {}", e);
+            log::error!("Error checking edit permissions: {}", e);
             return HttpResponse::InternalServerError().finish();
         }
     };
 
-    let Json(data): Json<UpdatePageRecordRequest> = match Json::from_bytes(&data) {
+    // Check if user can add
+    let can_add = match user_can_add_to_record(&state.db.pool, user_id, page_id).await {
+        Ok(can_add) => can_add,
+        Err(e) => {
+            log::error!("Error checking add permissions: {}", e);
+            return HttpResponse::InternalServerError().finish();
+        }
+    };
+
+    // Require at least one permission
+    if !can_edit && !can_add {
+        return HttpResponse::Forbidden().finish();
+    }
+
+    let Json(update_data): Json<UpdatePageRecordRequest> = match Json::from_bytes(&data) {
         Ok(data) => data,
         Err(e) => {
             log::error!("Error parsing JSON: {}", e);
@@ -284,7 +296,29 @@ pub async fn update_record(
         }
     };
 
-    if let serde_json::Value::Object(data_map) = &data.data {
+    // For users with only can_add permission, enforce they can only add to empty fields
+    if !can_edit && can_add {
+        if let serde_json::Value::Object(data_map) = &update_data.data {
+            if let serde_json::Value::Object(existing_data_map) = &record_with_files.record.data {
+                for (field_name, new_value) in data_map.iter() {
+                    // If field exists and has a value in the existing record
+                    if let Some(existing_value) = existing_data_map.get(field_name) {
+                        if !existing_value.is_null() 
+                            && !existing_value.as_str().map_or(false, |s| s.is_empty()) 
+                            && existing_value != new_value {
+                            // User is trying to modify an existing field value, which is not allowed with can_add
+                            log::warn!("User with can_add permission attempted to modify existing field {}", field_name);
+                            return HttpResponse::Forbidden()
+                                .body(format!("Cannot modify existing field value for {}", field_name));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Required field validation
+    if let serde_json::Value::Object(data_map) = &update_data.data {
         for field in &page_fields {
             if field.required {
                 if !data_map.contains_key(&field.name) || data_map[&field.name].is_null() {
@@ -295,7 +329,7 @@ pub async fn update_record(
         }
     }
 
-    match PageRecord::update(&state.db.pool, record_id, &data, user_id as u32).await {
+    match PageRecord::update(&state.db.pool, record_id, &update_data, user_id as u32).await {
         Ok(_) => HttpResponse::Ok().finish(),
         Err(e) => {
             log::error!("Error updating page record: {}", e);

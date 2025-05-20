@@ -10,6 +10,7 @@
         type SelectOption,
     } from "@lib/types/form-modal";
     import type { PageRecordFile } from "@lib/types/page-record";
+    import type { UserPagePermissions } from "@lib/types/custom-page"; // Import UserPagePermissions
     import { validateNIF } from "@utils/nif"; // Import NIF validator
 
     // --- Email Validation (Simple Regex Example) ---
@@ -383,6 +384,30 @@
         validationErrors = {};
         showValidationErrors = false; /* Reset formValues on close? Maybe not necessary if $effect handles it well */ /* formValues = {}; */
     }
+
+    // Function to determine if a field should be disabled based on permissions and content
+    function isFieldDisabled(fieldId: string): boolean {
+        if (readOnly) return true; // Fully read-only mode
+        
+        // If user has edit permission, field is always enabled
+        if (!currentUserPermissions || currentUserPermissions.can_edit) return false;
+        
+        // If creating a new record (no recordId) and user has can_add or can_create permission, enable fields
+        if (recordId === null && (currentUserPermissions.can_add || currentUserPermissions.can_create)) {
+            return false;
+        }
+        
+        // If user has add permission but NOT edit permission, field is disabled only if it has a value
+        if (currentUserPermissions.can_add && recordData) {
+            const hasValue = recordData[fieldId] !== null && 
+                           recordData[fieldId] !== undefined && 
+                           recordData[fieldId] !== '';
+            return hasValue; // Disable if field has value
+        }
+        
+        // In all other cases, field is disabled
+        return true;
+    }
 </script>
 
 <!-- Template -->
@@ -426,7 +451,7 @@
                                         bind:value={formValues[field.id]}
                                         required={field.required}
                                         onblur={() => handleFieldBlur(field)}
-                                        disabled={readOnly}
+                                        disabled={isFieldDisabled(field.id)}
                                     />
                                 {:else if field.type === FieldType.NUMBER}
                                     <input
@@ -439,7 +464,7 @@
                                         bind:value={formValues[field.id]}
                                         required={field.required}
                                         onblur={() => handleFieldBlur(field)}
-                                        disabled={readOnly}
+                                        disabled={isFieldDisabled(field.id)}
                                     />
                                 {:else if field.type === FieldType.SELECT}
                                     <select
@@ -449,31 +474,22 @@
                                         bind:value={formValues[field.id]}
                                         required={field.required}
                                         onblur={() => handleFieldBlur(field)}
-                                        onchange={() => handleFieldBlur(field)}
-                                        disabled={readOnly}
+                                        disabled={isFieldDisabled(field.id)}
                                     >
-                                        <option disabled value=""
-                                            >{field.placeholder ||
-                                                `Selecione ${field.label}`}</option
-                                        >
-                                        {#if field.options}{#each field.options as option}<option
-                                                    value={option.value}
-                                                    >{option.label}</option
-                                                >{/each}{/if}
+                                        <option value="">Selecione...</option>
+                                        {#each field.options || [] as option}
+                                            <option value={option.value}>{option.label}</option>
+                                        {/each}
                                     </select>
                                 {:else if field.type === FieldType.DATE}
                                     <DatePicker
-                                        range={false}
-                                        bind:value={formValues[field.id]}
-                                        required={field.required}
-                                        inputClass={!readOnly &&
-                                        validationErrors[field.id]
-                                            ? "input-error"
-                                            : ""}
-                                        onblur={() => handleFieldBlur(field)}
-                                        onchange={() => handleFieldBlur(field)}
-                                        disabled={readOnly}
-                                        formName={field.id}
+                                        value={formValues[field.id]}
+                                        onValueChange={(value) => {
+                                            formValues[field.id] = value;
+                                            handleFieldBlur(field);
+                                        }}
+                                        disabled={isFieldDisabled(field.id)}
+                                        hasError={!readOnly && !!validationErrors[field.id]}
                                     />
                                 {:else if field.type === FieldType.DATE_RANGE}
                                     <DatePicker
@@ -486,19 +502,19 @@
                                             : ""}
                                         onblur={() => handleFieldBlur(field)}
                                         onchange={() => handleFieldBlur(field)}
-                                        disabled={readOnly}
+                                        disabled={isFieldDisabled(field.id)}
                                         formName={field.id}
                                     />
                                 {:else if field.type === FieldType.TEXTAREA}
                                     <textarea
-                                        class="textarea textarea-bordered w-full min-h-24"
+                                        class="textarea textarea-bordered w-full h-32"
                                         class:textarea-error={!readOnly &&
                                             validationErrors[field.id]}
                                         placeholder={field.placeholder || ""}
                                         bind:value={formValues[field.id]}
                                         required={field.required}
                                         onblur={() => handleFieldBlur(field)}
-                                        disabled={readOnly}
+                                        disabled={isFieldDisabled(field.id)}
                                     ></textarea>
                                 {/if}
 

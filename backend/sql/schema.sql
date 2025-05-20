@@ -109,6 +109,7 @@ CREATE TABLE IF NOT EXISTS page_permissions (
     can_delete BOOLEAN NOT NULL DEFAULT false,
     can_manage_fields BOOLEAN NOT NULL DEFAULT false,
     can_view_acknowledgments BOOLEAN NOT NULL DEFAULT false,
+    can_add BOOLEAN NOT NULL DEFAULT false,
     PRIMARY KEY (id),
     UNIQUE KEY unique_page_role (page_id, role_id),
     FOREIGN KEY (page_id) REFERENCES custom_pages (id) ON DELETE CASCADE,

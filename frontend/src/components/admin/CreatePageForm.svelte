@@ -118,7 +118,8 @@
                     can_edit: false,
                     can_delete: false,
                     can_manage_fields: false,
-                    can_view_acknowledgments: false, // Added
+                    can_view_acknowledgments: false,
+                    can_add: false,
                 };
             });
             permissions = initialPermissions;
@@ -820,7 +821,7 @@
                                 <th class="text-center">Eliminar</th>
                                 <th class="text-center">Gerir Campos</th>
                                 <th class="text-center">Ver Confirmações</th>
-                                <!-- New Header -->
+                                <th class="text-center">Adicionar</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -917,6 +918,21 @@
                                                     (value) =>
                                                         (perm.can_view_acknowledgments =
                                                             value)
+                                                }
+                                                disabled={role.is_admin}
+                                            /></td
+                                        >
+                                        <!-- New Cell for can_add -->
+                                        <td class="text-center"
+                                            ><input
+                                                type="checkbox"
+                                                class="checkbox checkbox-xs"
+                                                bind:checked={
+                                                    () =>
+                                                        perm.can_add ||
+                                                        role.is_admin,
+                                                    (value) =>
+                                                        (perm.can_add = value)
                                                 }
                                                 disabled={role.is_admin}
                                             /></td

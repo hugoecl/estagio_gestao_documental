@@ -450,7 +450,7 @@ pub async fn duplicate_custom_page(
             r#"
             SELECT 
                 role_id, can_view, can_create, can_edit, can_delete,
-                can_manage_fields, can_view_acknowledgments
+                can_manage_fields, can_view_acknowledgments, can_add
             FROM page_permissions
             WHERE page_id = ?
             "#,
@@ -476,6 +476,7 @@ pub async fn duplicate_custom_page(
                 can_delete: perm.can_delete != 0, // Convert i8 to bool
                 can_manage_fields: perm.can_manage_fields != 0, // Convert i8 to bool
                 can_view_acknowledgments: perm.can_view_acknowledgments != 0, // Convert i8 to bool
+                can_add: perm.can_add != 0, // Convert i8 to bool
             });
         }
     }

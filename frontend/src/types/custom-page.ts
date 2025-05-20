@@ -18,6 +18,8 @@ export interface RolePermissionRequest {
   can_edit: boolean;
   can_delete: boolean;
   can_manage_fields: boolean;
+  can_view_acknowledgments: boolean;
+  can_add: boolean;
 }
 
 // export interface CreatePageFieldRequest {
@@ -39,6 +41,8 @@ export interface CreateCustomPageRequest {
   is_group: boolean;
   description: string | null;
   icon: string | null;
+  notify_on_new_record: boolean;
+  requires_acknowledgment: boolean;
   fields: CreatePageFieldRequest[]; // Empty if is_group is true
   permissions: RolePermissionRequest[]; // Empty if is_group is true
 }
@@ -48,6 +52,8 @@ export interface UpdateCustomPageRequest {
   parent_path?: string | null;
   description: string | null;
   icon: string | null;
+  notify_on_new_record?: boolean;
+  requires_acknowledgment?: boolean;
 }
 
 export interface PagePermission {
@@ -60,6 +66,8 @@ export interface PagePermission {
   can_edit: boolean;
   can_delete: boolean;
   can_manage_fields: boolean;
+  can_view_acknowledgments?: boolean;
+  can_add: boolean; // New permission: can add to empty fields without editing filled ones
 }
 
 // Represents the user's specific permissions for the current page
@@ -70,6 +78,8 @@ export interface UserPagePermissions {
   can_edit: boolean;
   can_delete: boolean;
   can_manage_fields: boolean;
+  can_view_acknowledgments?: boolean;
+  can_add: boolean; // New permission: can add to empty fields without editing filled ones
   is_admin: boolean; // Useful shortcut
 }
 

@@ -66,7 +66,8 @@ pub struct RolePermissionRequest {
     pub can_edit: bool,
     pub can_delete: bool,
     pub can_manage_fields: bool,
-    pub can_view_acknowledgments: bool, // New field
+    pub can_view_acknowledgments: bool,
+    pub can_add: bool, // New field
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -92,7 +93,8 @@ pub struct UserPagePermissions {
     pub can_edit: bool,
     pub can_delete: bool,
     pub can_manage_fields: bool,
-    pub can_view_acknowledgments: bool, // New field
+    pub can_view_acknowledgments: bool,
+    pub can_add: bool, // New field
     pub is_admin: bool,
 }
 
@@ -117,7 +119,8 @@ pub struct PagePermission {
     pub can_edit: bool,
     pub can_delete: bool,
     pub can_manage_fields: bool,
-    pub can_view_acknowledgments: bool, // New field
+    pub can_view_acknowledgments: bool,
+    pub can_add: bool, // New field
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -193,9 +196,9 @@ impl CustomPage {
                 sqlx::query!(
                     r#"
                     INSERT INTO page_permissions (
-                        page_id, role_id, can_view, can_create, can_edit, can_delete, can_manage_fields, can_view_acknowledgments
+                        page_id, role_id, can_view, can_create, can_edit, can_delete, can_manage_fields, can_view_acknowledgments, can_add
                     )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     "#,
                     page_id,
                     permission.role_id,
@@ -204,7 +207,8 @@ impl CustomPage {
                     permission.can_edit,
                     permission.can_delete,
                     permission.can_manage_fields,
-                    permission.can_view_acknowledgments // New field
+                    permission.can_view_acknowledgments,
+                    permission.can_add
                 )
                 .execute(&mut *tx)
                 .await?;
@@ -274,7 +278,8 @@ impl CustomPage {
                     p.can_view as "can_view: bool", p.can_create as "can_create: bool",
                     p.can_edit as "can_edit: bool", p.can_delete as "can_delete: bool",
                     p.can_manage_fields as "can_manage_fields: bool",
-                    p.can_view_acknowledgments as "can_view_acknowledgments: bool"
+                    p.can_view_acknowledgments as "can_view_acknowledgments: bool",
+                    p.can_add as "can_add: bool"
                 FROM page_permissions p
                 JOIN roles r ON p.role_id = r.id
                 WHERE p.page_id = ?
@@ -324,7 +329,8 @@ impl CustomPage {
                 MAX(CASE WHEN pp.can_edit = 1 THEN 1 ELSE 0 END) as can_edit,
                 MAX(CASE WHEN pp.can_delete = 1 THEN 1 ELSE 0 END) as can_delete,
                 MAX(CASE WHEN pp.can_manage_fields = 1 THEN 1 ELSE 0 END) as can_manage_fields,
-                MAX(CASE WHEN pp.can_view_acknowledgments = 1 THEN 1 ELSE 0 END) as can_view_acknowledgments
+                MAX(CASE WHEN pp.can_view_acknowledgments = 1 THEN 1 ELSE 0 END) as can_view_acknowledgments,
+                MAX(CASE WHEN pp.can_add = 1 THEN 1 ELSE 0 END) as can_add
             FROM user_roles ur
             LEFT JOIN roles r ON r.id = ur.role_id
             LEFT JOIN page_permissions pp ON pp.role_id = ur.role_id AND pp.page_id = ?
@@ -346,7 +352,8 @@ impl CustomPage {
             can_edit: is_admin || perms.can_edit.unwrap_or(0) == 1,
             can_delete: is_admin || perms.can_delete.unwrap_or(0) == 1,
             can_manage_fields: is_admin || perms.can_manage_fields.unwrap_or(0) == 1,
-            can_view_acknowledgments: is_admin || perms.can_view_acknowledgments.unwrap_or(0) == 1, // New field
+            can_view_acknowledgments: is_admin || perms.can_view_acknowledgments.unwrap_or(0) == 1,
+            can_add: is_admin || perms.can_add.unwrap_or(0) == 1,
         })
     }
 

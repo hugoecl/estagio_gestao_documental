@@ -51,13 +51,16 @@
 - [X] Fix quando o grupo esta vazio para nao aparecer pagina de 404
 - [ ] Pagina para gerir paginas, aparecer primeiro so os grupo e depois clicar nos grupos para aparecer as paginas desses grupos
 - [ ] Fazer campo para dar upload de ficheiros ao criar paginas
-- [ ] Criar novo tipo de permissão para adição (ou seja pode inserir nos campoes vazios de um registo, mas nao pode editar o que ja foi preenchido)
+- [X] Criar novo tipo de permissão para adição (ou seja pode inserir nos campoes vazios de um registo, mas nao pode editar o que ja foi preenchido)
 - [ ] Make the color of checkboxes consistent
+- [ ] Add static menu on admin menu
+
 
 
 
 
 - [ ] No menu estatico meter férias numa pasta de recursos humanos
+- [ ] Fix texto em modal que sai fora do modal
 - [ ] Nas ferias remover o conceito de "função de férias" e ao criar/editar uma função selecionar la funções que interferem nas férias
 - [ ] Novo tipo de campo, checkbox
 - [ ] Ver bug paginas aparecem no menu a users mesmo que nao tenham acesso 

@@ -329,13 +329,13 @@
     }
 
     // --- Event Handlers ---
-    async function proceedToOpenFormModal(
-        recordIdNum: number,
-        rowData?: PageRecord,
-    ) {
+    async function proceedToOpenFormModal(recordIdNum: number, rowData?: PageRecord) {
         // rowData is optional now
         selectedRecordId = recordIdNum;
-        isModalReadOnly = !permissions.can_edit;
+        
+        // Set modal to read-only if user has neither edit nor add permissions
+        isModalReadOnly = !permissions.can_edit && !permissions.can_add;
+        
         isLoading = true;
 
         try {
@@ -451,21 +451,24 @@
         }
     }
 
-    function handleCreateClick() {
-        if (!permissions.can_create) {
+    async function handleCreateClick() {
+        if (!permissions.can_create && !permissions.can_add) {
             showAlert(
-                "Não tem permissão para criar registos.",
+                "Não tem permissão para criar registos nesta página.",
                 AlertType.WARNING,
                 AlertPosition.TOP,
             );
             return;
         }
+
         selectedRecordId = null;
         selectedRecordWithFiles = null;
-        originalRecordJson = JSON.stringify({});
-        isModalReadOnly = false; // Create mode is never read-only
+        originalRecordJson = null;
+        isModalReadOnly = false; // Always allow editing in create mode
+        
+        await tick();
         formModalRef?.showModal();
-        currentModal.set(formModalRef); // formModalRef is the dialog element
+        currentModal.set(formModalRef);
     }
 
     // --- Form Submission ---
@@ -493,42 +496,78 @@
 
             // Prepare payload, converting types as needed
             const payloadData: Record<string, any> = {};
-            pageDefinition.fields.forEach((field) => {
-                if (formData.hasOwnProperty(field.name)) {
-                    let value = formData[field.name];
-                    const intendedType = field.field_type_name;
-
-                    if (intendedType === "NUMBER") {
-                        value =
-                            value === "" ||
-                            value === null ||
-                            value === undefined
-                                ? null
-                                : parseFloat(value);
-                        if (value !== null && isNaN(value)) value = null; // Ensure null if parse fails
-                    } else if (
-                        // Keep the else if structure, but handle DATE next
-                        intendedType === "DATE" &&
-                        typeof value === "string"
-                    ) {
-                        if (value && /^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
-                            const [d, m, y] = value.split("/");
-                            value = `${y}-${m}-${d}`;
-                        } else {
-                            value = null; // Invalid format or empty
-                        }
-                    } else if (
-                        value === "" &&
-                        intendedType !== "TEXT" &&
-                        intendedType !== "TEXTAREA"
-                    ) {
-                        value = null; // Treat empty strings as null for non-text fields
-                    }
-                    payloadData[field.name] = value;
+            
+            // If editing with only can_add permission (not can_edit), merge with original data
+            // to avoid overwriting existing values
+            const originalData = selectedRecordWithFiles?.record.data || {};
+            
+            for (const field of pageDefinition.fields) {
+                const fieldName = field.name;
+                const formValue = formData[fieldName];
+                
+                // Special handling for users with can_add but not can_edit
+                if (permissions.can_add && !permissions.can_edit && 
+                    selectedRecordId !== null && originalData[fieldName]) {
+                    // Skip this field if it already has a value and user can't edit
+                    payloadData[fieldName] = originalData[fieldName];
+                    continue;
                 }
-            });
+                
+                // Process the field value as before
+                if (
+                    field.field_type_name === "DATE" &&
+                    formValue &&
+                    typeof formValue === "string"
+                ) {
+                    try {
+                        const dateObj = DMYToDate(formValue);
+                        if (dateObj) {
+                            const y = dateObj.getFullYear();
+                            const m = String(dateObj.getMonth() + 1).padStart(2, "0");
+                            const d = String(dateObj.getDate()).padStart(2, "0");
+                            payloadData[fieldName] = `${y}-${m}-${d}`;
+                        } else {
+                            payloadData[fieldName] = null;
+                        }
+                    } catch (e) {
+                        payloadData[fieldName] = null;
+                    }
+                } else if (
+                    field.field_type_name === "DATE_RANGE" &&
+                    formValue &&
+                    typeof formValue === "object"
+                ) {
+                    // ... existing date range processing
+                    if (formValue.start && formValue.end) {
+                        try {
+                            const startDateObj = DMYToDate(formValue.start);
+                            const endDateObj = DMYToDate(formValue.end);
+                            if (startDateObj && endDateObj) {
+                                const startY = startDateObj.getFullYear();
+                                const startM = String(startDateObj.getMonth() + 1).padStart(2, "0");
+                                const startD = String(startDateObj.getDate()).padStart(2, "0");
+                                const endY = endDateObj.getFullYear();
+                                const endM = String(endDateObj.getMonth() + 1).padStart(2, "0");
+                                const endD = String(endDateObj.getDate()).padStart(2, "0");
+                                payloadData[fieldName] = {
+                                    start: `${startY}-${startM}-${startD}`,
+                                    end: `${endY}-${endM}-${endD}`,
+                                };
+                            } else {
+                                payloadData[fieldName] = null;
+                            }
+                        } catch (e) {
+                            payloadData[fieldName] = null;
+                        }
+                    } else {
+                        payloadData[fieldName] = null;
+                    }
+                } else {
+                    // Regular fields (texts, numbers, etc.)
+                    payloadData[fieldName] = formValue;
+                }
+            }
 
-            // Determine if creating or updating
             if (selectedRecordId !== null) {
                 // Update
                 const payload: UpdatePageRecordRequest = { data: payloadData };
@@ -681,7 +720,7 @@
         {#if permissions.can_create}
             <button
                 class="btn btn-primary flex-grow sm:flex-grow-0"
-                onclick={handleCreateClick}
+                on:click={handleCreateClick}
                 disabled={!pageDefinition || isLoading}
             >
                 <i class="fa-solid fa-plus mr-2"></i> Criar Novo
@@ -704,6 +743,15 @@
         <i class="fa-solid fa-circle-exclamation"></i>
         <span>{error}</span>
     </div>
+{/if}
+
+{#if permissions.can_create || permissions.can_add}
+    <button
+        class="btn btn-circle btn-lg btn-primary fixed bottom-12 right-12 shadow-lg z-10"
+        on:click={handleCreateClick}
+    >
+        <i class="fa-solid fa-plus text-2xl"></i>
+    </button>
 {/if}
 
 <div

@@ -183,9 +183,9 @@ impl Role {
                 r#"
                 INSERT INTO page_permissions (
                     page_id, role_id, can_view, can_create, can_edit,
-                    can_delete, can_manage_fields, can_view_acknowledgments
+                    can_delete, can_manage_fields, can_view_acknowledgments, can_add
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 "#,
                 page_id,
                 permission.role_id,
@@ -194,7 +194,8 @@ impl Role {
                 permission.can_edit,
                 permission.can_delete,
                 permission.can_manage_fields,
-                permission.can_view_acknowledgments
+                permission.can_view_acknowledgments,
+                permission.can_add
             )
             .execute(&mut *tx)
             .await?;

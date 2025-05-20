@@ -162,3 +162,25 @@ pub async fn user_can_delete_record(
 
     Ok(result.count > 0)
 }
+
+pub async fn user_can_add_to_record(
+    pool: &sqlx::MySqlPool,
+    user_id: i32,
+    page_id: u32,
+) -> Result<bool, sqlx::Error> {
+    let result = sqlx::query!(
+        r#"
+        SELECT COUNT(*) as count
+        FROM user_roles ur
+        LEFT JOIN roles r ON r.id = ur.role_id
+        LEFT JOIN page_permissions pp ON pp.role_id = ur.role_id AND pp.page_id = ?
+        WHERE ur.user_id = ? AND (r.is_admin = 1 OR pp.can_add = 1)
+        "#,
+        page_id,
+        user_id
+    )
+    .fetch_one(pool)
+    .await?;
+
+    Ok(result.count > 0)
+}
