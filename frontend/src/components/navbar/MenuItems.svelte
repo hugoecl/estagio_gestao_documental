@@ -24,9 +24,12 @@
       {item.title}
     </a>
   {:else}
-    <span>
-      {#if item.icon}<i class="fa-solid fa-{item.icon}"></i>{/if}
-      {item.title} (Grupo sem link direto)
-    </span>
+    <details open>
+      <summary>
+
+        {#if item.icon}<i class="fa-solid fa-{item.icon}"></i>{/if}
+        {item.title} 
+      </summary>
+    </details>
   {/if}
 </li> 
