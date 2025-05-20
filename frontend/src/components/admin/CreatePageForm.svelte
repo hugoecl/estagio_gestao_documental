@@ -445,6 +445,7 @@
                     class="input input-bordered w-full bg-base-200"
                     bind:value={pageData.path}
                     required
+                    disabled
                     readonly
                 />
                 {#if errors.page_path}<span class="text-error text-xs mt-1"

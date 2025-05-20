@@ -150,7 +150,7 @@
     </div>
     
     {#if currentPath !== null}
-        <div class="flex items-center mb-4">
+        <div class="flex justify-between items-center mb-4">
             <button class="btn btn-sm btn-outline" on:click={() => navigateTo(navigationHistory.length > 1 ? navigationHistory[navigationHistory.length - 2].path : null)}>
                 <i class="fa-solid fa-arrow-left mr-1"></i> Voltar
             </button>
@@ -161,6 +161,15 @@
                     Nível Raiz
                 {/if}
             </div>
+
+            {#if navigationHistory.length > 0}
+                {@const currentGroup = allPages.find(p => p.path === navigationHistory[navigationHistory.length - 1].path)}
+                {#if currentGroup && currentGroup.is_group}
+                    <a href={`/admin/pages/edit/${currentGroup.id}/`} class="btn btn-sm btn-primary ml-2">
+                        <i class="fa-solid fa-edit mr-1"></i> Editar Grupo
+                    </a>
+                {/if}
+            {/if}
         </div>
     {/if}
 </div>
