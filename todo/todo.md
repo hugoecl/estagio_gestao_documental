@@ -53,7 +53,7 @@
 - [ ] Fazer campo para dar upload de ficheiros ao criar paginas para icon
 - [X] Criar novo tipo de permissão para adição (ou seja pode inserir nos campoes vazios de um registo, mas nao pode editar o que ja foi preenchido)
 - [ ] Make the color of checkboxes consistent
-- [ ] Add static menu on admin menu
+- [X] Add static menu on admin menu
 
 
 
