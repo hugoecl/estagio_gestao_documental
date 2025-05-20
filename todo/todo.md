@@ -31,7 +31,7 @@
 
 - [X] Adicionar sistema de maração de férias administrador ao criar utilizador define dias por ano que o trabalhador ainda pode gozar.
   - [ ] Calendar Performance
-  - [ ] Integração com feriados
+  - [ ] Integração com feriados, provavelmente meter uma unica vez todos os feriados, utilizadores, tem que ter mais uma coluna de clinica, e feriados ha nacionais e locais, os locais so afetam os utilizadores que trabalham na clinica desse local
   - [ ] Replace default date inputs with custom datepicker
   - [X] Página especial (Sempre no menu) para férias
   - [X] Na página de marcação de férias vai ter um unico anual calendar (em que da para alterar o ano) em que utilizadores podem ver, mas não selecionar dias em que outras pessoas do mesmo cargo já tenham selecionado. Ou seja um trabalhador só pode ver ferias de pessoas com o mesmo cargo.
