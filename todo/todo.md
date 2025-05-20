@@ -58,6 +58,7 @@
 - [ ] No menu estatico meter férias numa pasta de recursos humanos
 - [ ] Nas ferias remover o conceito de "função de férias" e ao criar/editar uma função selecionar la funções que interferem nas férias
 - [ ] Novo tipo de campo, checkbox
+- [ ] Ver bug paginas aparecem no menu a users mesmo que nao tenham acesso 
 - [ ] Guardar logs de alteração, admin consegue ver quem editou X campo e quando
 
 
