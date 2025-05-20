@@ -83,5 +83,19 @@
 
 - [ ] Ver possivel bug quando o admin enviar uma mensagem/notifica utilizadores que o alert nao sai automaticamente
 
+
+
+
+## PT 3
+
+- [ ] Admin conseguir ver todas as férias de todos os grupos ou por grupo. No HPVC eles tem a cada dia identificado por codigo unico (ID de DB) cada pessoa que esta de ferias nesse dia. Ter uma legenda com o resumo das ferias de cada utilizador (quantos dias tirados e datas)
+- [ ] Na pagina inicial, ter 3 partes, Novidades, Documentos, Protocolos e Beneficios
+  - [ ] Editor de markdown para cada pagina
+  - [ ] Ideias de coisas para documentos: Manual da qualidade, Regulamento Interno, Politicas, Direitos do trabalhor, Codigo de Conduta, Manual Novo colaboradores
+  - [ ] Documentos tem que ter tomada de conhecimentos
+- [ ] Escolher quem notificar em novo registo, ou seja, ao criar/editar pagina, ou notificar toda a gente que tem acesso ou entao uma função em especifico
+    
+
+
 ## Referencias:
 - [Bizneo](https://www.bizneo.com/pt-pt/gestao-ferias/)
