@@ -182,43 +182,42 @@
     <h1 class="sidebar__title font-bold">Gestão Documental</h1>
   </a>
   
-  <div class="py-2 flex justify-center items-center">
-    {#if isAdmin}
-      <div class="flex gap-2">
-        {#if isReordering}
-          <button 
-            class="btn btn-xs btn-primary" 
-            onclick={saveOrderChanges} 
-            disabled={isSaving}
-          >
-            {#if isSaving}
-              <span class="loading loading-spinner loading-xs"></span>
-              A guardar...
-            {:else}
-              <i class="fa-solid fa-save"></i> Guardar
-            {/if}
-          </button>
-          <button 
-            class="btn btn-xs btn-outline" 
-            onclick={toggleReordering}
-            disabled={isSaving}
-          >
-            Cancelar
-          </button>
-        {:else}
-          <button 
-            class="btn btn-xs btn-outline" 
-            onclick={toggleReordering}
-          >
-            <i class="fa-solid fa-sort"></i> Reordenar Menu
-          </button>
-        {/if}
-      </div>
-    {/if}
-  </div>
-
   <nav>
     {@html StaticMenu }
+    <div class="pb-3 flex justify-center items-center">
+      {#if isAdmin}
+        <div class="flex gap-2">
+          {#if isReordering}
+            <button 
+              class="btn btn-xs btn-primary" 
+              onclick={saveOrderChanges} 
+              disabled={isSaving}
+            >
+              {#if isSaving}
+                <span class="loading loading-spinner loading-xs"></span>
+                A guardar...
+              {:else}
+                <i class="fa-solid fa-save"></i> Guardar
+              {/if}
+            </button>
+            <button 
+              class="btn btn-xs btn-outline" 
+              onclick={toggleReordering}
+              disabled={isSaving}
+            >
+              Cancelar
+            </button>
+          {:else}
+            <button 
+              class="btn btn-xs btn-outline" 
+              onclick={toggleReordering}
+            >
+              <i class="fa-solid fa-sort"></i> Reordenar Menu
+            </button>
+          {/if}
+        </div>
+      {/if}
+    </div>
     {#if isLoading}
       <div class="flex justify-center p-4">
         <span class="loading loading-spinner loading-md"></span>
