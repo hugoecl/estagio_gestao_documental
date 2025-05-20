@@ -6,6 +6,8 @@
   import type { NavigationItem } from "@lib/types/custom-page";
   import { toSearchString } from "@utils/search-utils";
   import jccBigLogo from "src/assets/jcc_big.svg?raw"; // Import logo correctly
+  import MenuItems from "./MenuItems.svelte";
+  import ReorderItem from "./ReorderItem.svelte";
 
   let isLoading = $state(true);
   let hasError = $state(false);
@@ -18,6 +20,7 @@
   onMount(async () => {
     try {
       const data = await getNavigationMenu();
+      console.log("Menu items loaded:", data);
       menuItems = data;
       isLoading = false;
     } catch (e) {
@@ -27,48 +30,103 @@
     }
   });
 
-  function handleDndConsiderRoot(e) {
-    const { items } = e.detail;
-    menuItems = items;
+  // Handle DnD events for root level items
+  function handleDndConsider(e) {
+    const { items: newItems } = e.detail;
+    menuItems = [...newItems];
   }
-
-  function handleDndFinalizeRoot(e) {
-    const { items } = e.detail;
-    menuItems = [...items];
-
-    // Update display_order for each item at the root level
+  
+  function handleDndFinalize(e) {
+    const { items: newItems } = e.detail;
+    menuItems = [...newItems];
+    
+    // Update display_order for items
+    updateDisplayOrders();
+  }
+  
+  // Listen for updates from child components
+  onMount(() => {
+    const handleItemUpdated = (e) => {
+      const { id, children } = e.detail;
+      updateItemChildren(id, children);
+    };
+    
+    document.addEventListener('itemUpdated', handleItemUpdated);
+    
+    return () => {
+      document.removeEventListener('itemUpdated', handleItemUpdated);
+    };
+  });
+  
+  // Update a specific item's children
+  function updateItemChildren(itemId, children) {
+    menuItems = menuItems.map(item => {
+      if (item.id === itemId) {
+        return { ...item, children };
+      }
+      
+      if (item.children?.length) {
+        const updatedChildren = updateChildrenRecursively(item.children, itemId, children);
+        return { ...item, children: updatedChildren };
+      }
+      
+      return item;
+    });
+    
+    // Update all display orders after a child change
+    updateDisplayOrders();
+  }
+  
+  // Recursively update children
+  function updateChildrenRecursively(items, targetId, newChildren) {
+    return items.map(item => {
+      if (item.id === targetId) {
+        return { ...item, children: newChildren };
+      }
+      
+      if (item.children?.length) {
+        const updatedChildren = updateChildrenRecursively(item.children, targetId, newChildren);
+        return { ...item, children: updatedChildren };
+      }
+      
+      return item;
+    });
+  }
+  
+  // Update display orders for all items
+  function updateDisplayOrders() {
+    // Update root items display_order
     for (let i = 0; i < menuItems.length; i++) {
       menuItems[i].display_order = i;
     }
-  }
-
-  function handleDndConsiderChildren(e, parentItem) {
-    const { items } = e.detail;
-    const index = menuItems.findIndex(item => item.id === parentItem.id);
-    if (index !== -1) {
-      const newMenuItems = [...menuItems];
-      newMenuItems[index] = { ...newMenuItems[index], children: items };
-      menuItems = newMenuItems;
-    }
-  }
-
-  function handleDndFinalizeChildren(e, parentItem) {
-    const { items } = e.detail;
-    const index = menuItems.findIndex(item => item.id === parentItem.id);
-    if (index !== -1) {
-      const newMenuItems = [...menuItems];
-      // Update children with their new display orders
-      const updatedChildren = [...items];
-      for (let i = 0; i < updatedChildren.length; i++) {
-        updatedChildren[i].display_order = i;
+    
+    // Update child items display_order recursively
+    menuItems = menuItems.map(item => {
+      if (item.children?.length) {
+        return {
+          ...item,
+          children: updateChildDisplayOrders(item.children)
+        };
       }
-      newMenuItems[index] = { ...newMenuItems[index], children: updatedChildren };
-      menuItems = newMenuItems;
-    }
+      return item;
+    });
+  }
+  
+  function updateChildDisplayOrders(children, startIndex = 0) {
+    return children.map((child, index) => {
+      const updatedChild = { ...child, display_order: startIndex + index };
+      
+      if (child.children?.length) {
+        updatedChild.children = updateChildDisplayOrders(child.children);
+      }
+      
+      return updatedChild;
+    });
   }
 
   function toggleReordering() {
     isReordering = !isReordering;
+    console.log("Reordering mode:", isReordering);
   }
 
   async function saveOrderChanges() {
@@ -88,6 +146,7 @@
         }
       });
       
+      console.log("Saving order changes:", orders);
       const success = await reorderPages(orders);
       
       if (success) {
@@ -113,15 +172,6 @@
         collectChildrenOrders(child.children, orders);
       }
     });
-  }
-  
-  // Prevent navigation when clicking items in reordering mode
-  function handleItemClick(e) {
-    if (isReordering) {
-      e.preventDefault();
-      e.stopPropagation();
-      return false;
-    }
   }
 </script>
 
@@ -182,89 +232,33 @@
       </div>
     {:else}
       {#if isReordering}
-        <div class="menu bg-base-100 border border-zinc-200 rounded-box w-56 p-2" >
-          <div class="root-container">
-            <div use:dndzone={{items: menuItems, flipDurationMs: 200, type: "root"}} 
-                onconsider={handleDndConsiderRoot} 
-                onfinalize={handleDndFinalizeRoot} 
-                class="dnd-container space-y-1">
-              {#each menuItems as item (item.id)}
-                <div class="dnd-item border-dashed border border-base-content/30 p-1 bg-base" >
-                  <div class="handle p-2 bg-base-200 flex items-center">
-                    <i class="fa-solid fa-grip-vertical mr-2"></i>
-                    <span>{item.title}</span>
-                  </div>
-                  
-                  {#if item.children && item.children.length > 0}
-                    <div class="ml-4 mt-2 child-container">
-                      <div use:dndzone={{items: item.children, flipDurationMs: 200, type: `children-${item.id}`}} 
-                           onconsider={(e) => handleDndConsiderChildren(e, item)} 
-                           onfinalize={(e) => handleDndFinalizeChildren(e, item)}
-                           class="dnd-container space-y-1">
-                        {#each item.children as child (child.id)}
-                          <div class="dnd-item border-dashed border border-base-content/30 p-1 bg-base" >
-                            <div class="handle p-2 bg-base-200 flex items-center">
-                              <i class="fa-solid fa-grip-vertical mr-2"></i>
-                              <span>{child.title}</span>
-                            </div>
-                          </div>
-                        {/each}
-                      </div>
-                    </div>
-                  {/if}
-                </div>
-              {/each}
-            </div>
+        <div class="menu bg-base-100 border border-zinc-200 rounded-box w-56 p-2">
+          <section 
+            use:dndzone={{ 
+              items: menuItems,
+              type: 'root-items',
+              flipDurationMs: 150,
+              dropTargetStyle: {
+                outline: '2px dashed #4CAF50'
+              }
+            }}
+            onconsider={handleDndConsider}
+            onfinalize={handleDndFinalize}
+            class="space-y-1 min-h-[50px]"
+          >
+            {#each menuItems as item (item.id)}
+              <ReorderItem {item} groupId="root-items" />
+            {/each}
+          </section>
+          
+          <div class="text-xs text-base-content/70 mt-2 p-2">
+            <p>Dica: Arraste os itens para reorganizar</p>
           </div>
         </div>
       {:else}
         <ul class="menu bg-base-100 border border-zinc-200 rounded-box w-56">
           {#each menuItems as item (item.id)}
-            <li>
-              {#if item.children && item.children.length > 0}
-                <details open>
-                  <summary>
-                    {#if item.icon}<i class="fa-solid fa-{item.icon}"></i>{/if}
-                    {item.title}
-                  </summary>
-                  <ul>
-                    {#each item.children as child (child.id)}
-                      <li>
-                        {#if child.children && child.children.length > 0}
-                          <details>
-                            <summary>
-                              {#if child.icon}<i class="fa-solid fa-{child.icon}"></i>{/if}
-                              {child.title}
-                            </summary>
-                            <!-- Handle deeper nesting -->
-                          </details>
-                        {:else if child.path}
-                          <a href={child.path.endsWith("/") ? child.path : child.path + "/"}>
-                            {#if child.icon}<i class="fa-solid fa-{child.icon}"></i>{/if}
-                            {child.title}
-                          </a>
-                        {:else}
-                          <span>
-                            {#if child.icon}<i class="fa-solid fa-{child.icon}"></i>{/if}
-                            {child.title} (Grupo sem link direto)
-                          </span>
-                        {/if}
-                      </li>
-                    {/each}
-                  </ul>
-                </details>
-              {:else if item.path}
-                <a href={item.path.endsWith("/") ? item.path : item.path + "/"}>
-                  {#if item.icon}<i class="fa-solid fa-{item.icon}"></i>{/if}
-                  {item.title}
-                </a>
-              {:else}
-                <span>
-                  {#if item.icon}<i class="fa-solid fa-{item.icon}"></i>{/if}
-                  {item.title} (Grupo sem link direto)
-                </span>
-              {/if}
-            </li>
+            <MenuItems {item} />
           {/each}
         </ul>
       {/if}
@@ -288,7 +282,6 @@
     }
   }
 
-
   .sidebar__header {
     display: flex;
     align-items: center;
@@ -307,9 +300,20 @@
     font-size: 20px;
   }
 
-  .dnd-item {
-    z-index: 1000000 !important;
+  nav {
+    position: relative;
+    z-index: 400;
   }
-
   
+  :global(.dndzone-activating) {
+    transition: transform 150ms ease;
+  }
+  
+  :global(.dndzone-copy-active) {
+    cursor: copy;
+  }
+  
+  :global(.dndzone-keyboard-active) {
+    cursor: grab;
+  }
 </style> 
