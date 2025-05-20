@@ -53,6 +53,14 @@
 - [ ] Criar novo tipo de permissão para adição (ou seja pode inserir nos campoes vazios de um registo, mas nao pode editar o que ja foi preenchido)
 - [ ] Make the color of checkboxes consistent
 
+
+
+- [ ] No menu estatico meter férias numa pasta de recursos humanos
+- [ ] Novo tipo de campo, checkbox
+- [ ] Guardar logs de alteração, admin consegue ver quem editou X campo e quando
+
+
+
 - [ ] Ver alerta que não sai sozinho depois de criar um registo
 - [ ] ~Meter no fim de cada registo um texto ou algum tipo de indicação para indicar que para aceder aos ficheiros tem se que clicar la~
 
