@@ -24,6 +24,7 @@ const { items, isRoot = false } = Astro.props;
             const hasChildren = item.children && item.children.length > 0;
             // The `item.path` from backend NavigationItem is None for groups,
             // and a direct, correctly formatted path for pages.
+            console.log("item.title:", item.title, " item.path:", item.path);
             const path = item.path?.endsWith("/") ? item.path : item.path + "/";
 
             return (
@@ -38,13 +39,23 @@ const { items, isRoot = false } = Astro.props;
                             </summary>
                             <Astro.self items={item.children} />
                         </details>
-                    ) : path ? (
+                    ) : path && item.path ? (
                         <a href={path}>
                             {item.icon && (
                                 <i class={`fa-solid fa-${item.icon} `} />
                             )}
                             {item.title}
                         </a>
+                    ) : item.path === null ? (
+                        <details open={false}>
+                            <summary>
+                                {item.icon && (
+                                    <i class={`fa-solid fa-${item.icon} `} />
+                                )}
+                                {item.title}
+                            </summary>
+                        </details>
+
                     ) : (
                         <span>
                             {item.icon && (
@@ -52,7 +63,7 @@ const { items, isRoot = false } = Astro.props;
                             )}
                             {item.title} (Grupo sem link direto)
                         </span>
-                    )}
+                    ) }
                 </li>
             );
         })
