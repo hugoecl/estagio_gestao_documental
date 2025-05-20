@@ -47,11 +47,13 @@
 - [X] Drag and drop ordem campos
 - [X] Fix bug ao editar página ele volta por defeito raiz /
 - [X] Lista drag and drop para o administrador ordenar páginas
+- [X] Make button shape consistent (square)
 - [ ] Fix quando o grupo esta vazio para nao aparecer pagina de 404
 - [ ] Pagina para gerir paginas, aparecer primeiro so os grupo e depois clicar nos grupos para aparecer as paginas desses grupos
 - [ ] Fazer campo para dar upload de ficheiros ao criar paginas
 - [ ] Criar novo tipo de permissão para adição (ou seja pode inserir nos campoes vazios de um registo, mas nao pode editar o que ja foi preenchido)
 - [ ] Make the color of checkboxes consistent
+
 
 
 

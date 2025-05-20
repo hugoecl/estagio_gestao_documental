@@ -357,7 +357,7 @@
                 Editar Utilizador: {user?.username} ({user?.email})
             </h3>
             <button
-                class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+                class="btn btn-sm btn-ghost absolute right-2 top-2"
                 onclick={closeModal}
                 disabled={isSubmittingRoles ||
                     isSubmittingDetails ||

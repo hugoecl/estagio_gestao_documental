@@ -104,7 +104,7 @@
                     Aprovar/Rejeitar Pedido de Férias #{request.id}
                 </h3>
                 <button
-                    class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+                    class="btn btn-sm btn-ghost absolute right-2 top-2"
                     onclick={closeModal}
                     disabled={isSubmitting}>✕</button
                 >
@@ -235,7 +235,7 @@
         {:else}
             <p>A carregar detalhes do pedido...</p>
             <button
-                class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+                class="btn btn-sm btn-ghost absolute right-2 top-2"
                 onclick={closeModal}>✕</button
             >
         {/if}

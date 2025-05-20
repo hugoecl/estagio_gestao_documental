@@ -44,7 +44,7 @@
     <div class="modal-box">
         <form method="dialog">
             <button
-                class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+                class="btn btn-sm btn-ghost absolute right-2 top-2"
                 onclick={handleCancel}>✕</button
             >
         </form>
