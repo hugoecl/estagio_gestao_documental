@@ -69,7 +69,7 @@
 - [X] Ver bug que quando registo so tem data nao deixa submete
 - [X] Admin menu começar todo fechado, e ver bug em que adiciona margem 
 - [X] Novo tipo de campo, checkbox
-- [ ] Ver bug paginas aparecem no menu a users mesmo que nao tenham acesso 
+- [X] Ver bug paginas aparecem no menu a users mesmo que nao tenham acesso 
 
 - [ ] Ver bug de quando admin apaga utilizador, o utilizador se ainda tiver sesão nao é logado fora
 
