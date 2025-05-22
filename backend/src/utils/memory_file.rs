@@ -19,18 +19,23 @@ impl<'t> FieldReader<'t> for MemoryFile {
             let (file_name, file_size) = {
                 let content_disp = field.content_disposition().unwrap();
                 let original_filename = content_disp.get_filename().unwrap();
-                let mut last_underscore_index = 0;
-                for (i, c) in original_filename.chars().enumerate() {
-                    if c == '_' {
-                        last_underscore_index = i;
-                    }
-                }
-                let file_name = original_filename[..last_underscore_index].to_string();
-                let file_size = original_filename[last_underscore_index + 1..]
-                    .parse::<usize>()
-                    .unwrap_or(0);
+                
+                // Find the last underscore which should separate the filename and size
+                // But we need to be careful not to cut off file extensions
+                let parts: Vec<&str> = original_filename.rsplitn(2, '_').collect();
+                
+                let (base_filename, size_part) = if parts.len() == 2 {
+                    // If we found an underscore, use the part before it as filename
+                    (parts[1].to_string(), parts[0])
+                } else {
+                    // If no underscore found, use the whole filename
+                    (original_filename.to_string(), "0")
+                };
+                
+                // Parse the size, defaulting to 0 if parsing fails
+                let file_size = size_part.parse::<usize>().unwrap_or(0);
 
-                (file_name, file_size)
+                (base_filename, file_size)
             };
 
             let mut data = Vec::with_capacity(file_size);
