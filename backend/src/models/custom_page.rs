@@ -561,8 +561,10 @@ impl CustomPage {
                             viewable_page_ids,
                             is_admin,
                         );
-                        // A group is visible ONLY if it has visible children
-                        if !grandchildren.is_empty() {
+                        // A group is visible if:
+                        // 1. The user is an admin (they can see all groups), OR
+                        // 2. The group has visible children pages (for non-admin users)
+                        if is_admin || !grandchildren.is_empty() {
                             current_nav_item.children = grandchildren;
                             level_children.push(current_nav_item);
                         }

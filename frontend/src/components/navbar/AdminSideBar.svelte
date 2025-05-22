@@ -176,7 +176,7 @@
 <div class="sidebar bg-base-200">
   <a href="/" class="sidebar__header">
     {@html jccBigLogo}
-    <h1 class="sidebar__title font-bold">Gestão Documental</h1>
+    <!-- <h1 class="sidebar__title font-bold">Gestão Documental</h1> -->
   </a>
 
   <nav>
