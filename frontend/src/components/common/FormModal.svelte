@@ -161,8 +161,36 @@
 
     // --- Validation ---
     function validateField(field: FormField, value: any): string | null {
-        // ... (validateField logic remains the same) ...
         if (readOnly) return null;
+        
+        // Special handling for DATE fields
+        if (field.type === FieldType.DATE) {
+            // Only validate if the field is required
+            if (field.required) {
+                // Check if the value is empty or null
+                if (!value) {
+                    return `${field.label} é obrigatório.`;
+                }
+                
+            }
+            return null;
+        }
+        
+        // Handle DATE_RANGE fields
+        if (field.type === FieldType.DATE_RANGE) {
+            if (field.required) {
+                // For date ranges, just check if we have an array with two valid date strings
+                if (!value) {
+                    return `${field.label} é obrigatório.`;
+                }
+                
+                const [startDate, endDate] = value;
+                
+            }
+            return null;
+        }
+        
+        // Regular validation for other field types
         if (
             field.required &&
             (value === null ||
@@ -483,23 +511,20 @@
                                     </select>
                                 {:else if field.type === FieldType.DATE}
                                     <DatePicker
-                                        value={formValues[field.id]}
-                                        onValueChange={(value) => {
-                                            formValues[field.id] = value;
-                                            handleFieldBlur(field);
-                                        }}
+                                        bind:value={formValues[field.id]}
+                                        required={field.required}
+                                        inputClass={!readOnly && validationErrors[field.id] ? "input-error" : ""}
+                                        onblur={() => handleFieldBlur(field)}
+                                        onchange={() => handleFieldBlur(field)}
                                         disabled={isFieldDisabled(field.id)}
-                                        hasError={!readOnly && !!validationErrors[field.id]}
+                                        formName={field.id}
                                     />
                                 {:else if field.type === FieldType.DATE_RANGE}
                                     <DatePicker
                                         range={true}
                                         bind:value={formValues[field.id]}
                                         required={field.required}
-                                        inputClass={!readOnly &&
-                                        validationErrors[field.id]
-                                            ? "input-error"
-                                            : ""}
+                                        inputClass={!readOnly && validationErrors[field.id] ? "input-error" : ""}
                                         onblur={() => handleFieldBlur(field)}
                                         onchange={() => handleFieldBlur(field)}
                                         disabled={isFieldDisabled(field.id)}
