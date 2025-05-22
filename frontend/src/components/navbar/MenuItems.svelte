@@ -8,7 +8,7 @@
 
 <li>
   {#if item.children && item.children.length > 0}
-    <details open>
+    <details>
       <summary>
         {#if item.icon_type === 'image' && item.icon_image_path}
           <img 
@@ -41,7 +41,7 @@
       {item.title}
     </a>
   {:else}
-    <details open>
+    <details>
       <summary>
         {#if item.icon_type === 'image' && item.icon_image_path}
           <img 
