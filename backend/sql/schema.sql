@@ -52,7 +52,8 @@ VALUES
     ('SELECT'),
     ('DATE'),
     ('DATE_RANGE'),
-    ('TEXTAREA');
+    ('TEXTAREA'),
+    ('CHECKBOX');
 
 -- Page Fields Table
 CREATE TABLE IF NOT EXISTS page_fields (

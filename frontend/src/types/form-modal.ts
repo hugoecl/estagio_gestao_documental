@@ -5,6 +5,7 @@ export const enum FieldType {
   DATE,
   DATE_RANGE,
   TEXTAREA,
+  CHECKBOX,
 }
 
 export interface SelectOption {

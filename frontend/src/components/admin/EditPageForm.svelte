@@ -88,6 +88,7 @@
         DATE: "Data",
         DATE_RANGE: "Intervalo de Datas",
         TEXTAREA: "Texto Longo",
+        CHECKBOX: "Caixa de seleção",
     };
 
     // --- Fetch Initial Data ---

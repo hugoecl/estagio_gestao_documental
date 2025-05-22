@@ -198,34 +198,32 @@
 
             switch (field.field_type_name) {
                 case "SELECT":
-                    const options = mapOptions(field.options);
-                    const selectedOption = options?.find(
-                        (opt) => opt.value == rawValue, // Use == for potential type coercion if needed
+                    const option = field.options?.find(
+                        (o) => o.value === rawValue,
                     );
-                    displayValue = selectedOption
-                        ? selectedOption.label
-                        : rawValue;
-                    searchValue = selectedOption
-                        ? toSearchString(selectedOption.label)
-                        : rawValue
-                          ? toSearchString(rawValue.toString())
-                          : undefined;
+                    displayValue = option?.label ?? rawValue ?? "";
+                    searchValue = displayValue
+                        ? toSearchString(displayValue)
+                        : undefined;
                     break;
-
                 case "DATE":
-                    const formattedDate = tryFormatDate(rawValue);
-                    if (formattedDate !== null) {
-                        displayValue = formattedDate;
-                        searchValue = displayValue;
+                    if (rawValue) {
+                        try {
+                            // Convert YYYY-MM-DD to DD/MM/YYYY for display
+                            const [y, m, d] = rawValue.split("-");
+                            displayValue = `${d}/${m}/${y}`;
+                            // Also keep a date object for sorting
+                            dateValue = new Date(rawValue);
+                        } catch (e) {
+                            displayValue = rawValue;
+                        }
                     } else {
-                        displayValue = rawValue ?? "";
-                        searchValue =
-                            typeof rawValue === "number"
-                                ? rawValue.toString()
-                                : undefined;
+                        displayValue = "";
                     }
+                    searchValue = displayValue
+                        ? toSearchString(displayValue)
+                        : undefined;
                     break;
-
                 case "DATE_RANGE":
                     if (
                         rawValue &&
@@ -233,30 +231,27 @@
                         rawValue.start &&
                         rawValue.end
                     ) {
-                        const formattedStart = tryFormatDate(rawValue.start);
-                        const formattedEnd = tryFormatDate(rawValue.end);
-                        if (formattedStart && formattedEnd) {
-                            displayValue = `${formattedStart} - ${formattedEnd}`;
-                            // dateValue is set by tryFormatDate(rawValue.start)
-                            searchValue = displayValue;
-                        } else {
-                            displayValue = "Datas Inválidas";
+                        try {
+                            // Convert range's YYYY-MM-DD to DD/MM/YYYY for display
+                            const [sy, sm, sd] = rawValue.start.split("-");
+                            const [ey, em, ed] = rawValue.end.split("-");
+                            displayValue = `${sd}/${sm}/${sy} - ${ed}/${em}/${ey}`;
+                            // Use start date as the sort date
+                            dateValue = new Date(rawValue.start);
+                        } catch (e) {
+                            displayValue = `${rawValue.start} - ${rawValue.end}`;
                         }
                     } else {
-                        // Handle cases where it might be stored as a single date string
-                        const formattedSingleDate = tryFormatDate(rawValue);
-                        if (formattedSingleDate !== null) {
-                            displayValue = formattedSingleDate;
-                            searchValue = displayValue;
-                        } else {
-                            displayValue = rawValue ?? "";
-                            searchValue = rawValue
-                                ? toSearchString(rawValue.toString())
-                                : undefined;
-                        }
+                        displayValue = "";
                     }
+                    searchValue = displayValue
+                        ? toSearchString(displayValue)
+                        : undefined;
                     break;
-
+                case "CHECKBOX":
+                    displayValue = rawValue ? "Sim" : "Não";
+                    searchValue = displayValue;
+                    break;
                 case "NUMBER":
                     displayValue = rawValue ?? "";
                     searchValue =
@@ -271,7 +266,6 @@
                         searchValue = toSearchString(rawValue);
                     }
                     break;
-
                 case "TEXT":
                 case "TEXTAREA":
                 default:
@@ -302,6 +296,7 @@
             DATE: FormModalFieldType.DATE,
             DATE_RANGE: FormModalFieldType.DATE_RANGE,
             TEXTAREA: FormModalFieldType.TEXTAREA,
+            CHECKBOX: FormModalFieldType.CHECKBOX,
         };
         return FieldTypeMap[backendType] ?? FormModalFieldType.TEXT;
     }

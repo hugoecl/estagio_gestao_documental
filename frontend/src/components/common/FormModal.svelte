@@ -135,6 +135,9 @@
                         } catch {
                             valueToSet = null;
                         }
+                    } else if (field.type === FieldType.CHECKBOX) {
+                        // Handle checkbox field: convert any truthy/falsy value to boolean
+                        valueToSet = Boolean(rawValue);
                     } else {
                         // For other types, use the raw value (or null if it's undefined/null)
                         valueToSet = rawValue ?? null;
@@ -266,6 +269,8 @@
                 return null;
             case FieldType.DATE_RANGE:
                 return null;
+            case FieldType.CHECKBOX:
+                return false;
             case FieldType.TEXTAREA:
             case FieldType.TEXT:
             default:
@@ -541,6 +546,21 @@
                                         onblur={() => handleFieldBlur(field)}
                                         disabled={isFieldDisabled(field.id)}
                                     ></textarea>
+                                {:else if field.type === FieldType.CHECKBOX}
+                                    <div class="form-control">
+                                        <label class="label cursor-pointer justify-start gap-3 pl-2">
+                                            <input
+                                                type="checkbox"
+                                                class="checkbox checkbox-primary"
+                                                class:checkbox-error={!readOnly && validationErrors[field.id]}
+                                                bind:checked={formValues[field.id]}
+                                                onblur={() => handleFieldBlur(field)}
+                                                onchange={() => handleFieldBlur(field)}
+                                                disabled={isFieldDisabled(field.id)}
+                                            />
+                                            <span class="label-text">{field.placeholder || "Sim"}</span>
+                                        </label>
+                                    </div>
                                 {/if}
 
                                 {#if !readOnly && validationErrors[field.id]}
