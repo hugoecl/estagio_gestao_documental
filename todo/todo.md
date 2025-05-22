@@ -67,6 +67,7 @@
 - [X] Nas ferias remover o conceito de "função de férias" e ao criar/editar uma função selecionar la funções que interferem nas férias
 - [ ] Ver bug que certos ficheiros ao guardar ficam com o utilmo caractere cortado
 - [ ] Ver bug que quando registo so tem data nao deixa submete
+- [ ] Admin menu começar todo fechado, e ver bug em que adiciona margem 
 - [ ] Novo tipo de campo, checkbox
 - [ ] Ver bug paginas aparecem no menu a users mesmo que nao tenham acesso 
 - [ ] Ver bug de quando admin apaga utilizador, o utilizador se ainda tiver sesão nao é logado fora
