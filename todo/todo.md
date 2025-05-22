@@ -70,8 +70,8 @@
 - [X] Admin menu começar todo fechado, e ver bug em que adiciona margem 
 - [ ] Novo tipo de campo, checkbox
 - [ ] Ver bug paginas aparecem no menu a users mesmo que nao tenham acesso 
+
 - [ ] Ver bug de quando admin apaga utilizador, o utilizador se ainda tiver sesão nao é logado fora
-- [ ] Guardar logs de alteração, admin consegue ver quem editou X campo e quando
 
 
 
@@ -80,7 +80,7 @@
 
 - [X] Página especial (Sempre no menu) para o inicio
 - [ ] Make inputs have the same hover effects
-- [ ] Administrador ao criar utilizador submete num date picker quando é que o trabalhador nasceu.
+- [ ] ~Administrador ao criar utilizador submete num date picker quando é que o trabalhador nasceu.~
 - [ ] Ver coisas giras para se meter na pagina inicial (editor de markdown para o admin, aniversários)
 - [ ] Fazer com que ao editar uma pagina novos campos tenham um nome interno decente
 
@@ -95,6 +95,7 @@
 
 ## PT 3
 
+- [ ] Guardar logs de alteração, admin consegue ver quem editou X campo e quando
 - [ ] Admin conseguir ver todas as férias de todos os grupos ou por grupo. No HPVC eles tem a cada dia identificado por codigo unico (ID de DB) cada pessoa que esta de ferias nesse dia. Ter uma legenda com o resumo das ferias de cada utilizador (quantos dias tirados e datas)
 - [ ] Na pagina inicial, ter 3 partes, Novidades, Documentos, Protocolos e Beneficios
   - [ ] Editor de markdown para cada pagina
