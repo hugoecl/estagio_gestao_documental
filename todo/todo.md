@@ -62,7 +62,7 @@
 
 
 
-- [ ] No menu estatico meter férias numa pasta de recursos humanos
+- [X] No menu estatico meter férias numa pasta de recursos humanos
 - [ ] Fix texto em modal que sai fora do modal
 - [ ] Nas ferias remover o conceito de "função de férias" e ao criar/editar uma função selecionar la funções que interferem nas férias
 - [ ] Novo tipo de campo, checkbox
