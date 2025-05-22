@@ -63,9 +63,8 @@
 
 
 - [X] No menu estatico meter férias numa pasta de recursos humanos
-- [ ] Fazer com que administrador consiga apagar funções
-- [ ] Fix texto em modal que sai fora do modal
-- [ ] Nas ferias remover o conceito de "função de férias" e ao criar/editar uma função selecionar la funções que interferem nas férias
+- [ ] ~Fix texto em modal que sai fora do modal~
+- [X] Nas ferias remover o conceito de "função de férias" e ao criar/editar uma função selecionar la funções que interferem nas férias
 - [ ] Ver bug que certos ficheiros ao guardar ficam com o utilmo caractere cortado
 - [ ] Ver bug que quando registo so tem data nao deixa submete
 - [ ] Novo tipo de campo, checkbox
