@@ -95,6 +95,7 @@
 
 ## PT 3
 
+- [ ] Remove the "Gestão Documental" text
 - [ ] Guardar logs de alteração, admin consegue ver quem editou X campo e quando
 - [ ] Admin conseguir ver todas as férias de todos os grupos ou por grupo. No HPVC eles tem a cada dia identificado por codigo unico (ID de DB) cada pessoa que esta de ferias nesse dia. Ter uma legenda com o resumo das ferias de cada utilizador (quantos dias tirados e datas)
 - [ ] Na pagina inicial, ter 3 partes, Novidades, Documentos, Protocolos e Beneficios
