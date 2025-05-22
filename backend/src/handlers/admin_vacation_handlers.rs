@@ -14,25 +14,6 @@ use crate::models::notification::{
     NOTIFICATION_TYPE_VACATION_REJECTED,
 };
 
-// Handler to get all roles marked as "holiday roles"
-pub async fn get_holiday_roles(
-    state: web::Data<State>,
-    session: Session,
-    req: HttpRequest,
-) -> impl Responder {
-    if let Err(admin_check_response) = is_admin(&session) {
-        return admin_check_response;
-    }
-
-    match Role::get_holiday_roles(&state.db.pool).await {
-        Ok(roles) => json_response_with_etag(&roles, &req),
-        Err(e) => {
-            log::error!("Error fetching holiday roles: {}", e);
-            HttpResponse::InternalServerError().finish()
-        }
-    }
-}
-
 // Handler to get pending vacation requests for users within a specific role
 pub async fn get_pending_requests_for_role(
     state: web::Data<State>,

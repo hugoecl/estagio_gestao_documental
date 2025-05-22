@@ -1,7 +1,7 @@
 ---
 import Layout from "@layouts/Layout.astro";
 import PendingRequestsTable from "@components/admin/vacations/PendingRequestsTable.svelte";
-import { getRoles } from "@api/roles-api"; // To fetch role details
+import { getRole } from "@api/roles-api"; // Just get the basic role info
 import type { Role } from "@lib/types/roles";
 
 const { roleId } = Astro.params;
@@ -16,17 +16,10 @@ if (isNaN(roleIdNum)) {
     status = 400;
 } else {
     try {
-        // Fetch all roles to find the name of the current one.
-        // In a real app, you might have a getRoleById API endpoint.
-        const allRoles = await getRoles(Astro.request.headers.get("cookie") ?? undefined);
-        const currentRole = allRoles.find(r => r.id === roleIdNum);
-        if (currentRole) {
-            if (currentRole.is_holiday_role) {
-                roleName = currentRole.name;
-            } else {
-                error = `A função '${currentRole.name}' não é uma função de férias.`;
-                status = 403; // Or 404, depending on desired behavior
-            }
+        // Fetch the role details
+        const role = await getRole(roleIdNum, Astro.request.headers.get("cookie") ?? undefined);
+        if (role) {
+            roleName = role.name;
         } else {
             error = `Função com ID #${roleIdNum} não encontrada.`;
             status = 404;

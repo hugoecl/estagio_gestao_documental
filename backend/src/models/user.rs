@@ -31,7 +31,6 @@ pub struct UserRoleRow {
     pub role_name: Option<String>,
     pub role_description: Option<String>,
     pub role_is_admin: Option<bool>, // MySQL boolean can be tinyint
-    pub role_is_holiday_role: Option<bool>,
     pub role_created_at: Option<chrono::DateTime<chrono::Utc>>,
     pub role_updated_at: Option<chrono::DateTime<chrono::Utc>>,
 }

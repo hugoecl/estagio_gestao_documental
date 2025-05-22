@@ -82,11 +82,22 @@ CREATE TABLE IF NOT EXISTS roles (
     name VARCHAR(100) NOT NULL UNIQUE,
     description TEXT,
     is_admin BOOLEAN NOT NULL DEFAULT false,
-    is_holiday_role BOOLEAN NOT NULL DEFAULT false COMMENT 'True if this role is relevant for vacation scheduling conflicts',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id)
 );
+
+-- Role Holiday Groups Table (for roles that interfere with each other for vacations)
+CREATE TABLE IF NOT EXISTS role_holiday_groups (
+    role_id INT UNSIGNED NOT NULL,
+    interferes_with_role_id INT UNSIGNED NOT NULL,
+    PRIMARY KEY (role_id, interferes_with_role_id),
+    FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE,
+    FOREIGN KEY (interferes_with_role_id) REFERENCES roles (id) ON DELETE CASCADE
+);
+
+-- Add index for faster lookups on interfering roles
+CREATE INDEX IF NOT EXISTS idx_role_holiday_groups_interferes_with ON role_holiday_groups (interferes_with_role_id);
 
 -- -- Insert default admin role
 -- INSERT IGNORE INTO roles (name, description, is_admin) VALUES
@@ -158,26 +169,6 @@ CREATE TABLE IF NOT EXISTS record_acknowledgments (
     FOREIGN KEY (record_id) REFERENCES page_records (id) ON DELETE CASCADE
 );
 
--- Notifications Table
-CREATE TABLE IF NOT EXISTS notifications (
-    id INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL,
-    user_id INT UNSIGNED NOT NULL COMMENT 'The user receiving the notification',
-    record_id INT UNSIGNED DEFAULT NULL COMMENT 'The record the notification relates to, NULL if general broadcast',
-    page_id INT UNSIGNED DEFAULT NULL COMMENT 'The page the record belongs to (denormalized for easier linking), NULL if general broadcast',
-    field_id INT UNSIGNED NULL COMMENT 'The specific field triggering the notification (if applicable)',
-    notification_type VARCHAR(50) NOT NULL COMMENT 'Type of notification (e.g., DATE_EXPIRY, SIGNATURE_REQUIRED, ADMIN_BROADCAST)',
-    message TEXT NOT NULL COMMENT 'Notification message content',
-    due_date DATE NULL COMMENT 'The relevant date from the record (e.g., expiry date)',
-    is_read BOOLEAN NOT NULL DEFAULT false,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (id),
-    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-    FOREIGN KEY (record_id) REFERENCES page_records (id) ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY (page_id) REFERENCES custom_pages (id) ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY (field_id) REFERENCES page_fields (id) ON DELETE SET NULL ON UPDATE CASCADE,
-    INDEX idx_user_unread (user_id, is_read)
-);
-
 -- Vacation Requests Table
 CREATE TABLE IF NOT EXISTS vacation_requests (
     id INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL,
@@ -194,4 +185,27 @@ CREATE TABLE IF NOT EXISTS vacation_requests (
     FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL,
     INDEX idx_vacation_user_status (user_id, status),
     INDEX idx_vacation_dates (start_date, end_date)
+);
+
+-- Notifications Table
+CREATE TABLE IF NOT EXISTS notifications (
+    id INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL,
+    user_id INT UNSIGNED NOT NULL COMMENT 'The user receiving the notification',
+    record_id INT UNSIGNED DEFAULT NULL COMMENT 'The record the notification relates to, NULL if general broadcast',
+    vacation_request_id INT UNSIGNED DEFAULT NULL COMMENT 'ID of a vacation request (if this is a vacation-related notification)',
+    page_id INT UNSIGNED DEFAULT NULL COMMENT 'The page the record belongs to (denormalized for easier linking), NULL if general broadcast',
+    field_id INT UNSIGNED NULL COMMENT 'The specific field triggering the notification (if applicable)',
+    notification_type VARCHAR(50) NOT NULL COMMENT 'Type of notification (e.g., DATE_EXPIRY, SIGNATURE_REQUIRED, ADMIN_BROADCAST)',
+    message TEXT NOT NULL COMMENT 'Notification message content',
+    due_date DATE NULL COMMENT 'The relevant date from the record (e.g., expiry date)',
+    is_read BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+    FOREIGN KEY (record_id) REFERENCES page_records (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (vacation_request_id) REFERENCES vacation_requests(id) ON DELETE CASCADE,
+    FOREIGN KEY (page_id) REFERENCES custom_pages (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (field_id) REFERENCES page_fields (id) ON DELETE SET NULL ON UPDATE CASCADE,
+    INDEX idx_user_unread (user_id, is_read),
+    INDEX idx_vacation_request_id (vacation_request_id)
 );

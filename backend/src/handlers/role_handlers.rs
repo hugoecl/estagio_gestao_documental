@@ -26,6 +26,25 @@ pub async fn get_roles(
     }
 }
 
+// New handler to get roles with their interfering roles
+pub async fn get_roles_with_interfering_roles(
+    state: web::Data<State>,
+    session: Session,
+    req: HttpRequest,
+) -> impl Responder {
+    if let Err(resp) = validate_session(&session) {
+        return resp;
+    }
+
+    match Role::get_all_with_interfering_roles(&state.db.pool).await {
+        Ok(roles) => json_response_with_etag(&roles, &req),
+        Err(e) => {
+            log::error!("Error fetching roles with interfering roles: {}", e);
+            HttpResponse::InternalServerError().finish()
+        }
+    }
+}
+
 pub async fn get_role(
     state: web::Data<State>,
     path: web::Path<u32>,
@@ -39,6 +58,26 @@ pub async fn get_role(
         Ok(role) => json_response(&role),
         Err(e) => {
             log::error!("Error fetching role: {}", e);
+            HttpResponse::InternalServerError().finish()
+        }
+    }
+}
+
+// New handler to get a role with its interfering roles
+pub async fn get_role_with_interfering_roles(
+    state: web::Data<State>,
+    path: web::Path<u32>,
+    session: Session,
+    req: HttpRequest,
+) -> impl Responder {
+    if let Err(resp) = validate_session(&session) {
+        return resp;
+    }
+
+    match Role::get_by_id_with_interfering_roles(&state.db.pool, path.into_inner()).await {
+        Ok(role) => json_response_with_etag(&role, &req),
+        Err(e) => {
+            log::error!("Error fetching role with interfering roles: {}", e);
             HttpResponse::InternalServerError().finish()
         }
     }
@@ -62,7 +101,7 @@ pub async fn create_role(
     };
 
     match Role::create(&state.db.pool, &data).await {
-        Ok(role) => json_response(&role),
+        Ok(role_id) => json_response(&role_id),
         Err(e) => {
             log::error!("Error creating role: {}", e);
             HttpResponse::InternalServerError().finish()

@@ -3,8 +3,8 @@ export interface Role {
   name: string;
   description: string | null;
   is_admin: boolean;
-  created_at: string; // Consider Date
-  updated_at: string; // Consider Date
+  created_at: string;
+  updated_at: string;
 }
 
 export interface RoleWithInterferingRoles {
@@ -24,10 +24,9 @@ export interface CreateRoleRequest {
   interfering_role_ids?: number[];
 }
 
-// Matches backend UpdateRoleRequest
 export interface UpdateRoleRequest {
   name: string;
   description: string | null;
   is_admin: boolean;
   interfering_role_ids?: number[];
-}
+} 

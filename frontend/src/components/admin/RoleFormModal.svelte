@@ -4,8 +4,9 @@
         Role,
         CreateRoleRequest,
         UpdateRoleRequest,
+        RoleWithInterferingRoles,
     } from "@lib/types/roles";
-    import { createRole, updateRole, deleteRole } from "@api/roles-api";
+    import { createRole, updateRole, deleteRole, getRoles, getRoleWithInterferingRoles } from "@api/roles-api";
     import {
         showAlert,
         AlertType,
@@ -33,8 +34,10 @@
         name: "",
         description: null,
         is_admin: false,
-        is_holiday_role: false, // New field
+        interfering_role_ids: [],
     });
+    let allRoles = $state<Role[]>([]);
+    let isLoadingRoles = $state(false);
     let originalDataJson = $state(""); // For checking changes
     let isSubmitting = $state(false);
     let isDeleting = $state(false);
@@ -49,23 +52,83 @@
         isEditMode ? "Guardar Alterações" : "Criar Função",
     );
 
+    // Load all roles when the modal opens
+    async function loadRoles() {
+        isLoadingRoles = true;
+        try {
+            allRoles = await getRoles();
+        } catch (e) {
+            console.error("Error loading roles:", e);
+            showAlert("Erro ao carregar funções", AlertType.ERROR, AlertPosition.TOP);
+        } finally {
+            isLoadingRoles = false;
+        }
+    }
+
+    // Load interfering roles for a specific role
+    async function loadInterferingRoles(roleId: number) {
+        try {
+            // Ensure roleId is a valid number
+            if (!roleId || isNaN(roleId)) {
+                console.warn("Invalid role ID for loading interfering roles:", roleId);
+                formData.interfering_role_ids = [];
+                return;
+            }
+            
+            const roleWithInterfering = await getRoleWithInterferingRoles(roleId);
+            formData.interfering_role_ids = roleWithInterfering.interfering_role_ids;
+        } catch (e) {
+            console.error("Error loading interfering roles:", e);
+            formData.interfering_role_ids = [];
+        }
+    }
+
+    $effect(() => {
+        if (modalRef) {
+            // When modal is defined, we can observe its open state
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.attributeName === 'open' && modalRef.hasAttribute('open')) {
+                        // Modal was opened, load roles
+                        loadRoles();
+                    }
+                });
+            });
+            
+            observer.observe(modalRef, { attributes: true });
+            
+            return () => observer.disconnect(); // Cleanup on component unmount
+        }
+    });
+
     // --- Form Setup ---
-    function setupForm(currentRole: Role | null) {
+    async function setupForm(currentRole: Role | null) {
         if (currentRole) {
             formData = structuredClone({
                 name: currentRole.name,
                 description: currentRole.description,
                 is_admin: currentRole.is_admin,
-                is_holiday_role: currentRole.is_holiday_role || false, // Initialize
+                interfering_role_ids: Array.isArray(currentRole.interfering_role_ids) 
+                    ? [...currentRole.interfering_role_ids]
+                    : [],
             });
+            
+            // Load interfering roles only if not already provided in the role object
+            if (!Array.isArray(currentRole.interfering_role_ids)) {
+                // Ensure roleId is a number
+                const roleId = typeof currentRole.id === 'string' ? parseInt(currentRole.id, 10) : currentRole.id;
+                if (roleId && !isNaN(roleId)) {
+                    await loadInterferingRoles(roleId);
+                }
+            }
             originalDataJson = JSON.stringify(formData);
         } else {
             formData = {
                 name: "",
                 description: null,
                 is_admin: false,
-                is_holiday_role: false,
-            }; // Initialize
+                interfering_role_ids: [],
+            };
             originalDataJson = JSON.stringify(formData);
         }
         errors = {};
@@ -78,19 +141,33 @@
 
     $effect(() => {
         const currentRole = role; // Capture current prop value
+        console.log("RoleFormModal - currentRole:", currentRole);
+        console.log("RoleFormModal - isEditMode:", isEditMode);
+        
         // Check if role identity actually changed (null -> object, object -> null, or different object)
         if (previousRoleRef !== currentRole) {
+            console.log("RoleFormModal - Setting up form with new role");
             setupForm(currentRole);
             previousRoleRef = currentRole; // Update the reference tracker
         }
-        // Add cleanup if needed when component unmounts or role becomes undefined again
-        // return () => { console.log('Cleanup effect for role:', currentRole?.id); };
     });
 
     // --- Actions ---
     function closeModalAndNotify() {
         modalRef?.close();
         onClose(); // Call the parent's close handler
+    }
+
+    function handleRoleCheckboxChange(roleId: number, isChecked: boolean) {
+        let currentIds = [...(formData.interfering_role_ids || [])];
+        
+        if (isChecked && !currentIds.includes(roleId)) {
+            currentIds.push(roleId);
+        } else if (!isChecked) {
+            currentIds = currentIds.filter(id => id !== roleId);
+        }
+        
+        formData.interfering_role_ids = currentIds;
     }
 
     function validateForm(): boolean {
@@ -285,25 +362,47 @@
                     >{/if}
             </div>
 
+            <!-- Interfering Roles Selection -->
             <div class="form-control mt-3">
-                <label class="label cursor-pointer justify-start gap-2">
-                    <input
-                        type="checkbox"
-                        class="toggle toggle-accent"
-                        bind:checked={formData.is_holiday_role}
-                        disabled={isSubmitting}
-                    />
-                    <span class="label-text font-medium"
-                        >É Função de Férias?</span
-                    >
-                </label>
                 <div class="label">
-                    <span class="label-text-alt"
-                        >Marque se esta função deve ser considerada para
-                        agendamento e visualização de férias partilhadas.</span
-                    >
+                    <span class="label-text font-medium">Funções com Conflito de Férias</span>
                 </div>
-                <!-- Add error handling for is_holiday_role if needed -->
+                
+                {#if isLoadingRoles}
+                    <div class="flex justify-center py-4">
+                        <span class="loading loading-spinner loading-md"></span>
+                    </div>
+                {:else}
+                    <div class="max-h-60 overflow-y-auto space-y-1 border p-3 rounded-md bg-base-200">
+                        {#each allRoles.filter(r => !isEditMode || r.id !== role?.id) as otherRole (otherRole.id)}
+                            {@const isInterfering = formData.interfering_role_ids?.includes(otherRole.id)}
+                            <label
+                                class="label cursor-pointer justify-start gap-3 p-1.5 hover:bg-base-300 rounded w-full"
+                            >
+                                <input
+                                    type="checkbox"
+                                    class="checkbox checkbox-accent checkbox-sm"
+                                    checked={isInterfering}
+                                    onchange={(e) =>
+                                        handleRoleCheckboxChange(
+                                            otherRole.id,
+                                            (e.target as HTMLInputElement).checked,
+                                        )}
+                                    disabled={isSubmitting}
+                                />
+                                <span class="label-text text-sm">{otherRole.name}</span>
+                                {#if otherRole.description}
+                                    <span
+                                        class="label-text-alt text-xs opacity-60 ml-auto truncate"
+                                        title={otherRole.description}
+                                    >
+                                        - {otherRole.description}</span
+                                    >
+                                {/if}
+                            </label>
+                        {/each}
+                    </div>
+                {/if}
             </div>
 
             <div

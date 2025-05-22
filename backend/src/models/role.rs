@@ -8,7 +8,6 @@ pub struct Role {
     pub name: String,
     pub description: Option<String>,
     pub is_admin: bool,
-    pub is_holiday_role: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -18,7 +17,7 @@ pub struct CreateRoleRequest {
     pub name: String,
     pub description: Option<String>,
     pub is_admin: bool,
-    pub is_holiday_role: bool,
+    pub interfering_role_ids: Option<Vec<u32>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -26,7 +25,7 @@ pub struct UpdateRoleRequest {
     pub name: String,
     pub description: Option<String>,
     pub is_admin: bool,
-    pub is_holiday_role: bool,
+    pub interfering_role_ids: Option<Vec<u32>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -35,32 +34,69 @@ pub struct UserRoleAssignment {
     pub role_ids: Vec<u32>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RoleWithInterferingRoles {
+    #[serde(flatten)]
+    pub role: Role,
+    pub interfering_role_ids: Vec<u32>,
+}
+
 impl Role {
     pub async fn create(
         pool: &sqlx::MySqlPool,
         request: &CreateRoleRequest,
     ) -> Result<u32, sqlx::Error> {
+        let mut tx = pool.begin().await?;
+        
         let result = sqlx::query!(
             r#"
-            INSERT INTO roles (name, description, is_admin, is_holiday_role)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO roles (name, description, is_admin)
+            VALUES (?, ?, ?)
             "#,
             request.name,
             request.description,
-            request.is_admin,
-            request.is_holiday_role
+            request.is_admin
         )
-        .execute(pool)
+        .execute(&mut *tx)
         .await?;
 
-        Ok(result.last_insert_id() as u32)
+        let role_id = result.last_insert_id() as u32;
+        
+        if let Some(interfering_ids) = &request.interfering_role_ids {
+            for interfering_id in interfering_ids {
+                sqlx::query!(
+                    r#"
+                    INSERT INTO role_holiday_groups (role_id, interferes_with_role_id)
+                    VALUES (?, ?)
+                    "#,
+                    role_id,
+                    interfering_id
+                )
+                .execute(&mut *tx)
+                .await?;
+                
+                sqlx::query!(
+                    r#"
+                    INSERT INTO role_holiday_groups (role_id, interferes_with_role_id)
+                    VALUES (?, ?)
+                    "#,
+                    interfering_id,
+                    role_id
+                )
+                .execute(&mut *tx)
+                .await?;
+            }
+        }
+        
+        tx.commit().await?;
+        Ok(role_id)
     }
 
     pub async fn get_all(pool: &sqlx::MySqlPool) -> Result<Vec<Role>, sqlx::Error> {
         sqlx::query_as!(
             Role,
             r#"
-            SELECT id, name, description, is_admin as "is_admin: bool", is_holiday_role as "is_holiday_role: bool", created_at as "created_at!", updated_at as "updated_at!"
+            SELECT id, name, description, is_admin as "is_admin: bool", created_at as "created_at!", updated_at as "updated_at!"
             FROM roles
             ORDER BY name
             "#
@@ -73,7 +109,7 @@ impl Role {
         sqlx::query_as!(
             Role,
             r#"
-            SELECT id, name, description, is_admin as "is_admin: bool", is_holiday_role as "is_holiday_role: bool", created_at as "created_at!", updated_at as "updated_at!"
+            SELECT id, name, description, is_admin as "is_admin: bool", created_at as "created_at!", updated_at as "updated_at!"
             FROM roles
             WHERE id = ?
             "#,
@@ -83,26 +119,84 @@ impl Role {
         .await
     }
 
+    pub async fn get_by_id_with_interfering_roles(pool: &sqlx::MySqlPool, role_id: u32) -> Result<RoleWithInterferingRoles, sqlx::Error> {
+        let role = Self::get_by_id(pool, role_id).await?;
+        
+        let interfering_role_ids = sqlx::query_scalar!(
+            r#"
+            SELECT interferes_with_role_id 
+            FROM role_holiday_groups
+            WHERE role_id = ?
+            "#,
+            role_id
+        )
+        .fetch_all(pool)
+        .await?;
+        
+        Ok(RoleWithInterferingRoles {
+            role,
+            interfering_role_ids,
+        })
+    }
+
     pub async fn update(
         pool: &sqlx::MySqlPool,
         role_id: u32,
         request: &UpdateRoleRequest,
     ) -> Result<(), sqlx::Error> {
+        let mut tx = pool.begin().await?;
+        
         sqlx::query!(
             r#"
             UPDATE roles
-            SET name = ?, description = ?, is_admin = ?, is_holiday_role = ?
+            SET name = ?, description = ?, is_admin = ?
             WHERE id = ?
             "#,
             request.name,
             request.description,
             request.is_admin,
-            request.is_holiday_role,
             role_id
         )
-        .execute(pool)
+        .execute(&mut *tx)
         .await?;
-
+        
+        if let Some(interfering_ids) = &request.interfering_role_ids {
+            sqlx::query!("DELETE FROM role_holiday_groups WHERE role_id = ?", role_id)
+                .execute(&mut *tx)
+                .await?;
+            
+            sqlx::query!("DELETE FROM role_holiday_groups WHERE interferes_with_role_id = ?", role_id)
+                .execute(&mut *tx)
+                .await?;
+            
+            for interfering_id in interfering_ids {
+                if *interfering_id != role_id {
+                    sqlx::query!(
+                        r#"
+                        INSERT INTO role_holiday_groups (role_id, interferes_with_role_id)
+                        VALUES (?, ?)
+                        "#,
+                        role_id,
+                        interfering_id
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                    
+                    sqlx::query!(
+                        r#"
+                        INSERT INTO role_holiday_groups (role_id, interferes_with_role_id)
+                        VALUES (?, ?)
+                        "#,
+                        interfering_id,
+                        role_id
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                }
+            }
+        }
+        
+        tx.commit().await?;
         Ok(())
     }
 
@@ -121,7 +215,7 @@ impl Role {
         sqlx::query_as!(
             Role,
             r#"
-            SELECT r.id, r.name, r.description, r.is_admin as "is_admin: bool", r.is_holiday_role as "is_holiday_role: bool", r.created_at as "created_at!", r.updated_at as "updated_at!"
+            SELECT r.id, r.name, r.description, r.is_admin as "is_admin: bool", r.created_at as "created_at!", r.updated_at as "updated_at!"
             FROM roles r
             JOIN user_roles ur ON r.id = ur.role_id
             WHERE ur.user_id = ?
@@ -138,7 +232,6 @@ impl Role {
     ) -> Result<(), sqlx::Error> {
         let mut tx = pool.begin().await?;
 
-        // Remove existing roles
         sqlx::query!(
             r#"DELETE FROM user_roles WHERE user_id = ?"#,
             assignment.user_id
@@ -146,7 +239,6 @@ impl Role {
         .execute(&mut *tx)
         .await?;
 
-        // Add new roles
         for role_id in &assignment.role_ids {
             sqlx::query!(
                 r#"
@@ -172,12 +264,10 @@ impl Role {
     ) -> Result<(), sqlx::Error> {
         let mut tx = pool.begin().await?;
 
-        // Remove existing permissions
         sqlx::query!(r#"DELETE FROM page_permissions WHERE page_id = ?"#, page_id)
             .execute(&mut *tx)
             .await?;
 
-        // Add new permissions
         for permission in permissions {
             sqlx::query!(
                 r#"
@@ -221,67 +311,107 @@ impl Role {
         Ok(user_ids)
     }
 
-    // Add this function inside the impl Role block in src/models/role.rs
-    pub async fn get_holiday_roles(pool: &sqlx::MySqlPool) -> Result<Vec<Role>, sqlx::Error> {
-        sqlx::query_as!(
-                Role,
-                r#"
-                SELECT id, name, description, is_admin as "is_admin: bool", is_holiday_role as "is_holiday_role: bool", created_at as "created_at!", updated_at as "updated_at!"
-                FROM roles
-                WHERE is_holiday_role = true
-                ORDER BY name
-                "#
-            )
-            .fetch_all(pool)
-            .await
+    pub async fn get_colleague_user_ids_in_interfering_roles(
+        pool: &sqlx::MySqlPool,
+        user_id: u32,
+    ) -> Result<Vec<u32>, sqlx::Error> {
+        let user_role_ids = sqlx::query_scalar!(
+            r#"
+            SELECT role_id 
+            FROM user_roles 
+            WHERE user_id = ?
+            "#,
+            user_id
+        )
+        .fetch_all(pool)
+        .await?;
+        
+        if user_role_ids.is_empty() {
+            return Ok(Vec::new());
         }
+        
+        let role_id_placeholders = user_role_ids
+            .iter()
+            .map(|_: &u32| "?")
+            .collect::<Vec<_>>()
+            .join(",");
+            
+        let query_str = format!(
+            r#"
+            SELECT DISTINCT interferes_with_role_id
+            FROM role_holiday_groups
+            WHERE role_id IN ({})
+            "#,
+            role_id_placeholders
+        );
+        
+        let mut query_builder = sqlx::query_scalar::<_, u32>(&query_str);
+        for role_id in &user_role_ids {
+            query_builder = query_builder.bind(*role_id);
+        }
+        
+        let interfering_role_ids = query_builder.fetch_all(pool).await?;
+        
+        if interfering_role_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        
+        let interfering_role_placeholders = interfering_role_ids
+            .iter()
+            .map(|_: &u32| "?")
+            .collect::<Vec<_>>()
+            .join(",");
+            
+        let query_str = format!(
+            r#"
+            SELECT DISTINCT user_id
+            FROM user_roles
+            WHERE role_id IN ({}) AND user_id != ?
+            "#,
+            interfering_role_placeholders
+        );
+        
+        let mut query_builder = sqlx::query_scalar::<_, u32>(&query_str);
+        for role_id in &interfering_role_ids {
+            query_builder = query_builder.bind(*role_id);
+        }
+        query_builder = query_builder.bind(user_id);
+        
+        let colleague_ids = query_builder.fetch_all(pool).await?;
+        
+        Ok(colleague_ids)
+    }
 
-        pub async fn get_colleague_user_ids_in_shared_holiday_roles(
-            pool: &sqlx::MySqlPool,
-            user_id: u32,
-        ) -> Result<Vec<u32>, sqlx::Error> {
-            // Step 1: Find the holiday role IDs for the given user
-            let user_holiday_role_ids = sqlx::query_scalar!(
+    pub async fn get_colleague_user_ids_in_shared_holiday_roles(
+        pool: &sqlx::MySqlPool,
+        user_id: u32,
+    ) -> Result<Vec<u32>, sqlx::Error> {
+        Self::get_colleague_user_ids_in_interfering_roles(pool, user_id).await
+    }
+    
+    pub async fn get_all_with_interfering_roles(pool: &sqlx::MySqlPool) -> Result<Vec<RoleWithInterferingRoles>, sqlx::Error> {
+        let roles = Self::get_all(pool).await?;
+        
+        let mut result = Vec::with_capacity(roles.len());
+        
+        for role in roles {
+            let interfering_role_ids = sqlx::query_scalar!(
                 r#"
-                SELECT r.id
-                FROM roles r
-                JOIN user_roles ur ON r.id = ur.role_id
-                WHERE ur.user_id = ? AND r.is_holiday_role = true
+                SELECT interferes_with_role_id 
+                FROM role_holiday_groups
+                WHERE role_id = ?
                 "#,
-                user_id
+                role.id
             )
             .fetch_all(pool)
             .await?;
-
-            if user_holiday_role_ids.is_empty() {
-                return Ok(Vec::new()); // User is not in any holiday roles
-            }
-
-            // Step 2: Find all other users who are in any of these holiday roles
-            // We need to construct the IN clause for role_ids dynamically.
-            let role_id_placeholders = user_holiday_role_ids
-                .iter()
-                .map(|_| "?")
-                .collect::<Vec<_>>()
-                .join(",");
-        
-            let query_str = format!(
-                r#"
-                SELECT DISTINCT ur.user_id
-                FROM user_roles ur
-                WHERE ur.role_id IN ({}) AND ur.user_id != ?
-                "#,
-                role_id_placeholders
-            );
-
-            let mut query_builder = sqlx::query_scalar(&query_str);
-            for role_id in user_holiday_role_ids {
-                query_builder = query_builder.bind(role_id);
-            }
-            query_builder = query_builder.bind(user_id); // For the ur.user_id != ?
-
-            let colleague_ids = query_builder.fetch_all(pool).await?;
-        
-            Ok(colleague_ids)
+            
+            result.push(RoleWithInterferingRoles {
+                role,
+                interfering_role_ids,
+            });
         }
+        
+        Ok(result)
     }
+}

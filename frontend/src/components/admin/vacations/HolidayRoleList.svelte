@@ -3,7 +3,7 @@
     import Table from "@components/common/Table.svelte";
     import type { Role } from "@lib/types/roles";
     import type { TableColumn } from "@lib/types/table";
-    import { getHolidayRoles } from "@api/admin-vacation-api"; // Ensure this API function exists
+    import { getRoles } from "@api/admin-vacation-api"; 
     import {
         showAlert,
         AlertType,
@@ -16,7 +16,7 @@
         // For now, we can directly use Role fields if formatting is simple or done in Table component
     }
 
-    let holidayRoles = $state<Record<string, DisplayRole>>({});
+    let roles = $state<Record<string, DisplayRole>>({});
     let isLoading = $state(true);
     let error = $state<string | null>(null);
 
@@ -31,7 +31,7 @@
         isLoading = true;
         error = null;
         try {
-            const rolesArray = await getHolidayRoles();
+            const rolesArray = await getRoles();
             const rolesRecord: Record<string, DisplayRole> = {};
             rolesArray.forEach((role) => {
                 // Perform any necessary formatting here if DisplayRole differs from Role
@@ -41,10 +41,10 @@
                     // created_at_formatted: new Date(role.created_at).toLocaleDateString("pt-PT"),
                 };
             });
-            holidayRoles = rolesRecord;
+            roles = rolesRecord;
         } catch (e: any) {
-            console.error("Error fetching holiday roles:", e);
-            error = `Erro ao carregar funções de férias: ${e.message}`;
+            console.error("Error fetching roles:", e);
+            error = `Erro ao carregar funções: ${e.message}`;
             showAlert(error, AlertType.ERROR, AlertPosition.TOP);
         } finally {
             isLoading = false;
@@ -65,11 +65,11 @@
 {/if}
 
 <Table
-    data={holidayRoles}
+    data={roles}
     {columns}
     loading={isLoading}
-    emptyMessage="Nenhuma função de férias encontrada. Edite as funções existentes para marcá-las como funções de férias."
-    searchEmptyMessage="Nenhuma função de férias encontrada para a sua pesquisa."
+    emptyMessage="Nenhuma função encontrada. Configure as funções para gerenciar pedidos de férias."
+    searchEmptyMessage="Nenhuma função encontrada para a sua pesquisa."
     keyField="id"
     searchFields={["name", "description"]}
     onRowClick={handleRowClick}

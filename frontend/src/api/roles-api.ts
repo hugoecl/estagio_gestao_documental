@@ -2,9 +2,10 @@ import API_BASE_URL from "@api/base-url";
 import { handleFetch } from "@api/fetch-handler";
 import type {
   Role,
+  RoleWithInterferingRoles,
   CreateRoleRequest,
   UpdateRoleRequest,
-} from "@lib/types/roles"; // Define this type
+} from "@lib/types/roles";
 
 export async function getRoles(cookie?: string): Promise<Role[]> {
   const response = await handleFetch(`${API_BASE_URL}/roles`, {
@@ -17,6 +18,47 @@ export async function getRoles(cookie?: string): Promise<Role[]> {
   }
   if (response.status === 304) return [];
   throw new Error(`Failed to fetch roles: ${response.statusText}`);
+}
+
+export async function getRolesWithInterferingRoles(cookie?: string): Promise<RoleWithInterferingRoles[]> {
+  const response = await handleFetch(`${API_BASE_URL}/roles/with-interfering`, {
+    method: "GET",
+    credentials: "include",
+    headers: cookie ? { Cookie: cookie } : undefined,
+  });
+  if (response.ok) {
+    return await response.json();
+  }
+  if (response.status === 304) return [];
+  throw new Error(`Failed to fetch roles with interfering roles: ${response.statusText}`);
+}
+
+export async function getRole(roleId: number, cookie?: string): Promise<Role> {
+  const response = await handleFetch(`${API_BASE_URL}/roles/${roleId}`, {
+    method: "GET",
+    credentials: "include",
+    headers: cookie ? { Cookie: cookie } : undefined,
+  });
+  if (response.ok) {
+    return await response.json();
+  }
+  throw new Error(`Failed to fetch role: ${response.statusText}`);
+}
+
+export async function getRoleWithInterferingRoles(roleId: number, cookie?: string): Promise<RoleWithInterferingRoles> {
+  if (!roleId) {
+    throw new Error("Role ID is required");
+  }
+  
+  const response = await handleFetch(`${API_BASE_URL}/roles/${roleId}/with-interfering`, {
+    method: "GET",
+    credentials: "include",
+    headers: cookie ? { Cookie: cookie } : undefined,
+  });
+  if (response.ok) {
+    return await response.json();
+  }
+  throw new Error(`Failed to fetch role with interfering roles: ${response.statusText}`);
 }
 
 export async function createRole(

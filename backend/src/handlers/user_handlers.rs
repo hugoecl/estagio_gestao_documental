@@ -628,7 +628,6 @@ pub async fn get_users_with_roles(
         r.name as role_name,
         r.description as role_description,
         r.is_admin as "role_is_admin: bool",
-        r.is_holiday_role as "role_is_holiday_role: bool",
         r.created_at as "role_created_at?: chrono::DateTime<chrono::Utc>",
         r.updated_at as "role_updated_at?: chrono::DateTime<chrono::Utc>"
     FROM users u
@@ -662,21 +661,18 @@ pub async fn get_users_with_roles(
                     Some(role_created_at),
                     Some(role_updated_at),
                     Some(role_is_admin),
-                    Some(role_is_holiday_role), // Add the new field here
                 ) = (
                     row.role_id,
                     row.role_name,
                     row.role_created_at,
                     row.role_updated_at,
                     row.role_is_admin,
-                    row.role_is_holiday_role, // And here
                 ) {
                     user.roles.push(Role {
                         id: role_id,
                         name: role_name,
                         description: row.role_description,
                         is_admin: role_is_admin,
-                        is_holiday_role: role_is_holiday_role, // And here
                         created_at: role_created_at,
                         updated_at: role_updated_at,
                     });

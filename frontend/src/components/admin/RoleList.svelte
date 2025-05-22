@@ -2,9 +2,9 @@
     import { onMount, tick } from "svelte";
     import Table from "@components/common/Table.svelte";
     import RoleFormModal from "./RoleFormModal.svelte";
-    import type { Role } from "@lib/types/roles";
+    import type { Role, RoleWithInterferingRoles } from "@lib/types/roles";
     import type { TableColumn } from "@lib/types/table";
-    import { getRoles } from "@api/roles-api";
+    import { getRoles, getRoleWithInterferingRoles } from "@api/roles-api";
     import {
         showAlert,
         AlertType,
@@ -15,7 +15,7 @@
         created_at_formatted: string;
         updated_at_formatted: string;
         is_admin_translated: string;
-        is_holiday_role_translated: string; // New field
+        has_interfering_roles?: boolean;
     }
     let roles = $state<Record<string, FormattedRole>>({});
     let isLoading = $state(true);
@@ -31,7 +31,6 @@
             created_at_formatted: new Date(role.created_at).toLocaleString("pt-PT", { dateStyle: "short", timeStyle: "medium" }),
             updated_at_formatted: new Date(role.updated_at).toLocaleString("pt-PT", { dateStyle: "short", timeStyle: "medium" }),
             is_admin_translated: role.is_admin ? "Sim" : "Não",
-            is_holiday_role_translated: role.is_holiday_role ? "Sim" : "Não",
         };
     }
 
@@ -40,7 +39,6 @@
         { header: "Nome", field: "name" },
         { header: "Descrição", field: "description" },
         { header: "É Admin?", field: "is_admin_translated" },
-        { header: "Função de Férias?", field: "is_holiday_role_translated" }, // New column
         { header: "Criado Em", field: "created_at_formatted" },
         { header: "Atualizado Em", field: "updated_at_formatted" },
     ];
@@ -50,47 +48,61 @@
     });
 
     async function loadRoles() {
-        // ... (loadRoles logic remains the same) ...
         isLoading = true;
-        error = null;
         try {
-            const rolesArray = await getRoles();
-            const rolesRecord: Record<string, FormattedRole> = {};
-            rolesArray.forEach((role) => {
-                rolesRecord[role.id.toString()] = {
-                    ...role,
-                    created_at_formatted: new Date(role.created_at).toLocaleString("pt-PT", { dateStyle: "short", timeStyle: "medium" }),
-                    updated_at_formatted: new Date(role.updated_at).toLocaleString("pt-PT", { dateStyle: "short", timeStyle: "medium" }),
-                    is_admin_translated: role.is_admin ? "Sim" : "Não",
-                    is_holiday_role_translated: role.is_holiday_role ? "Sim" : "Não", // Populate new field
-                };
+            const rolesList = await getRoles();
+            roles = {}; // Reset roles
+            // Convert array to record indexed by role id
+            rolesList.forEach((role) => {
+                roles[role.id.toString()] = formatRoleForDisplay(role);
             });
-            roles = rolesRecord;
-        } catch (e: any) {
-            error = `Erro ao carregar funções: ${e.message}`;
-            showAlert(error, AlertType.ERROR, AlertPosition.TOP);
+        } catch (error: any) {
+            showAlert(
+                `Erro ao carregar funções: ${error.message}`,
+                AlertType.ERROR,
+                AlertPosition.TOP,
+            );
+            console.error("Failed to load roles:", error);
         } finally {
             isLoading = false;
         }
     }
 
-    async function handleRowClick(id: string, row: Role) {
-        if (row.id === 1) {
-            showAlert(
-                "A função Admin principal não pode ser editada por aqui.",
-                AlertType.WARNING,
-                AlertPosition.TOP,
-            );
-            return;
+    async function handleRowClick(row: FormattedRole) {
+        try {
+            // Ensure row.id is a number
+            const roleId = typeof row.id === 'string' ? parseInt(row.id, 10) : row.id;
+            
+            if (!roleId || isNaN(roleId)) {
+                throw new Error("Invalid role ID");
+            }
+            
+            const roleWithInterfering = await getRoleWithInterferingRoles(roleId);
+            console.log("API response:", roleWithInterfering);
+            
+            // The API returns the role data directly, not nested in a 'role' property
+            if (!roleWithInterfering || typeof roleWithInterfering.id === 'undefined') {
+                console.error("Invalid role data from API:", roleWithInterfering);
+                // Fall back to using the row data directly
+                selectedRole = { ...row };
+            } else {
+                selectedRole = {
+                    ...roleWithInterfering,
+                };
+                console.log("Selected role for modal:", selectedRole);
+            }
+        } catch (error) {
+            console.error("Error loading role with interfering roles:", error);
+            // Ensure we set the full row object with its ID
+            selectedRole = { ...row };
+            console.log("Fallback selected role:", selectedRole);
         }
-        selectedRole = row; // Set the state
-        await tick(); // Wait for DOM update (modal gets the new prop)
+        
+        await tick(); // Ensure DOM updates
         if (roleModalRef) {
-            roleModalRef.showModal(); // Show the modal
+            roleModalRef.showModal();
         } else {
-            console.error(
-                "Modal reference (roleModalRef) not found after tick in handleRowClick.",
-            );
+            console.error("Modal reference not found after tick in handleRowClick.");
         }
     }
 
@@ -147,8 +159,8 @@
     loading={isLoading}
     emptyMessage="Nenhuma função encontrada."
     keyField="id"
-    searchFields={["name", "description", "is_admin_translated", "is_holiday_role_translated"]}
-    onRowClick={handleRowClick}
+    searchFields={["name", "description", "is_admin_translated"]}
+    onRowClick={(id, row) => handleRowClick(row)}
     rowClassName="hover:bg-base-300 cursor-pointer"
 ></Table>
 

@@ -5,14 +5,14 @@ import type { VacationRequestStatus, VacationRequestWithUser } from "@lib/types/
 
 
 /**
- * Fetches all roles that are marked as "holiday roles".
+ * Fetches all roles for vacation management.
  * Requires admin privileges on the backend.
  * @param cookie Optional cookie string for server-side rendering or specific auth needs.
  * @returns A promise that resolves to an array of Role objects.
  */
-export async function getHolidayRoles(cookie?: string): Promise<Role[]> {
+export async function getRoles(cookie?: string): Promise<Role[]> {
   const response = await handleFetch(
-    `${API_BASE_URL}/admin/vacations/roles`, // Ensure this matches your backend route
+    `${API_BASE_URL}/roles`, // Use regular roles endpoint
     {
       method: "GET",
       credentials: "include",
@@ -27,7 +27,7 @@ export async function getHolidayRoles(cookie?: string): Promise<Role[]> {
   // Handle common error cases or let handleFetch manage them
   if (response.status === 401 || response.status === 403) {
     console.warn(
-      `getHolidayRoles: Unauthorized (${response.status}) or Forbidden. Returning empty array.`,
+      `getRoles: Unauthorized (${response.status}) or Forbidden. Returning empty array.`,
     );
     return []; // Return empty on auth errors, as admin page might try to load this initially
   }
@@ -40,11 +40,16 @@ export async function getHolidayRoles(cookie?: string): Promise<Role[]> {
     // silence
   }
   console.error(
-    `Failed to fetch holiday roles: ${response.status} ${response.statusText}. Body: ${errorText}`,
+    `Failed to fetch roles: ${response.status} ${response.statusText}. Body: ${errorText}`,
   );
   // Depending on desired error handling, you might throw an error here
-  // throw new Error(`Failed to fetch holiday roles: ${response.statusText}`);
+  // throw new Error(`Failed to fetch roles: ${response.statusText}`);
   return []; // Or return empty array for other errors
+}
+
+// For backward compatibility with existing code
+export async function getHolidayRoles(cookie?: string): Promise<Role[]> {
+  return getRoles(cookie);
 }
 
 // Future admin vacation API functions can be added here:
