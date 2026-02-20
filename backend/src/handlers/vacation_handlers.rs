@@ -6,7 +6,7 @@ use sqlx::Row; // Added for Row::get method
 
 use crate::{
     State,
-    auth::validate_session, // Assuming user_can_view_page might be relevant later
+    auth::validate_session,
     models::{
         role::Role, // Added for shared calendar logic
         user::User, // Assuming User model exists to fetch vacation_days_current_year
@@ -15,7 +15,7 @@ use crate::{
     },
     utils::json_utils::{json_response, json_response_with_etag},
 };
-use actix_web::HttpRequest; // Added for HttpRequest
+use actix_web::HttpRequest;
 use serde::Deserialize;
 use std::collections::HashMap;
 
@@ -55,7 +55,12 @@ pub async fn submit_vacation_request(
         // return HttpResponse::BadRequest().body("Não pode solicitar férias para datas passadas.");
     }
 
-    let requested_days_count = (request_data.end_date - request_data.start_date).num_days() + 1;
+    let requested_days_count =
+        crate::utils::working_days::count_working_days(
+            request_data.start_date,
+            request_data.end_date,
+            request_data.start_date.year(),
+        );
     if requested_days_count <= 0 {
         return HttpResponse::BadRequest().body("Número de dias de férias inválido.");
     }
@@ -101,7 +106,7 @@ pub async fn submit_vacation_request(
         }
     };
 
-    if (approved_days_count + requested_days_count) as u32 > available_days as u32 {
+    if approved_days_count + requested_days_count > available_days as i64 {
         return HttpResponse::BadRequest().body(format!(
             "Não tem dias de férias suficientes. Disponíveis: {}, Solicitados: {}, Já aprovados: {}.",
             available_days, requested_days_count, approved_days_count
@@ -465,10 +470,9 @@ pub async fn get_my_remaining_vacation_days(
         }
     };
 
-    let mut pending_days_requested = 0;
+    let mut pending_days_requested: i64 = 0;
     for req in all_user_requests {
         if req.status == VacationRequestStatus::Pending {
-            // Ensure the request is for the specified year before counting
             if req.start_date.year() == year || req.end_date.year() == year {
                 let start_date = std::cmp::max(
                     req.start_date,
@@ -479,7 +483,8 @@ pub async fn get_my_remaining_vacation_days(
                     chrono::NaiveDate::from_ymd_opt(year, 12, 31).unwrap(),
                 );
                 if start_date <= end_date {
-                    pending_days_requested += (end_date - start_date).num_days() + 1;
+                    pending_days_requested +=
+                        crate::utils::working_days::count_working_days(start_date, end_date, year);
                 }
             }
         }
@@ -680,7 +685,108 @@ pub async fn cancel_vacation_request(
         },
         Err(e) => {
             log::error!("Error deleting vacation request {}: {}", request_id, e);
-            HttpResponse::InternalServerError().finish()
+                HttpResponse::InternalServerError().finish()
+        }
+    }
+}
+
+/// Handler for requesting cancellation of an approved vacation.
+/// Changes status from APPROVED to CANCELLATION_REQUESTED. Admin must approve.
+pub async fn request_vacation_cancellation(
+    state: web::Data<State>,
+    session: Session,
+    request_id_path: web::Path<u32>,
+) -> impl Responder {
+    let user_id = match validate_session(&session) {
+        Ok(id) => id as u32,
+        Err(resp) => return resp,
+    };
+
+    let request_id = request_id_path.into_inner();
+
+    let request = match sqlx::query!(
+        "SELECT user_id, status, start_date, end_date FROM vacation_requests WHERE id = ?",
+        request_id
+    )
+    .fetch_optional(&state.db.pool)
+    .await
+    {
+        Ok(Some(row)) => row,
+        Ok(None) => {
+            return HttpResponse::NotFound()
+                .body(format!("Pedido de férias #{} não encontrado.", request_id));
+        }
+        Err(e) => {
+            log::error!("Error fetching vacation request {}: {}", request_id, e);
+            return HttpResponse::InternalServerError().finish();
+        }
+    };
+
+    if request.user_id != user_id {
+        return HttpResponse::Forbidden()
+            .body("Não tem permissão para pedir cancelamento deste pedido.");
+    }
+
+    if request.status != "APPROVED" {
+        return HttpResponse::BadRequest().body(
+            "Apenas férias aprovadas podem ter pedido de cancelamento. Este pedido não está aprovado.",
+        );
+    }
+
+    match sqlx::query!(
+        "UPDATE vacation_requests SET status = 'CANCELLATION_REQUESTED' WHERE id = ? AND user_id = ? AND status = 'APPROVED'",
+        request_id,
+        user_id
+    )
+    .execute(&state.db.pool)
+    .await
+    {
+        Ok(result) => {
+            if result.rows_affected() > 0 {
+                let user_name = match sqlx::query!("SELECT username FROM users WHERE id = ?", user_id)
+                    .fetch_optional(&state.db.pool)
+                    .await
+                {
+                    Ok(Some(r)) => r.username,
+                    _ => "Um utilizador".to_string(),
+                };
+                let start_fmt = request.start_date.format("%d/%m/%Y").to_string();
+                let end_fmt = request.end_date.format("%d/%m/%Y").to_string();
+                let msg = format!(
+                    "{} pediu o cancelamento das férias aprovadas ({} a {}).",
+                    user_name, start_fmt, end_fmt
+                );
+                if let Ok(admin_ids) = Role::get_user_ids_by_role_id(&state.db.pool, 1).await {
+                    for admin_id in admin_ids {
+                        let _ = Notification::create(
+                            &state.db.pool,
+                            admin_id,
+                            None,
+                            Some(request_id),
+                            None,
+                            None,
+                            NOTIFICATION_TYPE_VACATION_REQUESTED,
+                            &msg,
+                            None,
+                        )
+                        .await;
+                    }
+                }
+                HttpResponse::Ok()
+                    .body(format!("Pedido de cancelamento enviado. O administrador irá processar o pedido #{}", request_id))
+            } else {
+                HttpResponse::InternalServerError().body("Falha ao registar pedido de cancelamento.")
+            }
+        }
+        Err(e) => {
+            log::error!("Error updating vacation request {}: {}", request_id, e);
+            let err_str = e.to_string();
+            let msg = if err_str.contains("Data truncated") || err_str.contains("enum") || err_str.contains("CANCELLATION") {
+                "A base de dados precisa de ser atualizada. Execute a migration 008_add_vacation_cancellation_status.sql no servidor MySQL."
+            } else {
+                "Falha ao registar pedido de cancelamento."
+            };
+            HttpResponse::InternalServerError().body(msg)
         }
     }
 }

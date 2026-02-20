@@ -10,13 +10,22 @@ pub struct Db {
 
 impl Db {
     pub async fn new() -> Result<Db, sqlx::Error> {
+        // 🔑 LIGAÇÃO À DB
         let pool = MySqlPool::connect(
-            "mariadb://root:root@localhost:3306/gestao_documental?password=root",
+            "mysql://root:admin123@localhost:3306/gestao_documental?charset=utf8mb4",
         )
         .await?;
 
-        sqlx::raw_sql(SCHEMA).execute(&pool).await?;
+        // ⚠️ IMPORTANTE:
+        // O schema já foi corrido manualmente.
+        // Se corrermos outra vez dá erro "table already exists"
+        // Por isso deixamos comentado.
+        //
+        // Se um dia precisares recriar tudo, descomenta.
+        //
+        // sqlx::raw_sql(SCHEMA).execute(&pool).await?;
 
+        // ROLES DEFAULT
         sqlx::query!(
             "INSERT IGNORE INTO roles (name, description, is_admin) VALUES (?, ?, ?), (?, ?, ?)",
             "Admin",
@@ -33,6 +42,7 @@ impl Db {
             .fetch_one(&pool)
             .await?;
 
+        // USER ADMIN DEFAULT
         let admin_password = hash("admin");
 
         sqlx::query!(

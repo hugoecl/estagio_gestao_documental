@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS users (
+CREATE TABLE users (
     id INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL,
     username VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS users (
     PRIMARY KEY (id)
 );
 
-CREATE TABLE IF NOT EXISTS user_page_analytics (
+CREATE TABLE   user_page_analytics (
     id INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL,
     user_id INT UNSIGNED NOT NULL,
     page_path VARCHAR(255) NOT NULL,
@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS user_page_analytics (
 );
 
 -- Custom Pages Table
-CREATE TABLE IF NOT EXISTS custom_pages (
+CREATE TABLE   custom_pages (
     id INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL,
     name VARCHAR(255) NOT NULL COMMENT 'Display name of the page or group',
     path VARCHAR(255) NOT NULL UNIQUE COMMENT 'URL path for the page, or base path for group children',
@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS custom_pages (
 
 
 -- Field Types Table
-CREATE TABLE IF NOT EXISTS field_types (
+CREATE TABLE   field_types (
     id INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL,
     name VARCHAR(50) NOT NULL UNIQUE,
     PRIMARY KEY (id)
@@ -56,7 +56,7 @@ VALUES
     ('CHECKBOX');
 
 -- Page Fields Table
-CREATE TABLE IF NOT EXISTS page_fields (
+CREATE TABLE   page_fields (
     id INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL,
     page_id INT UNSIGNED NOT NULL,
     name VARCHAR(100) NOT NULL COMMENT 'Field name/ID',
@@ -78,7 +78,7 @@ CREATE TABLE IF NOT EXISTS page_fields (
 );
 
 -- Roles Table
-CREATE TABLE IF NOT EXISTS roles (
+CREATE TABLE   roles (
     id INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL,
     name VARCHAR(100) NOT NULL UNIQUE,
     description TEXT,
@@ -89,7 +89,7 @@ CREATE TABLE IF NOT EXISTS roles (
 );
 
 -- Role Holiday Groups Table (for roles that interfere with each other for vacations)
-CREATE TABLE IF NOT EXISTS role_holiday_groups (
+CREATE TABLE   role_holiday_groups (
     role_id INT UNSIGNED NOT NULL,
     interferes_with_role_id INT UNSIGNED NOT NULL,
     PRIMARY KEY (role_id, interferes_with_role_id),
@@ -98,13 +98,13 @@ CREATE TABLE IF NOT EXISTS role_holiday_groups (
 );
 
 -- Add index for faster lookups on interfering roles
-CREATE INDEX IF NOT EXISTS idx_role_holiday_groups_interferes_with ON role_holiday_groups (interferes_with_role_id);
+CREATE INDEX   idx_role_holiday_groups_interferes_with ON role_holiday_groups (interferes_with_role_id);
 
 -- -- Insert default admin role
 -- INSERT IGNORE INTO roles (name, description, is_admin) VALUES
 -- ('Admin', 'Administrador com acesso completo', true);
 -- User Roles Table (Many-to-many relationship)
-CREATE TABLE IF NOT EXISTS user_roles (
+CREATE TABLE   user_roles (
     user_id INT UNSIGNED NOT NULL,
     role_id INT UNSIGNED NOT NULL,
     PRIMARY KEY (user_id, role_id),
@@ -113,7 +113,7 @@ CREATE TABLE IF NOT EXISTS user_roles (
 );
 
 -- Page Permissions Table
-CREATE TABLE IF NOT EXISTS page_permissions (
+CREATE TABLE   page_permissions (
     id INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL,
     page_id INT UNSIGNED NOT NULL,
     role_id INT UNSIGNED NOT NULL,
@@ -131,7 +131,7 @@ CREATE TABLE IF NOT EXISTS page_permissions (
 );
 
 -- Page Records Table (for storing dynamic data)
-CREATE TABLE IF NOT EXISTS page_records (
+CREATE TABLE   page_records (
     id INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL,
     page_id INT UNSIGNED NOT NULL,
     data JSON NOT NULL,
@@ -146,7 +146,7 @@ CREATE TABLE IF NOT EXISTS page_records (
 );
 
 -- Page Record Files Table
-CREATE TABLE IF NOT EXISTS page_record_files (
+CREATE TABLE page_record_files (
     id INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL,
     record_id INT UNSIGNED NOT NULL,
     file_name VARCHAR(255) NOT NULL,
@@ -159,7 +159,7 @@ CREATE TABLE IF NOT EXISTS page_record_files (
 );
 
 -- Record Acknowledgments Table
-CREATE TABLE IF NOT EXISTS record_acknowledgments (
+CREATE TABLE   record_acknowledgments (
     id INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL,
     user_id INT UNSIGNED NOT NULL,
     record_id INT UNSIGNED NOT NULL,
@@ -171,7 +171,7 @@ CREATE TABLE IF NOT EXISTS record_acknowledgments (
 );
 
 -- Vacation Requests Table
-CREATE TABLE IF NOT EXISTS vacation_requests (
+CREATE TABLE   vacation_requests (
     id INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL,
     user_id INT UNSIGNED NOT NULL,
     start_date DATE NOT NULL,
@@ -189,7 +189,7 @@ CREATE TABLE IF NOT EXISTS vacation_requests (
 );
 
 -- Notifications Table
-CREATE TABLE IF NOT EXISTS notifications (
+CREATE TABLE   notifications (
     id INT UNSIGNED AUTO_INCREMENT UNIQUE NOT NULL,
     user_id INT UNSIGNED NOT NULL COMMENT 'The user receiving the notification',
     record_id INT UNSIGNED DEFAULT NULL COMMENT 'The record the notification relates to, NULL if general broadcast',

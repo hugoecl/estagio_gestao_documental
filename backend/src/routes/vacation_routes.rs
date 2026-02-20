@@ -20,6 +20,10 @@ pub fn init(cfg: &mut web::ServiceConfig) {
                 web::get().to(vacation_handlers::get_shared_calendar_vacations),
             )
             .route(
+                "/{request_id}/request-cancellation",
+                web::post().to(vacation_handlers::request_vacation_cancellation),
+            )
+            .route(
                 "/{request_id}",
                 web::delete().to(vacation_handlers::cancel_vacation_request),
             ),

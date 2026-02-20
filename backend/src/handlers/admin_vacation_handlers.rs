@@ -11,6 +11,8 @@ use crate::{
 // Use notification constants from the Notification module
 use crate::models::notification::{
     NOTIFICATION_TYPE_VACATION_APPROVED,
+    NOTIFICATION_TYPE_VACATION_CANCELED,
+    NOTIFICATION_TYPE_VACATION_CANCELLATION_REJECTED,
     NOTIFICATION_TYPE_VACATION_REJECTED,
 };
 
@@ -76,7 +78,7 @@ pub async fn action_vacation_request_admin(
 
     if action_data.status == crate::models::vacation_request::VacationRequestStatus::Pending {
         return HttpResponse::BadRequest()
-            .body("Admin action cannot set status to PENDING. Use APPROVE or REJECT.");
+            .body("Admin action cannot set status to PENDING.");
     }
 
     // First, fetch the vacation request to get the user_id and other details
@@ -112,21 +114,28 @@ pub async fn action_vacation_request_admin(
                     _ => "Um utilizador".to_string(), // Fallback if we can't get the username
                 };
 
-            // 1. Create notification for the requesting user
-            let notification_type = match action_data.status {
-                VacationRequestStatus::Approved => NOTIFICATION_TYPE_VACATION_APPROVED,
-                VacationRequestStatus::Rejected => NOTIFICATION_TYPE_VACATION_REJECTED,
-                _ => unreachable!(), // We already checked this is not PENDING
-            };
-
-            // Prepare notification message based on status
-            let user_message = match action_data.status {
+            let (notification_type, user_message) = match action_data.status {
                 VacationRequestStatus::Approved => {
-                    format!("O seu pedido de férias ({} a {}) foi aprovado.", start_date_fmt, end_date_fmt)
+                    let msg = if request_details.status == VacationRequestStatus::CancellationRequested {
+                        format!("O seu pedido de cancelamento das férias ({} a {}) foi recusado. As férias mantêm-se aprovadas.", start_date_fmt, end_date_fmt)
+                    } else {
+                        format!("O seu pedido de férias ({} a {}) foi aprovado.", start_date_fmt, end_date_fmt)
+                    };
+                    let notif_type = if request_details.status == VacationRequestStatus::CancellationRequested {
+                        NOTIFICATION_TYPE_VACATION_CANCELLATION_REJECTED
+                    } else {
+                        NOTIFICATION_TYPE_VACATION_APPROVED
+                    };
+                    (notif_type, msg)
                 },
-                VacationRequestStatus::Rejected => {
-                    format!("O seu pedido de férias ({} a {}) foi recusado.", start_date_fmt, end_date_fmt)
-                },
+                VacationRequestStatus::Rejected => (
+                    NOTIFICATION_TYPE_VACATION_REJECTED,
+                    format!("O seu pedido de férias ({} a {}) foi recusado.", start_date_fmt, end_date_fmt),
+                ),
+                VacationRequestStatus::Cancelled => (
+                    NOTIFICATION_TYPE_VACATION_CANCELED,
+                    format!("O seu pedido de cancelamento das férias ({} a {}) foi aprovado. As férias foram canceladas.", start_date_fmt, end_date_fmt),
+                ),
                 _ => unreachable!(),
             };
 
@@ -160,14 +169,21 @@ pub async fn action_vacation_request_admin(
                 }
             }
             
-            // 2. Only send notifications to colleagues if the request was APPROVED
-            // (we don't need to bother colleagues about rejected requests)
-            if action_data.status == VacationRequestStatus::Approved {
-                // Prepare the message for colleagues
-                let colleague_message = format!(
-                    "O pedido de férias do seu colega {} ({} a {}) foi aprovado.",
-                    user_name, start_date_fmt, end_date_fmt
-                );
+            // 2. Notify colleagues: when approving new vacation, or when approving cancellation
+            let notify_colleagues = action_data.status == VacationRequestStatus::Approved && request_details.status == VacationRequestStatus::Pending
+                || action_data.status == VacationRequestStatus::Cancelled;
+            if notify_colleagues {
+                let colleague_message = if action_data.status == VacationRequestStatus::Cancelled {
+                    format!(
+                        "As férias do seu colega {} ({} a {}) foram canceladas.",
+                        user_name, start_date_fmt, end_date_fmt
+                    )
+                } else {
+                    format!(
+                        "O pedido de férias do seu colega {} ({} a {}) foi aprovado.",
+                        user_name, start_date_fmt, end_date_fmt
+                    )
+                };
                 
                 // Get colleagues in the same vacation role
                 match Role::get_colleague_user_ids_in_shared_holiday_roles(&state.db.pool, request_details.user_id).await {
@@ -186,7 +202,11 @@ pub async fn action_vacation_request_admin(
                                 Some(request_id),   // vacation_request_id - Using request_id
                                 None,               // page_id - Not applicable
                                 None,               // field_id - Not applicable 
-                                NOTIFICATION_TYPE_VACATION_APPROVED,
+                                if action_data.status == VacationRequestStatus::Cancelled {
+                                    NOTIFICATION_TYPE_VACATION_CANCELED
+                                } else {
+                                    NOTIFICATION_TYPE_VACATION_APPROVED
+                                },
                                 &colleague_message,
                                 Some(request_details.end_date), // Use end_date as due_date
                             ).await {

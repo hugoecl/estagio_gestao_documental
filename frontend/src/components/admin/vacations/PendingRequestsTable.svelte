@@ -5,6 +5,8 @@
     import { VacationRequestStatus } from "@lib/types/vacation";
     import type { TableColumn } from "@lib/types/table";
     import { getPendingRequestsForRole } from "@api/admin-vacation-api";
+    import { getCalendarEvents } from "@api/calendar-api";
+    import { countWorkingDays } from "@utils/working-days";
     import {
         showAlert,
         AlertType,
@@ -24,6 +26,7 @@
     // State for the action modal
     let actionModalRef: HTMLDialogElement | undefined = $state(undefined);
     let selectedRequestToAction = $state<VacationRequestWithUser | null>(null);
+    let allHolidays = $state<Array<{ start_date: string; end_date: string }>>([]);
 
     const columns: TableColumn[] = [
         { header: "ID Pedido", field: "id" },
@@ -36,7 +39,10 @@
         { header: "Notas Utilizador", field: "notes" },
     ];
 
-    function processRequestsForDisplay(requests: VacationRequestWithUser[]): Record<string, VacationRequestWithUser & { startDateDisplay: string, endDateDisplay: string, requestedAtDisplay: string, durationDisplay: string }> {
+    function processRequestsForDisplay(
+        requests: VacationRequestWithUser[],
+        holidays: Array<{ start_date: string; end_date: string }>
+    ): Record<string, VacationRequestWithUser & { startDateDisplay: string, endDateDisplay: string, requestedAtDisplay: string, durationDisplay: string }> {
         const processed: Record<string, any> = {};
         requests.forEach(req => {
             const start = new Date(req.start_date + "T00:00:00Z");
@@ -44,14 +50,14 @@
             const requestedAt = new Date(req.requested_at);
             let duration = 0;
             if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && end >= start) {
-                duration = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                duration = countWorkingDays(start, end, holidays);
             }
             processed[req.id.toString()] = {
                 ...req,
                 startDateDisplay: !isNaN(start.getTime()) ? start.toLocaleDateString("pt-PT", { timeZone: 'UTC' }) : "Inválida",
                 endDateDisplay: !isNaN(end.getTime()) ? end.toLocaleDateString("pt-PT", { timeZone: 'UTC' }) : "Inválida",
                 requestedAtDisplay: requestedAt.toLocaleString("pt-PT"),
-                durationDisplay: `${duration} dia${duration !== 1 ? 's' : ''}`,
+                durationDisplay: `${duration} dia${duration !== 1 ? 's' : ''} úteis`,
             };
         });
         return processed;
@@ -62,8 +68,14 @@
         isLoading = true;
         error = null;
         try {
-            const requestsArray = await getPendingRequestsForRole(roleId);
-            pendingRequests = processRequestsForDisplay(requestsArray);
+            const currentYear = new Date().getFullYear();
+            const [requestsArray, holidaysCurr, holidaysPrev] = await Promise.all([
+                getPendingRequestsForRole(roleId),
+                getCalendarEvents(currentYear),
+                getCalendarEvents(currentYear - 1),
+            ]);
+            allHolidays = [...(holidaysCurr || []), ...(holidaysPrev || [])];
+            pendingRequests = processRequestsForDisplay(requestsArray, allHolidays);
         } catch (e: any) {
             console.error(`Error fetching pending requests for role ${roleId}:`, e);
             error = `Erro ao carregar pedidos pendentes: ${e.message}`;
@@ -120,6 +132,7 @@
     <ActionVacationRequestModal
         bind:modalRef={actionModalRef}
         request={selectedRequestToAction}
+        holidays={allHolidays}
         onActionSuccess={handleRequestActioned}
         onClose={() => selectedRequestToAction = null}
     />

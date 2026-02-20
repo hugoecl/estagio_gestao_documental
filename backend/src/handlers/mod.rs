@@ -1,5 +1,6 @@
 pub mod acknowledgment_handlers;
 pub mod admin_vacation_handlers;
+pub mod calendar_handlers;
 pub mod custom_page_handlers;
 pub mod field_handlers;
 pub mod notification_handlers;

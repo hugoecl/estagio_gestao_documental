@@ -4,9 +4,11 @@
         getMyRemainingVacationDays,
         getMyVacationRequests,
         submitVacationRequest,
-        getSharedCalendarVacations, // Import new API function
+        getSharedCalendarVacations,
         cancelVacationRequest,
+        requestVacationCancellation,
     } from "@api/vacation-api";
+    import { getCalendarEvents } from "@api/calendar-api";
     import type {
         RemainingVacationDaysResponse,
         VacationRequest,
@@ -19,6 +21,7 @@
         AlertType,
         AlertPosition,
     } from "@components/alert/alert";
+    import { countWorkingDays } from "@utils/working-days";
 
     // --- State ---
     let remainingDaysInfo = $state<RemainingVacationDaysResponse | null>(null);
@@ -26,12 +29,16 @@
     let colleagueVacations = $state<
         Array<{ start_date: string; end_date: string; status: string }>
     >([]);
+    let calendarEvents = $state<
+        Array<{ start_date: string; end_date: string; title: string }>
+    >([]);
     let isLoadingDays = $state(true);
     let isLoadingRequests = $state(true);
     let isLoadingShared = $state(false); // New loading state for shared data
     let error = $state<string | null>(null);
     let isCancelling = $state(false);
     let cancelRequestId = $state<number | null>(null);
+    let cancellationRequestId = $state<number | null>(null);
 
     // --- Custom Calendar State & Logic ---
     interface CalendarDay {
@@ -81,7 +88,7 @@
         "Novembro",
         "Dezembro",
     ]);
-    const dayNames = $state(["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]); // Made reactive
+    const dayNames = $state(["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]);
 
     // Modal state for new request
     let requestModalRef: HTMLDialogElement | null = $state(null);
@@ -161,6 +168,9 @@
             styleClasses +=
                 " bg-neutral/40 text-neutral-content opacity-70 cursor-not-allowed";
             hoverClasses = ""; // No hover on colleague pending days
+            hasStatusStyle = true;
+        } else if (day.status === "holiday") {
+            styleClasses += " bg-error/20 text-error border border-error/50";
             hasStatusStyle = true;
         }
 
@@ -369,6 +379,7 @@
         baseStructureInput: CalendarMonth[],
         userRequests: VacationRequestDisplay[],
         colleagueDateRanges: Array<{ start_date: string; end_date: string; status: string }>,
+        holidayDateRanges: Array<{ start_date: string; end_date: string; title: string }>,
         currentSelectionStart: Date | null,
         currentSelectionEnd: Date | null,
         currentHoveredDate: Date | null,
@@ -385,7 +396,13 @@
         const colleagueBookedPeriods = colleagueDateRanges.map((range) => ({
             start: new Date(range.start_date + "T00:00:00Z").getTime(),
             end: new Date(range.end_date + "T00:00:00Z").getTime(),
-            status: range.status
+            status: range.status,
+        }));
+
+        const holidayPeriods = holidayDateRanges.map((range) => ({
+            start: new Date(range.start_date + "T00:00:00Z").getTime(),
+            end: new Date(range.end_date + "T00:00:00Z").getTime(),
+            title: range.title,
         }));
 
         newCalendarStructure.forEach((month) => {
@@ -410,9 +427,9 @@
                             dayTime >= colleaguePeriod.start &&
                             dayTime <= colleaguePeriod.end
                         ) {
-                            if (colleaguePeriod.status === "APPROVED") {
+                            if (colleaguePeriod.status === "APPROVED" || colleaguePeriod.status === "CANCELLATION_REQUESTED") {
                                 day.status = "colleague_approved";
-                                day.tooltip = "Férias Colega (Aprovadas)";
+                                day.tooltip = colleaguePeriod.status === "CANCELLATION_REQUESTED" ? "Férias Colega (Cancelamento pedido)" : "Férias Colega (Aprovadas)";
                             } else if (colleaguePeriod.status === "PENDING") {
                                 day.status = "colleague_pending";
                                 day.tooltip = "Férias Colega (Pendentes)";
@@ -462,6 +479,19 @@
                                 }
                                 break;
                             }
+                        }
+                    }
+
+                    // --- 2b. Apply Fixed Holidays (when no vacation status, or append to tooltip) ---
+                    for (const period of holidayPeriods) {
+                        if (dayTime >= period.start && dayTime <= period.end) {
+                            if (day.status === null) {
+                                day.status = "holiday";
+                                day.tooltip = `Feriado: ${period.title}`;
+                            } else if (day.tooltip) {
+                                day.tooltip += ` | Feriado: ${period.title}`;
+                            }
+                            break;
                         }
                     }
 
@@ -531,11 +561,13 @@
         
         try {
             // Always fetch data for the specific year requested
-            const [daysData, requestsData, sharedColleagueData] = await Promise.all([
-                getMyRemainingVacationDays(year),
-                getMyVacationRequests(year),
-                getSharedCalendarVacations(year)
-            ]);
+            const [daysData, requestsData, sharedColleagueData, eventsData] =
+                await Promise.all([
+                    getMyRemainingVacationDays(year),
+                    getMyVacationRequests(year),
+                    getSharedCalendarVacations(year),
+                    getCalendarEvents(year),
+                ]);
 
             // Process data for the specific year
             if (daysData) {
@@ -551,8 +583,13 @@
             }
 
             // Process vacation requests for the specific year
-            myRequests = processVacationRequestsForDisplay(requestsData || [], year);
+            myRequests = processVacationRequestsForDisplay(
+                requestsData || [],
+                year,
+                eventsData || []
+            );
             colleagueVacations = sharedColleagueData || [];
+            calendarEvents = eventsData || [];
 
             // Handle year-specific UI logic in the template
         } catch (e: any) {
@@ -596,6 +633,7 @@
         const year = currentYear;
         const _myRequests = myRequests;
         const _colleagueVacations = colleagueVacations;
+        const _calendarEvents = calendarEvents;
         const _selectionStartDate = selectionStartDate;
         const _selectionEndDate = selectionEndDate;
         const _hoveredDate = hoveredDate;
@@ -615,14 +653,15 @@
                 currentBase,
                 _myRequests,
                 _colleagueVacations,
+                _calendarEvents,
                 _selectionStartDate,
                 _selectionEndDate,
                 _hoveredDate,
             );
             
-            // Update selected days count when hovering changes
+            // Update selected days count (working days only) when hovering changes
             if (_selectionStartDate && !_selectionEndDate && _hoveredDate && _hoveredDate >= _selectionStartDate) {
-                selectedDaysCount = Math.round((_hoveredDate.getTime() - _selectionStartDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                selectedDaysCount = countWorkingDays(_selectionStartDate, _hoveredDate, _calendarEvents);
                 updateProjectedRemainingDays();
             }
         } else {
@@ -673,28 +712,25 @@
         if (!selectionStartDate) {
             selectionStartDate = clickedDate;
             selectionEndDate = null;
-            selectedDaysCount = 1;
+            selectedDaysCount = countWorkingDays(clickedDate, clickedDate, calendarEvents);
             updateProjectedRemainingDays();
         } else if (!selectionEndDate) {
-            // Start is selected, now selecting end
             if (clickedDate.getTime() === selectionStartDate.getTime()) {
-                // Clicking the start date again when only start is selected means make it a single-day selection
                 selectionEndDate = clickedDate;
-                selectedDaysCount = 1;
+                selectedDaysCount = countWorkingDays(clickedDate, clickedDate, calendarEvents);
             } else if (clickedDate < selectionStartDate) {
                 selectionEndDate = selectionStartDate;
                 selectionStartDate = clickedDate;
-                selectedDaysCount = Math.round((selectionEndDate.getTime() - selectionStartDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                selectedDaysCount = countWorkingDays(selectionStartDate, selectionEndDate, calendarEvents);
             } else {
                 selectionEndDate = clickedDate;
-                selectedDaysCount = Math.round((selectionEndDate.getTime() - selectionStartDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                selectedDaysCount = countWorkingDays(selectionStartDate, selectionEndDate, calendarEvents);
             }
             updateProjectedRemainingDays();
         } else {
-            // Both start and end are already selected, this is a new selection
             selectionStartDate = clickedDate;
             selectionEndDate = null;
-            selectedDaysCount = 1;
+            selectedDaysCount = countWorkingDays(clickedDate, clickedDate, calendarEvents);
             updateProjectedRemainingDays();
         }
         
@@ -729,7 +765,8 @@
 
     function processVacationRequestsForDisplay(
         requests: VacationRequest[],
-        year?: number
+        year?: number,
+        holidays: Array<{ start_date: string; end_date: string }> = []
     ): VacationRequestDisplay[] {
         // If a specific year is provided, filter requests for that year
         if (year !== undefined) {
@@ -747,6 +784,12 @@
             switch (
                 req.status.toUpperCase() // Convert API string status to enum
             ) {
+                case "CANCELLATION_REQUESTED":
+                    statusEnum = VacationRequestStatus.CancellationRequested;
+                    break;
+                case "CANCELLED":
+                    statusEnum = VacationRequestStatus.Cancelled;
+                    break;
                 case "PENDING":
                     statusEnum = VacationRequestStatus.Pending;
                     break;
@@ -775,11 +818,7 @@
                 !isNaN(end.getTime()) &&
                 end >= start
             ) {
-                duration =
-                    Math.round(
-                        (end.getTime() - start.getTime()) /
-                            (1000 * 60 * 60 * 24),
-                    ) + 1;
+                duration = countWorkingDays(start, end, holidays);
             }
 
             return {
@@ -852,10 +891,11 @@
                 newRequestErrors.endDate =
                     "Data de fim não pode ser anterior à data de início.";
             }
-            const requestedDuration =
-                Math.round(
-                    (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24),
-                ) + 1;
+            const requestedDuration = countWorkingDays(
+                start,
+                end,
+                calendarEvents
+            );
             if (
                 remainingDaysInfo &&
                 requestedDuration > remainingDaysInfo.remaining_days
@@ -902,6 +942,24 @@
         } finally {
             isCancelling = false;
             cancelRequestId = null;
+        }
+    }
+
+    async function handleRequestCancellation(requestId: number) {
+        if (cancellationRequestId) return;
+        cancellationRequestId = requestId;
+        try {
+            const result = await requestVacationCancellation(requestId);
+            if (result.success) {
+                showAlert(result.message, AlertType.SUCCESS, AlertPosition.TOP);
+                await fetchAllCalendarData(currentYear);
+            } else {
+                showAlert(result.message, AlertType.ERROR, AlertPosition.TOP);
+            }
+        } catch (e: any) {
+            showAlert(`Erro: ${e.message}`, AlertType.ERROR, AlertPosition.TOP);
+        } finally {
+            cancellationRequestId = null;
         }
     }
     
@@ -996,7 +1054,7 @@
             <button
                 class="btn btn-primary"
                 onclick={openRequestModal}
-                disabled={!selectionStartDate || !selectionEndDate || currentYear !== new Date().getFullYear()}
+                disabled={!selectionStartDate || !selectionEndDate || selectedDaysCount <= 0 || currentYear !== new Date().getFullYear()}
             >
                 <i class="fa-solid fa-calendar-plus mr-2"></i>
                 Pedir Férias
@@ -1228,8 +1286,12 @@
         <span>Férias pendentes de colegas</span>
        </div>
        <div class="flex items-center gap-2">
+        <div class="w-4 h-4 bg-error/20 border border-error/50 rounded"></div>
+        <span>Feriados</span>
+       </div>
+       <div class="flex items-center gap-2">
         <div class="w-4 h-4 bg-accent rounded"></div>
-        <span>Dias selecionados {selectedDaysCount > 0 ? `(${selectedDaysCount} dias)` : ''}</span>
+        <span>Dias selecionados {selectedDaysCount > 0 ? `(${selectedDaysCount} dias úteis)` : ''}</span>
        </div>
        <div class="flex items-center gap-2">
         <div class="w-4 h-4 bg-info rounded"></div>
@@ -1282,7 +1344,7 @@
                                 <tr>
                                     <td>{req.startDateDisplay}</td>
                                     <td>{req.endDateDisplay}</td>
-                                    <td>{req.duration} dias</td>
+                                    <td>{req.duration} dias úteis</td>
                                     <td>
                                         <span
                                             class="badge badge-sm
@@ -1298,6 +1360,12 @@
                                             VacationRequestStatus.Rejected
                                                 ? 'badge-error'
                                                 : ''}
+                                            {req.status === VacationRequestStatus.CancellationRequested
+                                                ? 'badge-warning'
+                                                : ''}
+                                            {req.status === VacationRequestStatus.Cancelled
+                                                ? 'badge-ghost'
+                                                : ''}
                                         "
                                         >
                                             {#if req.status === VacationRequestStatus.Approved}
@@ -1306,6 +1374,10 @@
                                                 Pendente
                                             {:else if req.status === VacationRequestStatus.Rejected}
                                                 Rejeitado
+                                            {:else if req.status === VacationRequestStatus.CancellationRequested}
+                                                Cancelamento pedido
+                                            {:else if req.status === VacationRequestStatus.Cancelled}
+                                                Cancelado
                                             {/if}
 
                                         </span>
@@ -1333,6 +1405,23 @@
                                                     <i class="fa-solid fa-xmark mr-1"></i> Cancelar
                                                 {/if}
                                             </button>
+                                        {:else if req.status === VacationRequestStatus.Approved && currentYear === realCurrentYear}
+                                            <button
+                                                class="btn btn-xs btn-warning"
+                                                disabled={cancellationRequestId === req.id}
+                                                onclick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleRequestCancellation(req.id);
+                                                }}
+                                            >
+                                                {#if cancellationRequestId === req.id}
+                                                    <span class="loading loading-spinner loading-xs"></span>
+                                                {:else}
+                                                    <i class="fa-solid fa-ban mr-1"></i> Pedir cancelamento
+                                                {/if}
+                                            </button>
+                                        {:else if req.status === VacationRequestStatus.CancellationRequested}
+                                            <span class="text-warning text-xs">A aguardar admin</span>
                                         {:else}
                                             -
                                         {/if}

@@ -2,6 +2,8 @@ export enum VacationRequestStatus {
   Pending = "PENDING",
   Approved = "APPROVED",
   Rejected = "REJECTED",
+  CancellationRequested = "CANCELLATION_REQUESTED",
+  Cancelled = "CANCELLED",
 }
 
 export interface VacationRequest {

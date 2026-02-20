@@ -724,7 +724,7 @@ pub async fn duplicate_custom_page(
         for field in fields {
             // Parse the options from binary to JSON if present
             let options = if let Some(opt_bytes) = field.options {
-                match serde_json::from_slice::<serde_json::Value>(&opt_bytes) {
+               match serde_json::from_slice::<serde_json::Value>(&opt_bytes) {
                     Ok(json) => Some(json),
                     Err(e) => {
                         log::error!("Error parsing options JSON for field {}: {}", field.id, e);

@@ -106,13 +106,11 @@ export async function getPendingRequestsForRole(
  */
 export async function actionVacationRequest(
   requestId: number,
-  payload: { status: 'APPROVED' | 'REJECTED'; admin_notes?: string | null }, // Use string literals for status
+  payload: { status: 'APPROVED' | 'REJECTED' | 'CANCELLED'; admin_notes?: string | null },
 ): Promise<{ success: boolean; message?: string }> {
-  // Map the uppercase status to PascalCase for the backend
-  const mappedStatus = payload.status === 'APPROVED' ? 'Approved' : 'Rejected';
-  
+  const statusMap = { APPROVED: 'Approved', REJECTED: 'Rejected', CANCELLED: 'Cancelled' } as const;
   const mappedPayload = {
-    status: mappedStatus,
+    status: statusMap[payload.status],
     admin_notes: payload.admin_notes
   };
   

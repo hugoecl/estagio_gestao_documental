@@ -8,15 +8,18 @@
         AlertType,
         AlertPosition,
     } from "@components/alert/alert";
+    import { countWorkingDays } from "@utils/working-days";
 
     let {
         modalRef = $bindable(),
-        request, // Type: VacationRequestWithUser | null
-        onActionSuccess, // Callback when approve/reject is successful
-        onClose, // Callback when modal is closed by cancel or X
+        request,
+        holidays = [],
+        onActionSuccess,
+        onClose,
     }: {
         modalRef?: HTMLDialogElement;
         request: VacationRequestWithUser | null;
+        holidays?: Array<{ start_date: string; end_date: string }>;
         onActionSuccess: (actionedRequestId: number) => void;
         onClose: () => void;
     } = $props();
@@ -39,7 +42,7 @@
     }
 
     async function handleAction(
-        statusToSet: RequestStatusEnum.Approved | RequestStatusEnum.Rejected,
+        statusToSet: RequestStatusEnum.Approved | RequestStatusEnum.Rejected | RequestStatusEnum.Cancelled,
     ) {
         if (!request) return;
         isSubmitting = true;
@@ -75,22 +78,15 @@
         }
     }
 
-    // Helper to calculate duration from the processed display data if available
-    // This assumes your VacationRequestWithUser might already have pre-calculated display fields
-    // or you might need to calculate it here from start_date and end_date.
-    // For simplicity, using the 'durationDisplay' if passed or calculating.
     function getDurationDisplay(req: VacationRequestWithUser | null): string {
         if (!req) return "N/A";
-        if ((req as any).durationDisplay) return (req as any).durationDisplay; // If already processed
+        if ((req as any).durationDisplay) return (req as any).durationDisplay;
 
         const start = new Date(req.start_date + "T00:00:00Z");
         const end = new Date(req.end_date + "T00:00:00Z");
         if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && end >= start) {
-            const duration =
-                Math.round(
-                    (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24),
-                ) + 1;
-            return `${duration} dia${duration !== 1 ? "s" : ""}`;
+            const duration = countWorkingDays(start, end, holidays);
+            return `${duration} dia${duration !== 1 ? "s" : ""} úteis`;
         }
         return "Inválido";
     }
@@ -197,36 +193,57 @@
                         Cancelar
                     </button>
                     <div class="flex gap-2 order-1 sm:order-2 w-full sm:w-auto">
-                        <button
-                            type="button"
-                            class="btn btn-error flex-1"
-                            onclick={() =>
-                                handleAction(RequestStatusEnum.Rejected)}
-                            disabled={isSubmitting}
-                        >
-                            {#if isSubmitting && request && request.status === RequestStatusEnum.Rejected}
-                                <!-- Assuming status might update -->
-                                <span class="loading loading-spinner loading-sm"
-                                ></span> A Rejeitar...
-                            {:else}
-                                <i class="fa-solid fa-times-circle mr-2"></i> Rejeitar
-                                Pedido
-                            {/if}
-                        </button>
-                        <button
-                            type="button"
-                            class="btn btn-success flex-1"
-                            onclick={() =>
-                                handleAction(RequestStatusEnum.Approved)}
-                            disabled={isSubmitting}
-                        >
-                            {#if isSubmitting && request && request.status === RequestStatusEnum.Approved}
-                                <span class="loading loading-spinner loading-sm"
-                                ></span> A Aprovar...
-                            {:else}
-                                <i class="fa-solid fa-check-circle mr-2"></i> Aprovar Pedido
-                            {/if}
-                        </button>
+                        {#if (request as any).status === "CANCELLATION_REQUESTED"}
+                            <button
+                                type="button"
+                                class="btn btn-error flex-1"
+                                onclick={() => handleAction(RequestStatusEnum.Rejected)}
+                                disabled={isSubmitting}
+                            >
+                                {#if isSubmitting}
+                                    <span class="loading loading-spinner loading-sm"></span> A processar...
+                                {:else}
+                                    <i class="fa-solid fa-times-circle mr-2"></i> Rejeitar cancelamento
+                                {/if}
+                            </button>
+                            <button
+                                type="button"
+                                class="btn btn-success flex-1"
+                                onclick={() => handleAction(RequestStatusEnum.Cancelled)}
+                                disabled={isSubmitting}
+                            >
+                                {#if isSubmitting}
+                                    <span class="loading loading-spinner loading-sm"></span> A processar...
+                                {:else}
+                                    <i class="fa-solid fa-check-circle mr-2"></i> Aprovar cancelamento
+                                {/if}
+                            </button>
+                        {:else}
+                            <button
+                                type="button"
+                                class="btn btn-error flex-1"
+                                onclick={() => handleAction(RequestStatusEnum.Rejected)}
+                                disabled={isSubmitting}
+                            >
+                                {#if isSubmitting}
+                                    <span class="loading loading-spinner loading-sm"></span> A Rejeitar...
+                                {:else}
+                                    <i class="fa-solid fa-times-circle mr-2"></i> Rejeitar Pedido
+                                {/if}
+                            </button>
+                            <button
+                                type="button"
+                                class="btn btn-success flex-1"
+                                onclick={() => handleAction(RequestStatusEnum.Approved)}
+                                disabled={isSubmitting}
+                            >
+                                {#if isSubmitting}
+                                    <span class="loading loading-spinner loading-sm"></span> A Aprovar...
+                                {:else}
+                                    <i class="fa-solid fa-check-circle mr-2"></i> Aprovar Pedido
+                                {/if}
+                            </button>
+                        {/if}
                     </div>
     
                     <!-- Spacer -->

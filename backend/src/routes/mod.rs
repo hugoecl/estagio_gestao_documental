@@ -4,6 +4,7 @@ use actix_web::{Error, HttpRequest, error::ErrorUnauthorized, get, web};
 use crate::auth::validate_session;
 
 pub mod admin_vacation_routes;
+pub mod calendar_routes;
 pub mod custom_page_routes;
 pub mod field_routes;
 pub mod notification_routes;
@@ -30,6 +31,7 @@ async fn serve_files(req: HttpRequest, session: Session) -> Result<actix_files::
 
 pub fn init(cfg: &mut web::ServiceConfig) {
     user_routes::init(cfg);
+    calendar_routes::init(cfg);
     custom_page_routes::init(cfg);
     field_routes::init(cfg);
     role_routes::init(cfg);

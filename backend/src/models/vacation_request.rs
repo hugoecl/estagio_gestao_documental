@@ -3,11 +3,16 @@ use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, MySqlPool, Row};
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, sqlx::Type)]
-#[sqlx(type_name = "ENUM('PENDING', 'APPROVED', 'REJECTED')", rename_all = "UPPERCASE")]
+#[sqlx(
+    type_name = "ENUM('PENDING', 'APPROVED', 'REJECTED', 'CANCELLATION_REQUESTED', 'CANCELLED')",
+    rename_all = "UPPERCASE"
+)]
 pub enum VacationRequestStatus {
     Pending,
     Approved,
     Rejected,
+    CancellationRequested,
+    Cancelled,
 }
 
 // Intermediate struct for fetching from DB, with status as String
@@ -44,6 +49,8 @@ impl From<VacationRequestDbRow> for VacationRequest {
             "PENDING" => VacationRequestStatus::Pending,
             "APPROVED" => VacationRequestStatus::Approved,
             "REJECTED" => VacationRequestStatus::Rejected,
+            "CANCELLATION_REQUESTED" => VacationRequestStatus::CancellationRequested,
+            "CANCELLED" => VacationRequestStatus::Cancelled,
             _ => {
                 log::warn!("Unknown vacation status string '{}', defaulting to Pending", db_row.status);
                 VacationRequestStatus::Pending // Default or handle error
@@ -116,6 +123,8 @@ impl From<VacationRequestWithUserDbRow> for VacationRequestWithUser {
             "PENDING" => VacationRequestStatus::Pending,
             "APPROVED" => VacationRequestStatus::Approved,
             "REJECTED" => VacationRequestStatus::Rejected,
+            "CANCELLATION_REQUESTED" => VacationRequestStatus::CancellationRequested,
+            "CANCELLED" => VacationRequestStatus::Cancelled,
             _ => {
                 log::warn!("Unknown vacation status string '{}', defaulting to Pending", db_row.status);
                 VacationRequestStatus::Pending // Default or handle error
@@ -227,7 +236,7 @@ impl VacationRequest {
                 vr.actioned_at
             FROM vacation_requests vr
             JOIN users u ON vr.user_id = u.id
-            WHERE vr.status = 'PENDING'
+            WHERE vr.status IN ('PENDING', 'CANCELLATION_REQUESTED')
         "#;
 
         let query_str = if let Some(ids) = user_ids {
@@ -257,7 +266,9 @@ impl VacationRequest {
                         "PENDING" => VacationRequestStatus::Pending,
                         "APPROVED" => VacationRequestStatus::Approved,
                         "REJECTED" => VacationRequestStatus::Rejected,
-                        _ => VacationRequestStatus::Pending, // Default
+                        "CANCELLATION_REQUESTED" => VacationRequestStatus::CancellationRequested,
+                        "CANCELLED" => VacationRequestStatus::Cancelled,
+                        _ => VacationRequestStatus::Pending,
                     },
                     notes: row.get("notes"),
                     requested_at: row.get("requested_at"),
@@ -317,6 +328,8 @@ impl VacationRequest {
             "PENDING" => VacationRequestStatus::Pending,
             "APPROVED" => VacationRequestStatus::Approved,
             "REJECTED" => VacationRequestStatus::Rejected,
+            "CANCELLATION_REQUESTED" => VacationRequestStatus::CancellationRequested,
+            "CANCELLED" => VacationRequestStatus::Cancelled,
             _ => {
                 log::error!("Invalid status string '{}' from database for request_id: {}", current_db_status_str, request_id);
                 tx.rollback().await?;
@@ -324,17 +337,35 @@ impl VacationRequest {
             }
         };
 
-        // Ensure the request is currently PENDING before actioning
-        if current_db_status != VacationRequestStatus::Pending {
+        // Handle CANCELLATION_REQUESTED: admin approves (CANCELLED) or rejects (APPROVED)
+        let where_status = if current_db_status == VacationRequestStatus::CancellationRequested {
+            if new_status != VacationRequestStatus::Cancelled && new_status != VacationRequestStatus::Approved {
+                tx.rollback().await?;
+                return Err(sqlx::Error::Protocol(
+                    "Para pedidos de cancelamento, use CANCELLED (aprovar) ou APPROVED (rejeitar).".into(),
+                ));
+            }
+            "CANCELLATION_REQUESTED"
+        } else if current_db_status == VacationRequestStatus::Pending {
+            if new_status != VacationRequestStatus::Approved && new_status != VacationRequestStatus::Rejected {
+                tx.rollback().await?;
+                return Err(sqlx::Error::Protocol(
+                    "Para pedidos pendentes, use APPROVED ou REJECTED.".into(),
+                ));
+            }
+            "PENDING"
+        } else {
             tx.rollback().await?;
-            log::warn!("Attempted to action non-pending request_id: {}, current status: {:?}", request_id, current_db_status);
-            return Ok(false); // Indicate request was not actioned because not pending
-        }
+            log::warn!("Attempted to action request_id: {} with status {:?}", request_id, current_db_status);
+            return Ok(false);
+        };
 
-
-        if new_status == VacationRequestStatus::Approved {
-            // Calculate number of days for the request
-            let duration_days = (request_end_date - request_start_date).num_days() + 1;
+        if current_db_status == VacationRequestStatus::Pending && new_status == VacationRequestStatus::Approved {
+            let duration_days = crate::utils::working_days::count_working_days(
+                request_start_date,
+                request_end_date,
+                request_start_date.year(),
+            );
             if duration_days <= 0 {
                 tx.rollback().await?;
                 return Err(sqlx::Error::Protocol("Invalid request duration.".into()));
@@ -374,20 +405,24 @@ impl VacationRequest {
             // This avoids modifying the total allocation which should remain constant
         }
 
-        // Update the vacation request status
-        let update_result = sqlx::query!(
-            r#"
-            UPDATE vacation_requests
-            SET status = ?, approved_by = ?, actioned_at = CURRENT_TIMESTAMP, notes = ?
-            WHERE id = ? AND status = 'PENDING' 
-            "#, // Ensure it's still PENDING to avoid race conditions
-            new_status as VacationRequestStatus,
-            admin_id,
-            admin_notes,
-            request_id
-        )
-        .execute(&mut *tx)
-        .await?;
+        let new_status_str = match new_status {
+            VacationRequestStatus::Approved => "APPROVED",
+            VacationRequestStatus::Rejected => "REJECTED",
+            VacationRequestStatus::Cancelled => "CANCELLED",
+            VacationRequestStatus::CancellationRequested => "CANCELLATION_REQUESTED",
+            VacationRequestStatus::Pending => "PENDING",
+        };
+        let update_sql = format!(
+            r#"UPDATE vacation_requests SET status = ?, approved_by = ?, actioned_at = CURRENT_TIMESTAMP, notes = ? WHERE id = ? AND status = '{}'"#,
+            where_status
+        );
+        let update_result = sqlx::query(&update_sql)
+            .bind(new_status_str)
+            .bind(admin_id)
+            .bind(admin_notes)
+            .bind(request_id)
+            .execute(&mut *tx)
+            .await?;
 
         if update_result.rows_affected() == 0 {
              // This means the request was not in PENDING state when update was attempted (e.g. actioned by another admin)
@@ -484,7 +519,7 @@ impl VacationRequest {
             SELECT start_date, end_date, status
             FROM vacation_requests
             WHERE user_id IN ({})
-              AND status IN ('APPROVED', 'PENDING')
+              AND status IN ('APPROVED', 'PENDING', 'CANCELLATION_REQUESTED')
               AND (
                   (start_date <= ? AND end_date >= ?) OR 
                   (start_date <= ? AND end_date >= ?) OR 
@@ -536,7 +571,7 @@ impl VacationRequest {
             SELECT start_date, end_date
             FROM vacation_requests
             WHERE user_id = ?
-              AND status = 'APPROVED'
+              AND status IN ('APPROVED', 'CANCELLATION_REQUESTED')
               AND start_date <= ? 
               AND end_date >= ?   
             "#,
@@ -554,9 +589,12 @@ impl VacationRequest {
             let effective_start_date = std::cmp::max(req.start_date, year_start);
             let effective_end_date = std::cmp::min(req.end_date, year_end);
 
-            // Calculate duration if effective_start_date is not after effective_end_date
             if effective_start_date <= effective_end_date {
-                total_days_in_year += (effective_end_date - effective_start_date).num_days() + 1;
+                total_days_in_year += crate::utils::working_days::count_working_days(
+                    effective_start_date,
+                    effective_end_date,
+                    year,
+                );
             }
         }
         Ok(total_days_in_year)

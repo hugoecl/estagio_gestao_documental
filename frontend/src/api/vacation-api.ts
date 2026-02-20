@@ -139,6 +139,35 @@ export async function getSharedCalendarVacations(year: number): Promise<{start_d
  * @param requestId The ID of the vacation request to cancel
  * @returns A promise that resolves to an object with success and message information
  */
+/**
+ * Requests cancellation of an approved vacation. Admin must approve.
+ * @param requestId The ID of the approved vacation request
+ */
+export async function requestVacationCancellation(
+  requestId: number
+): Promise<{ success: boolean; message: string }> {
+  const response = await handleFetch(
+    `${API_BASE_URL}/vacation-requests/${requestId}/request-cancellation`,
+    {
+      method: "POST",
+      credentials: "include",
+    },
+  );
+
+  const responseText = await response.text();
+
+  if (response.ok) {
+    return {
+      success: true,
+      message: responseText || "Pedido de cancelamento enviado.",
+    };
+  }
+  return {
+    success: false,
+    message: responseText || `Falha ao pedir cancelamento: ${response.statusText}`,
+  };
+}
+
 export async function cancelVacationRequest(
   requestId: number,
 ): Promise<{ success: boolean; message: string }> {
